@@ -15,9 +15,9 @@
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
-    [http-kit "2.1.18"] ; http-kip https://github.com/http-kit/http-kit
+    [http-kit "2.1.19"] ; http-kip https://github.com/http-kit/http-kit
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
-    [javax.servlet/servlet-api "2.5"] ; required by ring https://github.com/ring-clojure/ring#upgrade-notice
+    [javax.servlet/servlet-api "3.0-alpha-1"] ; required by ring https://github.com/ring-clojure/ring#upgrade-notice
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.0"] ; Clj Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
@@ -38,7 +38,7 @@
         :passphrase "this_is_a_dev_secret"}
 
       :dependencies [
-        [javax.servlet/servlet-api "2.5"]
+        [javax.servlet/servlet-api "3.0-alpha-1"]
         [ring-mock "0.1.5"]]}
     ;; Production environment
     :prod {
