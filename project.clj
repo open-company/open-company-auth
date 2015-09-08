@@ -49,6 +49,7 @@
 
   :aliases{
     "start" ["do" "run"] ; start a development server
+    "start!" ["with-profile" "prod" "do" "build," "run"] ; start a server in production
     "build" ["do" "clean," "deps," "compile"] ; clean and build code
   }
 
