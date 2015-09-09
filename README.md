@@ -89,10 +89,17 @@ lein build
 ```
 
 
-## Tests
+## Testing
 
-TBD
+Tests are run in continuous integration of the `master` and `mainline` branches on [Travis CI](https://travis-ci.org/open-company/open-company-auth):
 
+[![Build Status](http://img.shields.io/travis/open-company/open-company-auth.svg?style=flat)](https://travis-ci.org/open-company/open-company-auth)
+
+To run the tests locally:
+
+```console
+lein test!
+```
 
 ## Participation
 
