@@ -1,8 +1,6 @@
 (ns open-company-auth.jwt
   (:require [clj-jwt.core  :refer :all]
-            [clj-jwt.key   :refer [private-key public-key]]
-            [open-company-auth.config :as config]
-            [clojure.java.io :as io]))
+            [open-company-auth.config :as config]))
 
 (defn generate
   "Get a JWT token from a payload"
