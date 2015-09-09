@@ -36,6 +36,7 @@
     :qa {
       :env {
         :hot-reload false
+        :passphrase "this_is_a_qa_secret"
       }
       :dependencies [
         [midje "1.7.0"] ; Example-based testing https://github.com/marick/Midje
