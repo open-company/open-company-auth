@@ -4,7 +4,7 @@
             [open-company-auth.config :as config]
             [clojure.java.io :as io]))
 
-(defn generate 
+(defn generate
   "Get a JWT token from a payload"
   [payload]
   (-> payload
@@ -21,9 +21,11 @@
         str->jwt
         (verify config/passphrase))
       true)
-    (catch Exception e 
+    (catch Exception e
       false)))
 
-(defn decode [token]
+(defn decode
+  "Decode a JWT"
+  [token]
   (-> token
       str->jwt))

@@ -28,7 +28,9 @@
 (def session-store
   {:store (cookie-store {:key "a 16-byte secret"})})
 
-(defn error-response [error]
+(defn error-response
+  "Return a formatted ring response with an error and :ok false"
+  [error]
   {:body (json/write-str {:ok false :error error})
    :headers {"Content-Type" "application/json"}
    :status 200})
@@ -98,14 +100,18 @@
   (-> sentry-routes
       (wrap-session session-store)
       (wrap-params)))
-  
-(defn start [port]
-(run-server app {:port port :join? false})
-  (println (str "\n Open Company Auth \n"
-    "Running on port: " port "\n"
-    "Hot-reload: " config/hot-reload "\n"
-    "Sentry: " config/dsn "\n\n"
-    "Ready to serve...\n")))
 
-(defn -main []
+(defn start
+  "Start a server"
+  [port]
+  (run-server app {:port port :join? false})
+    (println (str "\n Open Company Auth \n"
+      "Running on port: " port "\n"
+      "Hot-reload: " config/hot-reload "\n"
+      "Sentry: " config/dsn "\n\n"
+      "Ready to serve...\n")))
+
+(defn -main
+  "Main"
+  []
   (start config/web-server-port))
