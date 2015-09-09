@@ -96,7 +96,7 @@
     "start!" ["with-profile" "prod" "do" "build," "run"] ; start a server in production
     "build" ["do" "clean," "deps," "compile"] ; clean and build code
     "midje!" ["with-profile" "qa" "midje"] ; run all tests
-    "test!" ["with-profile" "qa" "do" "build," "init-db," "midje"] ; build, init the DB and run all tests
+    "test!" ["with-profile" "qa" "do" "build," "midje"] ; build, init the DB and run all tests
     "spell!" ["spell" "-n"] ; check spelling in docs and docstrings
     "bikeshed!" ["bikeshed" "-v" "-m" "120"] ; code check with max line length warning of 120 characters
     "ancient" ["with-profile" "dev" "do" "ancient" ":allow-qualified," "ancient" ":plugins" ":allow-qualified"] ; check for out of date dependencies
