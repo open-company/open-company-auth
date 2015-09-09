@@ -1,19 +1,14 @@
 (ns open-company-auth.core
   (:require [compojure.core :refer :all]
-            [compojure.route :as route]
-            [compojure.handler :as handler]
             [ring.util.response :refer [redirect]]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.reload :refer [wrap-reload]]
-            [ring.middleware.session :refer [wrap-session]]
-            [ring.middleware.session.cookie :refer [cookie-store]]
             [ring.middleware.cors :refer (wrap-cors)]
             [raven-clj.ring :refer (wrap-sentry)]
             [org.httpkit.server :refer (run-server)]
             [clojure.data.json :as json]
             [open-company-auth.config :as config]
             [clj-slack.oauth :as slack-oauth]
-            [clj-slack.users :as slack-users]
             [clj-slack.auth :as slack-auth]
             [open-company-auth.jwt :as jwt]))
 
@@ -25,9 +20,6 @@
   :state        "open-company-auth"
   :scope        "identify,read,post"})
 
-(def session-store
-  {:store (cookie-store {:key "a 16-byte secret"})})
-
 (defn error-response
   "Return a formatted ring response with an error and :ok false"
   [error]
@@ -36,11 +28,11 @@
    :status 200})
 
 (defroutes auth-routes
-  (GET "/" {session :session params :params}
+  (GET "/" []
        {:body "it works!"
         :headers {"Content-Type" "text/html"}
         :status 200})
-  (GET "/auth-settings" {session :session params :params}
+  (GET "/auth-settings" []
     (let [url (str "https://slack.com/oauth/authorize?client_id="
                    config/slack-client-id
                    "&redirect_uri="
@@ -53,7 +45,7 @@
       {:body (json/write-str settings)
        :headers {"Content-Type" "application/json"}
        :status 200}))
-  (GET "/slack-oauth" {session :session params :params}
+  (GET "/slack-oauth" {params :params}
     (let [parsed-body (slack-oauth/access slack-connection
                                           config/slack-client-id
                                           config/slack-client-secret
@@ -62,12 +54,12 @@
           ok (:ok parsed-body)]
       (if-not ok
         (error-response "invalid slack code")
-          (let [access-token (:access_token parsed-body)
-                parsed-test-body (slack-auth/test (merge slack-connection {:token access-token}))
-                jwt-content (merge parsed-test-body {:access-token access-token})
-                jwt (jwt/generate jwt-content)]
-            (redirect (str config/web-server-name "/login?jwt=" jwt))))))
-  (GET "/test-token" {session :session params :params}
+        (let [access-token (:access_token parsed-body)
+              parsed-test-body (slack-auth/test (merge slack-connection {:token access-token}))
+              jwt-content (merge parsed-test-body {:access-token access-token})
+              jwt (jwt/generate jwt-content)]
+          (redirect (str config/web-server-name "/login?jwt=" jwt))))))
+  (GET "/test-token" []
     (let [payload {:test "test" :bago "bago"}
           jwt-token (jwt/generate payload)
           jwt-verified (jwt/check-token jwt-token)
@@ -98,7 +90,6 @@
 
 (defonce app
   (-> sentry-routes
-      (wrap-session session-store)
       (wrap-params)))
 
 (defn start
