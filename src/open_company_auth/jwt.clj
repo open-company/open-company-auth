@@ -5,6 +5,7 @@
 (defn generate
   "Get a JWT token from a payload"
   [payload]
+  (println "Generate: " payload " - " config/passphrase " - " (jwt payload))
   (-> payload
       jwt
       (sign :HS256 config/passphrase)
