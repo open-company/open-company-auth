@@ -1,17 +1,18 @@
 (defproject open-company-auth "0.0.1-SNAPSHOT"
-  :description "Handles auth calls from the web app and the callback from slack"
-  :url "https://open-company.io"
+  :description "Handles auth calls and the callback from Slack"
+  :url "https://open-company.io/"
   :license {
-    :name "Mozilla Public License, version 2.0"
-    :url "http://open-company.io/license"}
-  
+    :name "Mozilla Public License v2.0"
+    :url "http://www.mozilla.org/MPL/2.0/"
+  }
+    
   :min-lein-version "2.5.1" ; highest version supported by Travis-CI as of 7/5/2015
 
   ;; JVM memory
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.8.0-alpha4"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.8.0-alpha5"] ; Lisp on the JVM http://clojure.org/documentation
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
@@ -19,16 +20,16 @@
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
     [javax.servlet/servlet-api "3.0-alpha-1"] ; required by ring https://github.com/ring-clojure/ring#upgrade-notice
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
-    [org.julienxx/clj-slack "0.5.0"] ; Clj Slack REST API https://github.com/julienXX/clj-slack
+    [org.julienxx/clj-slack "0.5.1"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
-    [environ "1.0.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [environ "1.0.1"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
-    [clj-jwt "0.1.0"] ; Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
+    [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
   ]
 
   :plugins [
-    [lein-ring "0.9.6"]
-    [lein-environ "1.0.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [lein-ring "0.9.7"]
+    [lein-environ "1.0.1"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
   :profiles {
@@ -39,12 +40,13 @@
         :passphrase "this_is_a_qa_secret"
       }
       :dependencies [
-        [midje "1.7.0"] ; Example-based testing https://github.com/marick/Midje
+        [midje "1.8-alpha1"] ; Example-based testing https://github.com/marick/Midje
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [
         [lein-midje "3.2-RC4"] ; Example-based testing https://github.com/marick/lein-midje
         [jonase/eastwood "0.2.1"] ; Clojure linter https://github.com/jonase/eastwood
+        [lein-kibit "0.1.2"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
       ]
     }
     ;; Dev env and deps
@@ -61,7 +63,6 @@
       ]
       :plugins [
         [lein-bikeshed "0.2.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed
-        [lein-kibit "0.1.2"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
         [lein-checkall "0.1.1"] ; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-pprint "1.1.2"] ; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint
         [lein-ancient "0.6.7"] ; Check for outdated dependencies https://github.com/xsc/lein-ancient
