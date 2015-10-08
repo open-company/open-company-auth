@@ -10,6 +10,7 @@
             [open-company-auth.config :as config]
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
+            [clj-slack.users :as slack-users]
             [open-company-auth.jwt :as jwt]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
@@ -69,7 +70,18 @@
           (error-response "invalid slack code")
           (let [access-token (:access_token parsed-body)
                 parsed-test-body (slack-auth/test (merge slack-connection {:token access-token}))
-                jwt-content (merge parsed-test-body {:access-token access-token})
+                user-id (:user_id parsed-test-body)
+                user-info-parsed (slack-users/info (merge slack-connection {:token access-token}) user-id)
+                user-obj (:user user-info-parsed)
+                profile-obj (:profile user-obj)
+                jwt-content {:user_id user-id
+                             :name (:name user-obj)
+                             :team (:team parsed-test-body)
+                             :team_id (:team_id parsed-test-body)
+                             :user (:user parsed-test-body)
+                             :real_name (:real_name profile-obj)
+                             :image_192 (:image_192 profile-obj)
+                             :email (:email profile-obj)}
                 jwt (jwt/generate jwt-content)]
             (redirect (str config/web-server-name "/login?jwt=" jwt)))))))
   (GET "/test-token" []
