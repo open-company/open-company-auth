@@ -86,7 +86,9 @@
                                      :team_id (:team_id parsed-test-body)
                                      :real_name (:real_name profile-obj)
                                      :image_192 (:image_192 profile-obj)
-                                     :email (:email profile-obj)}
+                                     :email (:email profile-obj)
+                                     :owner (:is_owner user-obj)
+                                     :admin (:is_admin user-obj)}
                         jwt (jwt/generate jwt-content)]
                     (redirect (str config/web-server-name "/login?jwt=" jwt)))))))))))
   (GET "/test-token" []
