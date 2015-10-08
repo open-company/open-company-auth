@@ -65,25 +65,30 @@
                                             config/slack-client-secret
                                             (params "code")
                                             (str config/server-name (:redirectURI slack)))
-            ok (:ok parsed-body)]
-        (if-not ok
+            access-ok (:ok parsed-body)]
+        (if-not access-ok
           (error-response "invalid slack code")
           (let [access-token (:access_token parsed-body)
                 parsed-test-body (slack-auth/test (merge slack-connection {:token access-token}))
-                user-id (:user_id parsed-test-body)
-                user-info-parsed (slack-users/info (merge slack-connection {:token access-token}) user-id)
-                user-obj (:user user-info-parsed)
-                profile-obj (:profile user-obj)
-                jwt-content {:user_id user-id
-                             :name (:name user-obj)
-                             :team (:team parsed-test-body)
-                             :team_id (:team_id parsed-test-body)
-                             :user (:user parsed-test-body)
-                             :real_name (:real_name profile-obj)
-                             :image_192 (:image_192 profile-obj)
-                             :email (:email profile-obj)}
-                jwt (jwt/generate jwt-content)]
-            (redirect (str config/web-server-name "/login?jwt=" jwt)))))))
+                test-ok (:ok parsed-body)]
+            (if-not test-ok
+              (error-response "error in test call")
+              (let [user-id (:user_id parsed-test-body)
+                    user-info-parsed (slack-users/info (merge slack-connection {:token access-token}) user-id)
+                    info-ok (:ok user-info-parsed)]
+                (if-not info-ok
+                  (error-response "error in info call")
+                  (let [user-obj (:user user-info-parsed)
+                        profile-obj (:profile user-obj)
+                        jwt-content {:user_id user-id
+                                     :name (:name user-obj)
+                                     :team (:team parsed-test-body)
+                                     :team_id (:team_id parsed-test-body)
+                                     :real_name (:real_name profile-obj)
+                                     :image_192 (:image_192 profile-obj)
+                                     :email (:email profile-obj)}
+                        jwt (jwt/generate jwt-content)]
+                    (redirect (str config/web-server-name "/login?jwt=" jwt)))))))))))
   (GET "/test-token" []
     (let [payload {:test "test" :bago "bago"}
           jwt-token (jwt/generate payload)
