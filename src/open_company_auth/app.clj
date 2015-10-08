@@ -1,4 +1,4 @@
-(ns open-company-auth.core
+(ns open-company-auth.app
   (:require [compojure.core :refer :all]
             [ring.util.response :refer [redirect]]
             [ring.middleware.params :refer [wrap-params]]
@@ -102,8 +102,7 @@
     cors-routes))
 
 (defonce app
-  (-> sentry-routes
-      (wrap-params)))
+  (wrap-params sentry-routes))
 
 (defn start
   "Start a server"

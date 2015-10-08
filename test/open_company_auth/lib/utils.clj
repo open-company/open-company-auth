@@ -1,7 +1,7 @@
 (ns open-company-auth.lib.utils
   "Namespace for tests utilities"
   (:require [ring.mock.request :refer (request body content-type header)]
-            [open-company-auth.core :refer (app)]
+            [open-company-auth.app :refer (app)]
             [clojure.string :as s]
             [cheshire.core :as json]))
 

@@ -5,7 +5,7 @@
     :name "Mozilla Public License v2.0"
     :url "http://www.mozilla.org/MPL/2.0/"
   }
-    
+
   :min-lein-version "2.5.1" ; highest version supported by Travis-CI as of 7/5/2015
 
   ;; JVM memory
@@ -120,12 +120,12 @@
   ;; ----- Web Application -----
 
   :ring {
-    :handler open-company-auth.core/app
+    :handler open-company-auth.app/app
     :reload-paths ["src"] ; work around issue https://github.com/weavejester/lein-ring/issues/68
     :port 3003
   }
 
   :resource-paths ["resources" ]
 
-  :main open-company-auth.core
+  :main open-company-auth.app
 )

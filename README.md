@@ -66,12 +66,14 @@ Users of the [OpenCompany.io](https://opencompany.io) platform should get starte
 To start a production Auth server:
 
 ```console
+export OPEN_COMPANY_AUTH_PASSPHRASE="put-in-something-super-secret-here"
 lein start!
 ```
 
 Or to start a development Auth server:
 
 ```console
+export OPEN_COMPANY_AUTH_PASSPHRASE="put-in-something-super-secret-here"
 lein start
 ```
 

@@ -25,5 +25,4 @@
 (defn decode
   "Decode a JWT"
   [token]
-  (-> token
-      str->jwt))
+  (str->jwt token))
