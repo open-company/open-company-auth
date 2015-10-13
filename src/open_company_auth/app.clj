@@ -23,48 +23,62 @@
   :state        "open-company-auth"
   :scope        "identify,read,post"})
 
-(defn format-response
-  "Format a generic response helper"
-  [body headers status & [other-options]]
-  (merge
-    {:body (json/write-str body)
-     :headers headers
-     :status status}
-    other-options))
+(defn- ring-response
+  "Helper to format a generic ring response"
+  [body headers status] {
+    :body body
+    :headers headers
+    :status status})
 
-(defn error-response
-  "Return a formatted ring response with an error and :ok false"
+(defn- json-response
+  "Helper to format a generic JSON body ring response"
+  [body headers status]
+  (ring-response (json/write-str body) headers status))
+
+(defn- error-response
+  "Helper to format a JSON ring response with an error and :ok false"
   [error]
-  (format-response {:ok false :error error} json-mime-type 200))
+  (json-response {:ok false :error error} json-mime-type 200))
+
+(defonce ^:private test-response (ring-response "OpenCompany auth server: OK" html-mime-type 200))
+
+(def ^:private test-token {:test "test" :bago "bago"})
+
+(defn- jwt-debug-response
+  "Helper to format a JWT debug response"
+  [payload]
+  (let [jwt-token (jwt/generate payload)
+        response {
+          :jwt-token jwt-token
+          :jwt-verified (jwt/check-token jwt-token)
+          :jwt-decoded (jwt/decode jwt-token)}]
+    (json-response response json-mime-type 200)))
+
+(defn- auth-settings-response []
+  (let [url (str "https://slack.com/oauth/authorize?client_id="
+                  config/slack-client-id
+                  "&redirect_uri="
+                  config/auth-server-url (:redirectURI slack)
+                  "&state="
+                  (:state slack)
+                  "&scope="
+                  (:scope slack))
+      settings (merge {:full-url url} slack)]
+    (json-response settings json-mime-type 200)))
 
 (defroutes auth-routes
-  (GET "/" []
-       {:body "it works!"
-        :headers html-mime-type
-        :status 200})
-  (GET "/auth-settings" []
-    (let [url (str "https://slack.com/oauth/authorize?client_id="
-                   config/slack-client-id
-                   "&redirect_uri="
-                   config/server-name (:redirectURI slack)
-                   "&state="
-                   (:state slack)
-                   "&scope="
-                   (:scope slack))
-          settings (merge {:full-url url} slack)]
-      {:body (json/write-str settings)
-       :headers json-mime-type
-       :status 200}))
+  (GET "/" [] test-response)
+  (GET "/auth-settings" [] (auth-settings-response))
   (GET "/slack-oauth" {params :params}
     (if (contains? params "test")
       ; for testing purpose
-      (format-response {:test true :ok true} json-mime-type 200)
+      (json-response {:test true :ok true} json-mime-type 200)
       ; normal execution
       (let [parsed-body (slack-oauth/access slack-connection
                                             config/slack-client-id
                                             config/slack-client-secret
                                             (params "code")
-                                            (str config/server-name (:redirectURI slack)))
+                                            (str config/auth-server-url (:redirectURI slack)))
             access-ok (:ok parsed-body)]
         (if-not access-ok
           (error-response "invalid slack code")
@@ -80,41 +94,30 @@
                   (error-response "error in info call")
                   (let [user-obj (:user user-info-parsed)
                         profile-obj (:profile user-obj)
-                        jwt-content {:user_id user-id
+                        jwt-content {:user-id user-id
                                      :name (:name user-obj)
-                                     :team (:team parsed-test-body)
-                                     :team_id (:team_id parsed-test-body)
-                                     :real_name (:real_name profile-obj)
-                                     :image_192 (:image_192 profile-obj)
+                                     :org-name (:team parsed-test-body)
+                                     :org-id (:team_id parsed-test-body)
+                                     :real-name (:real_name profile-obj)
+                                     :avatar (:image_192 profile-obj)
                                      :email (:email profile-obj)
                                      :owner (:is_owner user-obj)
                                      :admin (:is_admin user-obj)}
                         jwt (jwt/generate jwt-content)]
-                    (redirect (str config/web-server-name "/login?jwt=" jwt)))))))))))
-  (GET "/test-token" []
-    (let [payload {:test "test" :bago "bago"}
-          jwt-token (jwt/generate payload)
-          jwt-verified (jwt/check-token jwt-token)
-          jwt-decoded (jwt/decode jwt-token)
-          resp {:jwt-token jwt-token
-                :jwt-verified jwt-verified
-                :jwt-decoded jwt-decoded
-                }]
-      {:body (json/write-str resp)
-       :headers json-mime-type
-       :status 200})))
+                    (redirect (str config/ui-server-url "/login?jwt=" jwt)))))))))))
+  (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(defonce hot-reload-routes
+(defonce ^:private hot-reload-routes
   ;; Reload changed files without server restart
   (if config/hot-reload
     (wrap-reload #'auth-routes)
     auth-routes))
 
-(defonce cors-routes
+(defonce ^:private cors-routes
   ;; Use CORS middleware to support in-browser JavaScript requests.
   (wrap-cors hot-reload-routes #".*"))
 
-(defonce sentry-routes
+(defonce ^:private sentry-routes
   ;; Use sentry middleware to report runtime errors if we have a raven DSN.
   (if config/dsn
     (wrap-sentry cors-routes config/dsn)
@@ -137,4 +140,4 @@
 (defn -main
   "Main"
   []
-  (start config/web-server-port))
+  (start config/auth-server-port))

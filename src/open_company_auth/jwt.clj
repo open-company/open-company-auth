@@ -3,7 +3,7 @@
             [open-company-auth.config :as config]))
 
 (defn generate
-  "Get a JWT token from a payload"
+  "Get a JSON Web Token from a payload"
   [payload]
   (-> payload
       jwt
@@ -11,7 +11,7 @@
       to-str))
 
 (defn check-token
-  "Verify a JWT token"
+  "Verify a JSON Web Token"
   [token]
   (try
     (do
@@ -23,6 +23,6 @@
       false)))
 
 (defn decode
-  "Decode a JWT"
+  "Decode a JSON Web Token"
   [token]
   (str->jwt token))

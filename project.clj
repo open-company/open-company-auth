@@ -37,12 +37,11 @@
     :qa {
       :env {
         :hot-reload false
-        :passphrase "this_is_a_qa_secret"
+        :open-company-auth-passphrase "this_is_a_qa_secret"
       }
       :dependencies [
-        ; --- DO NOT UPDATE MIDJE, it brakes the tests https://github.com/marick/Midje/issues/323
+        ; --- DO NOT UPDATE MIDJE, it breaks the tests https://github.com/marick/Midje/issues/323
         [midje "1.7.0"] ; Example-based testing https://github.com/marick/Midje
-        ; ---------------------------------------------------------------------------------------
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [
@@ -54,7 +53,7 @@
     ;; Dev env and deps
     :dev [:qa {
       :env ^:replace {
-        :passphrase "this_is_a_dev_secret"
+        :open-company-auth-passphrase "this_is_a_dev_secret"
         :hot-reload true ; reload code when changed on the file system
       }
 
