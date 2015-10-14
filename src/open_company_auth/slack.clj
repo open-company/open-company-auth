@@ -15,7 +15,7 @@
   :state        "open-company-auth"
   :scope        "identify,read,post"})
 
-(def ^:private slack-url (str 
+(def ^:private slack-url (str
   "https://slack.com/oauth/authorize?client_id="
   config/slack-client-id
   "&redirect_uri="

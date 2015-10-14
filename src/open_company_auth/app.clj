@@ -31,8 +31,8 @@
 
 (defun- oauth-callback
   ;; for testing purpose
-  ([callback params :guard #(get % "test")] (ring/json-response {:test true :ok true} ring/json-mime-type 200))
-  
+  ([_callback _params :guard #(get % "test")] (ring/json-response {:test true :ok true} ring/json-mime-type 200))
+
   ([callback params] (callback params)))
 
 (defroutes auth-routes
