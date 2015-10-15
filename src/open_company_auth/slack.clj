@@ -3,7 +3,6 @@
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
-            [open-company-auth.lib.ring :as ring]
             [open-company-auth.config :as config]
             [open-company-auth.jwt :as jwt]))
 
