@@ -96,4 +96,7 @@
   ([_params :guard #(get % "error")] [false "denied"])
 
   ;; we got back a code, use it to get user info
-  ([params :guard #(get % "code")] (swap-code-for-token (params "code"))))
+  ([params :guard #(get % "code")] (swap-code-for-token (params "code")))
+
+  ;; no error and no code either, what's happening with you Slack?
+  ([_params] [false "no-code"]))
