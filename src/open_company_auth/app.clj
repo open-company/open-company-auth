@@ -30,15 +30,18 @@
   [auth-settings]
   (ring/json-response auth-settings ring/json-mime-type 200))
 
+(defun- redirect-to-ui
+  "Send them back to the UI login page with a JWT token or a reason they don't have one."
+
+  ([[false reason]] (redirect (str config/ui-server-url "/login?access=" reason)))
+
+  ([[true jwt]] (redirect (str config/ui-server-url "/login?jwt=" jwt))))
+
 (defun- oauth-callback
   ;; for testing purpose
   ([_callback _params :guard #(get % "test")] (ring/json-response {:test true :ok true} ring/json-mime-type 200))
 
-  ;; error, presumably user denied our app (in which case error value is "access denied")
-  ([_callback _params :guard #(get % "error")]
-    (redirect (str config/ui-server-url "/login"))) ; send them back to the login page
-
-  ([callback params] (callback params)))
+  ([callback params] (redirect-to-ui (callback params))))
 
 (defroutes auth-routes
   (GET "/" [] test-response)

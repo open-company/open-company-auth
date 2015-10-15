@@ -1,5 +1,5 @@
 (ns open-company-auth.slack
-  (:require [ring.util.response :refer [redirect]]
+  (:require [defun :refer (defun)]
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
@@ -27,36 +27,73 @@
 
 (def auth-settings (merge {:full-url slack-url} slack))
 
-(defn oauth-callback
-  [params]
+(defn- jwt-token-for
+  "Given user, profile and org data, package it up into a map and encode it as a JWToken."
+  [user profile org]
+  (let [jwt-content {
+          :user-id (:id user)
+          :name (:name user)
+          :real-name (:real_name profile)
+          :avatar (:image_192 profile)
+          :email (:email profile)
+          :owner (:is_owner user)
+          :admin (:is_admin user)}]
+    [true (jwt/generate (merge org jwt-content))]))
+
+(defn- user-info-for
+  "Given a Slack access token, retrieve the user info for the specified user id."
+  [access-token org user-id]
+  (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
+        user (:user user-info)
+        profile (:profile user)]
+    (if (:ok user-info)
+      (jwt-token-for user profile org)
+      [false "user-info-error"])))
+
+(defn- test-access-token
+  "
+  Given a Slack access token, see if it's valid by making a test call.
+  If it's valid, use it to retrieve the user's info.
+  "
+  [access-token]
+  (let [response (slack-auth/test (merge slack-connection {:token access-token}))
+        user-id (:user_id response)
+        org-id (:team_id response)
+        org-name (:team response)
+        org {:org-id org-id :org-name org-name}]
+    (if (:ok response)
+      (user-info-for access-token org user-id)
+      [false "test-call-error"])))
+
+(defn- swap-code-for-token
+  "
+  Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
+  Then test the access token.
+  "
+  [slack-code]
   (let [parsed-body (slack-oauth/access slack-connection
                                         config/slack-client-id
                                         config/slack-client-secret
-                                        (params "code")
+                                        slack-code
                                         (str config/auth-server-url (:redirectURI slack)))
-        access-ok (:ok parsed-body)]
-    (if-not access-ok
-      (ring/error-response "invalid slack code" 401)
-      (let [access-token (:access_token parsed-body)
-            parsed-test-body (slack-auth/test (merge slack-connection {:token access-token}))
-            test-ok (:ok parsed-body)]
-        (if-not test-ok
-          (ring/error-response "error in test call" 401)
-          (let [user-id (:user_id parsed-test-body)
-                user-info-parsed (slack-users/info (merge slack-connection {:token access-token}) user-id)
-                info-ok (:ok user-info-parsed)]
-            (if-not info-ok
-              (ring/error-response "error in info call" 401)
-              (let [user-obj (:user user-info-parsed)
-                    profile-obj (:profile user-obj)
-                    jwt-content {:user-id user-id
-                                 :name (:name user-obj)
-                                 :org-name (:team parsed-test-body)
-                                 :org-id (:team_id parsed-test-body)
-                                 :real-name (:real_name profile-obj)
-                                 :avatar (:image_192 profile-obj)
-                                 :email (:email profile-obj)
-                                 :owner (:is_owner user-obj)
-                                 :admin (:is_admin user-obj)}
-                    jwt (jwt/generate jwt-content)]
-                (redirect (str config/ui-server-url "/login?jwt=" jwt))))))))))
+        access-token (:access_token parsed-body)]
+    (if (:ok parsed-body)
+      (test-access-token access-token)
+      [false "invalid-slack-code"])))
+
+(defun oauth-callback
+  "
+  Handle the callback from Slack, returning either a tuple of:
+
+  [true, {JWToken-contents}]
+
+    or
+
+  [false, {error-description}]
+  "
+
+  ;; error, presumably user denied our app (in which case error value is "access denied")
+  ([_params :guard #(get % "error")] [false "denied"])
+
+  ;; we got back a code, use it to get user info
+  ([params :guard #(get % "code")] (swap-code-for-token (params "code"))))
