@@ -4,6 +4,7 @@
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.reload :refer [wrap-reload]]
             [ring.middleware.cors :refer (wrap-cors)]
+            [ring.util.response :refer [redirect]]
             [raven-clj.ring :refer (wrap-sentry)]
             [org.httpkit.server :refer (run-server)]
             [open-company-auth.config :as config]
@@ -32,6 +33,10 @@
 (defun- oauth-callback
   ;; for testing purpose
   ([_callback _params :guard #(get % "test")] (ring/json-response {:test true :ok true} ring/json-mime-type 200))
+
+  ;; error, presumably user denied our app (in which case error value is "access denied")
+  ([_callback _params :guard #(get % "error")]
+    (redirect (str config/ui-server-url "/login"))) ; send them back to the login page
 
   ([callback params] (callback params)))
 
