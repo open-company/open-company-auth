@@ -2,14 +2,14 @@
 
 [![MPL License](http://img.shields.io/badge/license-MPL-blue.svg?style=flat)](https://www.mozilla.org/MPL/2.0/)
 [![Build Status](https://travis-ci.org/open-company/open-company-auth.svg)](https://travis-ci.org/open-company/open-company-auth)
-[![Dependency Status](https://www.versioneye.com/user/projects/55ef206f1e87ad001400001d/badge.svg?style=flat)](https://www.versioneye.com/user/projects/55ef206f1e87ad001400001d)
+[![Dependency Status](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e/badge.svg?style=flat)](https://www.versioneye.com/user/projects/55ef206f1e87ad001400001d)
 [![Roadmap on Trello](http://img.shields.io/badge/roadmap-trello-blue.svg?style=flat)](https://trello.com/b/3naVWHgZ/open-company-development)
 
 ## Overview
 
-> Transparency, honesty, kindness, good stewardship, even humor, work in businesses at all times.
+> I've come to learn there is a virtuous cycle to transparency and a very vicious cycle of obfuscation.
 
-> -- [John Gerzema](http://www.johngerzema.com/)
+> -- [Jeff Weiner](https://www.linkedin.com/in/jeffweiner08)
 
 Employees and investors, co-founders and execs, they all want more transparency from their startups, but there's no consensus about what it means to be transparent. OpenCompany is a platform that simplifies how key business information is shared with stakeholders.
 
