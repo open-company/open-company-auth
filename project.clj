@@ -37,7 +37,7 @@
     :qa {
       :env {
         :hot-reload false
-        :open-company-auth-passphrase "this_is_a_qa_secret"
+        :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
       :dependencies [
         ; --- DO NOT UPDATE MIDJE, it breaks the tests https://github.com/marick/Midje/issues/323
@@ -53,7 +53,7 @@
     ;; Dev env and deps
     :dev [:qa {
       :env ^:replace {
-        :open-company-auth-passphrase "this_is_a_dev_secret"
+        :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload true ; reload code when changed on the file system
       }
 
