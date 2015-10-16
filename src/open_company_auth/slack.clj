@@ -40,7 +40,7 @@
     [true (jwt/generate (merge org jwt-content))]))
 
 (defn- user-info-for
-  "Given a Slack access token, retrieve the user info for the specified user id."
+  "Given a Slack access token, retrieve the user info from Slack for the specified user id."
   [access-token org user-id]
   (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
         user (:user user-info)
@@ -51,7 +51,7 @@
 
 (defn- test-access-token
   "
-  Given a Slack access token, see if it's valid by making a test call.
+  Given a Slack access token, see if it's valid by making a test call to Slack.
   If it's valid, use it to retrieve the user's info.
   "
   [access-token]
@@ -67,7 +67,7 @@
 (defn- swap-code-for-token
   "
   Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
-  Then test the access token.
+  If the swap works, then test the access token.
   "
   [slack-code]
   (let [parsed-body (slack-oauth/access slack-connection

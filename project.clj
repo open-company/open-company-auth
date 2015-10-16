@@ -19,7 +19,6 @@
     [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [http-kit "2.1.19"] ; http-kip https://github.com/http-kit/http-kit
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
-    [javax.servlet/servlet-api "3.0-alpha-1"] ; required by ring https://github.com/ring-clojure/ring#upgrade-notice
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.1"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
@@ -60,8 +59,6 @@
 
       :dependencies [
         [aprint "0.1.3"] ; Pretty printing in the REPL (aprint thing) https://github.com/razum2um/aprint
-        [javax.servlet/servlet-api "3.0-alpha-1"]
-        [org.clojure/tools.trace "0.7.8"] ; Tracing macros/fns https://github.com/clojure/tools.trace
       ]
       :plugins [
         [lein-bikeshed "0.2.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed
@@ -100,7 +97,7 @@
     "start!" ["with-profile" "prod" "do" "build," "run"] ; start a server in production
     "build" ["do" "clean," "deps," "compile"] ; clean and build code
     "midje!" ["with-profile" "qa" "midje"] ; run all tests
-    "test!" ["with-profile" "qa" "do" "build," "midje"] ; build, init the DB and run all tests
+    "test!" ["with-profile" "qa" "do" "clean," "build," "midje"] ; build, init the DB and run all tests
     "spell!" ["spell" "-n"] ; check spelling in docs and docstrings
     "bikeshed!" ["bikeshed" "-v" "-m" "120"] ; code check with max line length warning of 120 characters
     "ancient" ["with-profile" "dev" "do" "ancient" ":allow-qualified," "ancient" ":plugins" ":allow-qualified"] ; check for out of date dependencies
