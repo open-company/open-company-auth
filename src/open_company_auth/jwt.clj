@@ -1,5 +1,5 @@
 (ns open-company-auth.jwt
-  (:require [clj-jwt.core  :refer :all]
+  (:require [clj-jwt.core :refer :all]
             [open-company-auth.config :as config]))
 
 (defn generate

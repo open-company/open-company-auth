@@ -12,8 +12,8 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.8.0-beta1"] ; Lisp on the JVM http://clojure.org/documentation
-    [defun "0.2.0"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
+    [org.clojure/clojure "1.8.0-beta2"] ; Lisp on the JVM http://clojure.org/documentation
+    [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
@@ -24,7 +24,7 @@
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.0.1"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
-    [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
+    [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
   ]
 
   :plugins [
@@ -45,7 +45,7 @@
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [
-        [lein-midje "3.2-RC4"] ; Example-based testing https://github.com/marick/lein-midje
+        [lein-midje "3.2"] ; Example-based testing https://github.com/marick/lein-midje
         [jonase/eastwood "0.2.1"] ; Clojure linter https://github.com/jonase/eastwood
         [lein-kibit "0.1.2"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
       ]
@@ -67,15 +67,8 @@
         [lein-ancient "0.6.7"] ; Check for outdated dependencies https://github.com/xsc/lein-ancient
         [lein-spell "0.1.0"] ; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-deps-tree "0.1.2"] ; Print a tree of project dependencies https://github.com/the-kenny/lein-deps-tree
-        [lein-cljfmt "0.3.0"] ; Code formatting https://github.com/weavejester/cljfmt
-        [venantius/ultra "0.3.4"] ; Enhancement's to Leiningen's REPL https://github.com/venantius/ultra
         [venantius/yagni "0.1.4"] ; Dead code finder https://github.com/venantius/yagni
       ]
-      ;; REPL config
-      :ultra {
-        :color-scheme :solarized_dark
-        :stacktraces  false
-      }
       ;; REPL injections
       :injections [
         (require '[aprint.core :refer (aprint ap)]
