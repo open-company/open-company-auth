@@ -17,6 +17,7 @@
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.1.19"] ; http-kip https://github.com/http-kit/http-kit
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
@@ -40,8 +41,7 @@
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
       :dependencies [
-        ; --- DO NOT UPDATE MIDJE, it breaks the tests https://github.com/marick/Midje/issues/323
-        [midje "1.7.0"] ; Example-based testing https://github.com/marick/Midje
+        [midje "1.8.1"] ; Example-based testing https://github.com/marick/Midje
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [
@@ -56,10 +56,6 @@
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload true ; reload code when changed on the file system
       }
-
-      :dependencies [
-        [aprint "0.1.3"] ; Pretty printing in the REPL (aprint thing) https://github.com/razum2um/aprint
-      ]
       :plugins [
         [lein-bikeshed "0.2.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed
         [lein-checkall "0.1.1"] ; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
@@ -68,6 +64,12 @@
         [lein-spell "0.1.0"] ; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-deps-tree "0.1.2"] ; Print a tree of project dependencies https://github.com/the-kenny/lein-deps-tree
         [venantius/yagni "0.1.4"] ; Dead code finder https://github.com/venantius/yagni
+      ]
+    }]
+    :repl [:dev {
+      :dependencies [
+        [org.clojure/tools.nrepl "0.2.12"] ; Network REPL https://github.com/clojure/tools.nrepl
+        [aprint "0.1.3"] ; Pretty printing in the REPL (aprint ...) https://github.com/razum2um/aprint
       ]
       ;; REPL injections
       :injections [
@@ -91,6 +93,8 @@
     "build" ["do" "clean," "deps," "compile"] ; clean and build code
     "midje!" ["with-profile" "qa" "midje"] ; run all tests
     "test!" ["with-profile" "qa" "do" "clean," "build," "midje"] ; build, init the DB and run all tests
+    "autotest" ["with-profile" "qa" "midje" ":autotest"] ; watch for code changes and run affected tests
+    "repl" ["with-profile" "repl" "repl"]
     "spell!" ["spell" "-n"] ; check spelling in docs and docstrings
     "bikeshed!" ["bikeshed" "-v" "-m" "120"] ; code check with max line length warning of 120 characters
     "ancient" ["with-profile" "dev" "do" "ancient" ":allow-qualified," "ancient" ":plugins" ":allow-qualified"] ; check for out of date dependencies
