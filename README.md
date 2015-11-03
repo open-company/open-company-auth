@@ -1,8 +1,8 @@
-# [OpenCompany.io](https://opencompany.io) Authentication Service
+# [OpenCompany](https://opencompany.io) Authentication Service
 
 [![MPL License](http://img.shields.io/badge/license-MPL-blue.svg?style=flat)](https://www.mozilla.org/MPL/2.0/)
 [![Build Status](https://travis-ci.org/open-company/open-company-auth.svg)](https://travis-ci.org/open-company/open-company-auth)
-[![Dependency Status](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e/badge.svg?style=flat)](https://www.versioneye.com/user/projects/55ef206f1e87ad001400001d)
+[![Dependency Status](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e/badge.svg?style=flat)](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e)
 [![Roadmap on Trello](http://img.shields.io/badge/roadmap-trello-blue.svg?style=flat)](https://trello.com/b/3naVWHgZ/open-company-development)
 
 ## Overview
