@@ -46,7 +46,7 @@
             token (jwt/generate payload)]
         (println "\nIdentity:" payload)
         (println "\nJWToken:" token)
-        (println "\nTo use this JWToken from cURL:\ncurl --header \"Authorization: Bearer " token "\"\n"))
+        (println (str "\nTo use this JWToken from cURL:\ncurl --header \"Authorization: Bearer " token "\"\n")))
       (catch Exception e
         (println e)
         (exit 1 (data-msg))))))
