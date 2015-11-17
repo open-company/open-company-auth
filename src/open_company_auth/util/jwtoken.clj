@@ -16,11 +16,11 @@
   (s/join \newline
      ["This program creates an OpenCompany JWToken for command-line API usage (cURL)."
       ""
-      "Usage: lein run -m open-company.util.jwtoken -- identity.edn"
+      "Usage: lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn"
       ""
       "Identity data: an EDN file with the user properties."
       ""
-      "Please refer to ./opt/identities for more information on the file format."
+      "Please refer to the file(s) in ./opt/identities for more information on the file format."
       ""]))
 
 (defn data-msg []
