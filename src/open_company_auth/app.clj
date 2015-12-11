@@ -12,7 +12,7 @@
             [open-company-auth.lib.ring :as ring]
             [open-company-auth.slack :as slack]))
 
-(defonce ^:private test-response (ring/ring-response "OpenCompany auth server: OK" ring/html-mime-type 200))
+(defonce ^:private test-response (ring/ring-response "OPENcompany auth server: OK" ring/html-mime-type 200))
 
 (def ^:private test-token {:test "test" :bago "bago"})
 

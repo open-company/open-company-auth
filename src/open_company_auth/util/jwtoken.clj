@@ -1,5 +1,5 @@
 (ns open-company-auth.util.jwtoken
-  "Commandline client to create a JWToken for OpenCompany API use."
+  "Commandline client to create a JWToken for OPENcompany API use."
   (:require [clojure.string :as s]
             [clojure.tools.cli :refer (parse-opts)]
             [open-company-auth.jwt :as jwt])
@@ -14,7 +14,7 @@
 
 (defn usage [options-summary]
   (s/join \newline
-     ["This program creates an OpenCompany JWToken for command-line API usage (cURL)."
+     ["This program creates an OPENcompany JWToken for command-line API usage (cURL)."
       ""
       "Usage: lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn"
       ""
