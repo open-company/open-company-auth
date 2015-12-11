@@ -73,7 +73,7 @@
   [port]
   (run-server app {:port port :join? false})
     (println (str "\n" (slurp (clojure.java.io/resource "./open_company_auth/assets/ascii_art.txt")) "\n"
-      "Auth Server\n"
+      "OPENcompany Auth Server\n"
       "Running on port: " port "\n"
       "Hot-reload: " config/hot-reload "\n"
       "Sentry: " config/dsn "\n\n"
