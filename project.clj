@@ -69,7 +69,7 @@
         [venantius/yagni "0.1.4"] ; Dead code finder https://github.com/venantius/yagni
       ]
     }]
-    :repl [:dev {
+    :repl-config [:dev {
       :dependencies [
         [org.clojure/tools.nrepl "0.2.12"] ; Network REPL https://github.com/clojure/tools.nrepl
         [aprint "0.1.3"] ; Pretty printing in the REPL (aprint ...) https://github.com/razum2um/aprint
@@ -97,7 +97,7 @@
     "midje!" ["with-profile" "qa" "midje"] ; run all tests
     "test!" ["with-profile" "qa" "do" "clean," "build," "midje"] ; build, init the DB and run all tests
     "autotest" ["with-profile" "qa" "midje" ":autotest"] ; watch for code changes and run affected tests
-    "repl" ["with-profile" "repl" "repl"]
+    "repl" ["with-profile" "+repl-config" "repl"]
     "spell!" ["spell" "-n"] ; check spelling in docs and docstrings
     "bikeshed!" ["bikeshed" "-v" "-m" "120"] ; code check with max line length warning of 120 characters
     "ancient" ["with-profile" "dev" "do" "ancient" ":allow-qualified," "ancient" ":plugins" ":allow-qualified"] ; check for out of date dependencies
