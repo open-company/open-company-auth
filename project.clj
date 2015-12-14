@@ -18,7 +18,7 @@
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
-    [http-kit "2.1.19"] ; http-kip https://github.com/http-kit/http-kit
+    [http-kit "2.1.21-alpha2"] ; Web server http://http-kit.org/
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.1"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
@@ -49,6 +49,7 @@
         [lein-midje "3.2"] ; Example-based testing https://github.com/marick/lein-midje
         [jonase/eastwood "0.2.2"] ; Clojure linter https://github.com/jonase/eastwood
         [lein-kibit "0.1.2"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
+        [io.aviso/pretty "0.1.20"] ; Pretty print exceptions https://github.com/AvisoNovate/pretty
       ]
     }
     ;; Dev env and deps
