@@ -53,7 +53,8 @@
         [io.aviso/pretty "0.1.20"] ; Pretty print exceptions https://github.com/AvisoNovate/pretty
       ]
     }
-    ;; Dev env and deps
+
+    ;; Dev environment and dependencies
     :dev [:qa {
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
@@ -82,6 +83,7 @@
                  '[clojure.string :as s])
       ]
     }]
+
     ;; Production environment
     :prod {
       :env {
