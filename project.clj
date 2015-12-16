@@ -12,7 +12,7 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.8.0-RC3"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.8.0-RC4"] ; Lisp on the JVM http://clojure.org/documentation
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
@@ -48,7 +48,7 @@
       ]
       :plugins [
         [lein-midje "3.2"] ; Example-based testing https://github.com/marick/lein-midje
-        [jonase/eastwood "0.2.2"] ; Clojure linter https://github.com/jonase/eastwood
+        [jonase/eastwood "0.2.3"] ; Clojure linter https://github.com/jonase/eastwood
         [lein-kibit "0.1.2"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
         [io.aviso/pretty "0.1.20"] ; Pretty print exceptions https://github.com/AvisoNovate/pretty
       ]
