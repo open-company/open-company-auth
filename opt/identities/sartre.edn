@@ -1,0 +1,10 @@
+{
+  :user-id "1980-06-21"
+  :name "sartre"
+  :real-name "Jean-Paul Sartre"
+  :avatar "http://existentialismtoday.com/wp-content/uploads/2015/11/sartre_22.jpg"
+  :email "sartre@lyceela.org"
+  :owner true
+  :admin true
+  :org-id "87654"
+}
