@@ -24,13 +24,15 @@
   "&scope="
   (:scope slack)))
 
+(def ^:private prefix "slack:")
+
 (def auth-settings (merge {:full-url slack-url} slack))
 
 (defn- jwt-token-for
   "Given user, profile and org data, package it up into a map and encode it as a JWToken."
   [user profile org]
   (let [jwt-content {
-          :user-id (:id user)
+          :user-id (str prefix (:id user))
           :name (:name user)
           :real-name (:real_name profile)
           :avatar (:image_192 profile)
@@ -57,7 +59,7 @@
   [access-token]
   (let [response (slack-auth/test (merge slack-connection {:token access-token}))
         user-id (:user_id response)
-        org-id (str "slack:" (:team_id response))
+        org-id (str prefix (:team_id response))
         org-name (:team response)
         org {:org-id org-id :org-name org-name}]
     (if (:ok response)

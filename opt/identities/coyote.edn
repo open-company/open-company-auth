@@ -1,5 +1,5 @@
 {
-  :user-id "123456"
+  :user-id "slack:123456"
   :name "coyote"
   :real-name "Wile E. Coyote"
   :avatar "http://www.emoticonswallpapers.com/avatar/cartoons/Wiley-Coyote-Dazed.jpg"
