@@ -6,5 +6,5 @@
   :email "wile.e.coyote@acme.com"
   :owner false
   :admin false
-  :org-id "98765"
+  :org-id "slack:98765"
 }

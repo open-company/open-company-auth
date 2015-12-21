@@ -6,5 +6,5 @@
   :email "albert@combat.org"
   :owner true
   :admin true
-  :org-id "98765"
+  :org-id "slack:98765"
 }

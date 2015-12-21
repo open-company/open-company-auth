@@ -6,5 +6,5 @@
   :email "sartre@lyceela.org"
   :owner true
   :admin true
-  :org-id "87654"
+  :org-id "slack:87654"
 }

@@ -57,7 +57,7 @@
   [access-token]
   (let [response (slack-auth/test (merge slack-connection {:token access-token}))
         user-id (:user_id response)
-        org-id (:team_id response)
+        org-id (str "slack:" (:team_id response))
         org-name (:team response)
         org {:org-id org-id :org-name org-name}]
     (if (:ok response)
