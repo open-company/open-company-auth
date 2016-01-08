@@ -21,7 +21,7 @@
     [http-kit "2.1.21-alpha2"] ; Web server http://http-kit.org/
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
-    [org.julienxx/clj-slack "0.5.1"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
+    [org.julienxx/clj-slack "0.5.2.1"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.0.1"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
