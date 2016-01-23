@@ -12,7 +12,7 @@
 (def ^:private slack {
   :redirectURI  "/slack-oauth"
   :state        "open-company-auth"
-  :scope        "identify,read,post"})
+  :scope        "users:read"})
 
 (def ^:private slack-url (str
   "https://slack.com/oauth/authorize?client_id="
