@@ -1,5 +1,5 @@
 (defproject open-company-auth "0.0.1-SNAPSHOT"
-  :description "Handles auth calls and the callback from Slack"
+  :description "Handles auth calls and callbacks"
   :url "https://open-company.io/"
   :license {
     :name "Mozilla Public License v2.0"
@@ -12,7 +12,7 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.8.0-RC4"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.8.0"] ; Lisp on the JVM http://clojure.org/documentation
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
