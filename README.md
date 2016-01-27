@@ -89,6 +89,14 @@ To create a production build run:
 lein build
 ```
 
+## Sample JWToken
+
+To create a sample JWToken for use in development without going through a full auth cycle, create an identity EDN file
+formated like the ones in ```/opt/identities``` or use one of the identity EDN files provided, and run the utility:
+
+```console
+lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn
+```
 
 ## Testing
 
