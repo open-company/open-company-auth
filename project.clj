@@ -85,7 +85,7 @@
     ;; Production environment
     :prod {
       :env {
-        :hot-reload false
+        :hot-reload "false"
       }
     }
   }
