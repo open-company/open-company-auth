@@ -31,14 +31,14 @@
 
   :plugins [
     [lein-ring "0.9.7"]
-    [lein-environ "1.0.1"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [lein-environ "1.0.2"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
   :profiles {
     ;; QA environment and dependencies
     :qa {
       :env {
-        :hot-reload false
+        :hot-reload "false"
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
       :dependencies [
@@ -56,7 +56,7 @@
     :dev [:qa {
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
-        :hot-reload true ; reload code when changed on the file system
+        :hot-reload "true" ; reload code when changed on the file system
       }
       :plugins [
         [lein-bikeshed "0.2.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed

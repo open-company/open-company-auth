@@ -2,6 +2,11 @@
   "Namespace for the configuration parameters."
   (:require [environ.core :refer (env)]))
 
+(defn- bool
+  "Handle the fact that we may have true/false strings, when we want booleans."
+  [val]
+  (boolean (Boolean/valueOf val)))
+
 ;; ----- Sentry -----
 
 (defonce dsn (or (env :open-company-sentry-auth) false))
@@ -13,7 +18,7 @@
 
 ;; ----- HTTP server -----
 
-(defonce hot-reload (or (env :hot-reload) false))
+(defonce hot-reload (bool (or (env :hot-reload) false)))
 (defonce auth-server-port (Integer/parseInt (or (env :port) "3003")))
 
 ;; ----- URLs -----
