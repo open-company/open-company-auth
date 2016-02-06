@@ -23,7 +23,7 @@
     [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.2.1"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
-    [environ "1.0.1"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [environ "1.0.2"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.3"] ; command-line parsing https://github.com/clojure/tools.cli
