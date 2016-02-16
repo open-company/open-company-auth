@@ -12,7 +12,7 @@
             [open-company-auth.lib.ring :as ring]
             [open-company-auth.slack :as slack]))
 
-(defonce ^:private test-response (ring/ring-response "OPENcompany auth server: OK" ring/html-mime-type 200))
+(defonce ^:private test-response (ring/ring-response "OpenCompany auth server: OK" ring/html-mime-type 200))
 
 (def ^:private test-token {:test "test" :bago "bago"})
 
@@ -73,7 +73,7 @@
   [port]
   (run-server app {:port port :join? false})
     (println (str "\n" (slurp (clojure.java.io/resource "./open_company_auth/assets/ascii_art.txt")) "\n"
-      "OPENcompany Auth Server\n"
+      "OpenCompany Auth Server\n"
       "Running on port: " port "\n"
       "Hot-reload: " config/hot-reload "\n"
       "Sentry: " config/dsn "\n\n"
