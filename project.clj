@@ -16,7 +16,7 @@
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
-    [compojure "1.4.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [compojure "1.5.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0-alpha1"] ; Web server http://http-kit.org/
     [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
