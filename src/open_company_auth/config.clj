@@ -24,7 +24,7 @@
 ;; ----- URLs -----
 
 (defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
-(defonce ui-server-url (or (env :ui-server-url) "http://localhost:3449"))
+(defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
 
 ;; ----- JWT -----
 
