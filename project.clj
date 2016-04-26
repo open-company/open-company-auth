@@ -19,8 +19,7 @@
     [compojure "1.5.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0-alpha1"] ; Web server http://http-kit.org/
-    [org.clojure/data.json "0.2.6"] ; data.JSON https://github.com/clojure/data.json
-    [cheshire "5.5.0"] ; Used to print JSON responses https://github.com/dakrone/cheshire
+    [cheshire "5.6.1"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.3"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.3.1"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.0.2"] ; Get environment settings from different sources https://github.com/weavejester/environ
