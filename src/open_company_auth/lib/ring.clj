@@ -1,5 +1,5 @@
 (ns open-company-auth.lib.ring
-  (:require [clojure.data.json :as json]))
+  (:require [cheshire.core :as json]))
 
 (def json-mime-type {"Content-Type" "application/json"})
 (def html-mime-type {"Content-Type" "text/html"})
@@ -14,7 +14,7 @@
 (defn json-response
   "Helper to format a generic JSON body ring response"
   [body headers status]
-  (ring-response (json/write-str body) headers status))
+  (ring-response (json/generate-string body {:pretty true}) headers status))
 
 (defn error-response
   "Helper to format a JSON ring response with an error and :ok false"
