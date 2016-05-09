@@ -28,28 +28,29 @@
 
 (def auth-settings (merge {:full-url slack-url} slack))
 
-(defn- jwt-token-for
+(defn- jwt-data
   "Given user, profile and org data, package it up into a map and encode it as a JWToken."
-  [user profile org]
-  (let [jwt-content {
-          :user-id (str prefix (:id user))
-          :name (:name user)
-          :real-name (:real_name profile)
-          :avatar (:image_192 profile)
-          :email (:email profile)
-          :owner (:is_owner user)
-          :admin (:is_admin user)}]
-    [true (jwt/generate (merge org jwt-content))]))
+  [{:keys [user profile org]}]
+  {:pre [(map? user) (map? profile) (map? org)]}
+  (let [jwt-content {:user-id (str prefix (:id user))
+                     :name (:name user)
+                     :real-name (:real_name profile)
+                     :avatar (:image_192 profile)
+                     :email (:email profile)
+                     :owner (:is_owner user)
+                     :admin (:is_admin user)}]
+    (merge org jwt-content)))
 
-(defn- user-info-for
+(defn- get-user-info
   "Given a Slack access token, retrieve the user info from Slack for the specified user id."
   [access-token org user-id]
   (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
         user (:user user-info)
         profile (:profile user)]
     (if (:ok user-info)
-      (jwt-token-for user profile org)
-      [false "user-info-error"])))
+      {:user user :profile profile :org org}
+      (throw (ex-info "Error response from Slack API while retrieving user data"
+                      {:response user-info :user-id user-id :org org})))))
 
 (defn- test-access-token
   "
@@ -58,13 +59,14 @@
   "
   [access-token]
   (let [response (slack-auth/test (merge slack-connection {:token access-token}))
-        user-id (:user_id response)
-        org-id (str prefix (:team_id response))
+        user-id  (:user_id response)
+        org-id   (str prefix (:team_id response))
         org-name (:team response)
-        org {:org-id org-id :org-name org-name}]
+        org      {:org-id org-id :org-name org-name}]
     (if (:ok response)
-      (user-info-for access-token org user-id)
-      [false "test-call-error"])))
+      (jwt-data (get-user-info access-token org user-id))
+      (throw (ex-info "Eroor while testing access token"
+                      {:response response})))))
 
 (defn- swap-code-for-token
   "
@@ -72,15 +74,21 @@
   If the swap works, then test the access token.
   "
   [slack-code]
-  (let [parsed-body (slack-oauth/access slack-connection
+  (let [response     (slack-oauth/access slack-connection
                                         config/slack-client-id
                                         config/slack-client-secret
                                         slack-code
                                         (str config/auth-server-url (:redirectURI slack)))
-        access-token (:access_token parsed-body)]
-    (if (:ok parsed-body)
-      (test-access-token access-token)
-      [false "invalid-slack-code"])))
+        bot          {:bot-id    (-> response :bot :bot_user_id)
+                      :bot-token (-> response :bot :bot_access_token)}
+        access-token (:access_token response)]
+    (try
+      (if (:ok response)
+        (let [jwt-data (test-access-token (:access_token response))]
+          [true (jwt/generate (assoc jwt-data :bot bot))])
+        (throw (ex-info "Invalid slack code" {:response response})))
+      (catch Throwable e
+        [false (.getMessage e)]))))
 
 (defun oauth-callback
   "
