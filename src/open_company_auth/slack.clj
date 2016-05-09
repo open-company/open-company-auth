@@ -79,13 +79,13 @@
                                         config/slack-client-secret
                                         slack-code
                                         (str config/auth-server-url (:redirectURI slack)))
-        bot          {:bot-id    (-> response :bot :bot_user_id)
-                      :bot-token (-> response :bot :bot_access_token)}
+        bot          {:bot {:id    (-> response :bot :bot_user_id)
+                            :token (-> response :bot :bot_access_token)}}
         access-token (:access_token response)]
     (try
       (if (:ok response)
         (let [jwt-data (test-access-token (:access_token response))]
-          [true (jwt/generate (assoc jwt-data :bot bot))])
+          [true (jwt/generate (merge jwt-data bot))])
         (throw (ex-info "Invalid slack code" {:response response})))
       (catch Throwable e
         [false (.getMessage e)]))))
