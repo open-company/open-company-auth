@@ -65,7 +65,7 @@
         org      {:org-id org-id :org-name org-name}]
     (if (:ok response)
       (jwt-data (get-user-info access-token org user-id))
-      (throw (ex-info "Eroor while testing access token"
+      (throw (ex-info "Error while testing access token"
                       {:response response})))))
 
 (defn- swap-code-for-token
