@@ -71,7 +71,6 @@
         org          {:org-id   (str prefix (:team_id response))
                       :org-name (:team response)}
         access-token (:access_token response)]
-    (prn response)
     (try
       (test-access-token access-token)
       (if (:ok response)
