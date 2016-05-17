@@ -7,4 +7,5 @@
   :owner true
   :admin true
   :org-id "slack:98765"
+  :bot {:id "abc" :token "xyz"}
 }
