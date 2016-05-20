@@ -1,5 +1,6 @@
 (ns open-company-auth.app
   (:require [defun :refer (defun-)]
+            [clojure.java.io :as io]
             [compojure.core :refer :all]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.reload :refer [wrap-reload]]
@@ -72,7 +73,7 @@
   "Start a server"
   [port]
   (run-server app {:port port :join? false})
-    (println (str "\n" (slurp (clojure.java.io/resource "./open_company_auth/assets/ascii_art.txt")) "\n"
+    (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
       "OpenCompany Auth Server\n"
       "Running on port: " port "\n"
       "Hot-reload: " config/hot-reload "\n"
