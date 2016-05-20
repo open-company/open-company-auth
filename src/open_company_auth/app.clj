@@ -6,7 +6,7 @@
             [ring.middleware.reload :refer [wrap-reload]]
             [ring.middleware.cors :refer (wrap-cors)]
             [ring.util.response :refer [redirect]]
-            [raven-clj.ring :refer (wrap-sentry)]
+            [raven-clj.ring :as sentry-mw]
             [org.httpkit.server :refer (run-server)]
             [open-company-auth.config :as config]
             [open-company-auth.jwt :as jwt]
@@ -50,29 +50,17 @@
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(defonce ^:private hot-reload-routes
-  ;; Reload changed files without server restart
-  (if config/hot-reload
-    (wrap-reload #'auth-routes)
-    auth-routes))
-
-(defonce ^:private cors-routes
-  ;; Use CORS middleware to support in-browser JavaScript requests.
-  (wrap-cors hot-reload-routes #".*"))
-
-(defonce ^:private sentry-routes
-  ;; Use sentry middleware to report runtime errors if we have a raven DSN.
-  (if config/dsn
-    (wrap-sentry cors-routes config/dsn)
-    cors-routes))
-
-(defonce app
-  (wrap-params sentry-routes))
+(defn app []
+  (cond-> #'auth-routes
+   config/hot-reload wrap-reload
+   true              wrap-params
+   true              (wrap-cors #".*")
+   config/dsn        (sentry-mw/wrap-sentry config/dsn)))
 
 (defn start
   "Start a server"
   [port]
-  (run-server app {:port port :join? false})
+  (run-server (app) {:port port :join? false})
     (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
       "OpenCompany Auth Server\n"
       "Running on port: " port "\n"
