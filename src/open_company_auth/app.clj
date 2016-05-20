@@ -10,7 +10,7 @@
             [org.httpkit.server :refer (run-server)]
             [open-company-auth.config :as config]
             [open-company-auth.jwt :as jwt]
-            [open-company-auth.util.ring :as ring]
+            [open-company-auth.ring :as ring]
             [open-company-auth.slack :as slack]))
 
 (defonce ^:private test-response (ring/ring-response "OpenCompany auth server: OK" ring/html-mime-type 200))
