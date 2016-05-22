@@ -61,6 +61,7 @@
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
+        :aws-secrets-bucket "open-company-secrets"
       }
       :plugins [
         [lein-bikeshed "0.2.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed
