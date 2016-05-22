@@ -1,6 +1,5 @@
 (ns open-company-auth.slack
-  (:require [defun :refer (defun)]
-            [clj-slack.oauth :as slack-oauth]
+  (:require [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
             [open-company-auth.config :as config]
@@ -80,22 +79,28 @@
       (catch Throwable e
         [false (.getMessage e)]))))
 
-(defun oauth-callback
-  "
-  Handle the callback from Slack, returning either a tuple of:
+;; (defun oauth-callback
+;;   "Handle the callback from Slack, returning either a tuple of:
+;;   [true, {JWToken-contents}]
+;;     or
+;;   [false, {error-description}]"
 
+;;   ;; error, presumably user denied our app (in which case error value is "access denied")
+;;   ([_params :guard #(get % "error")] [false "denied"])
+
+;;   ;; we got back a code, use it to get user info
+;;   ([params :guard #(get % "code")] (swap-code-for-token (params "code")))
+
+;;   ;; no error and no code either, what's happening with you Slack?
+;;   ([_params] [false "no-code"]))
+
+(defn oauth-callback
+  "Handle the callback from Slack, returning either a tuple of:
   [true, {JWToken-contents}]
-
     or
-
-  [false, {error-description}]
-  "
-
-  ;; error, presumably user denied our app (in which case error value is "access denied")
-  ([_params :guard #(get % "error")] [false "denied"])
-
-  ;; we got back a code, use it to get user info
-  ([params :guard #(get % "code")] (swap-code-for-token (params "code")))
-
-  ;; no error and no code either, what's happening with you Slack?
-  ([_params] [false "no-code"]))
+  [false, {error-description}]"
+  [params]
+  (cond
+    (get params "error") [false "denied"]
+    (get params "code")  (swap-code-for-token (get params "code"))
+    :else                [false "no-code"])
