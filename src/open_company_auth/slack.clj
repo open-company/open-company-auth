@@ -3,6 +3,7 @@
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
             [open-company-auth.config :as config]
+            [open-company-auth.store :as store]
             [open-company-auth.jwt :as jwt]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
@@ -74,7 +75,11 @@
       (test-access-token access-token)
       (if (:ok response)
         (let [user (get-user-info access-token user-id)]
-          [true (jwt/generate (merge user bot org))])
+          [true
+           (if (-> bot :bot :id)
+             (do (store/store! (:org-id org) bot)
+                 (jwt/generate (merge user bot org)))
+             (do (jwt/generate (merge user (store/retrieve (:org-id org)) org))))])
         (throw (ex-info "Invalid slack code" {:response response})))
       (catch Throwable e
         [false (.getMessage e)]))))
