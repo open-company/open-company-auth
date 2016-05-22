@@ -6,10 +6,6 @@
             [clojure.edn :as edn]
             [environ.core :as e]))
 
-(defonce aws-credentials
-  {:access-key (e/env :aws-access-key)
-   :secret-key (e/env :aws-secret-key)})
-
 (defn- get-value [creds bucket key]
   (-> (s3/get-object creds bucket key) :input-stream slurp edn/read-string))
 
@@ -22,8 +18,7 @@
 
 (deftype S3Backend [creds bucket key]
   end/IDurableBackend
-  (-commit!
-    [this value]
+  (-commit! [this value]
     (store-value creds bucket key value))
   (-remove! [this]
     (s3/delete-object creds bucket key)))
@@ -52,13 +47,17 @@
    "store"))
 
 (defn store! [k v]
-  (timbre/info "Storing:" k v)
-  (end/swap! db assoc k v))
+  (if (= v (get @db k))
+    (timbre/infof "Same value for %s already stored: %s" k v)
+    (do (timbre/info "Storing:" k v)
+        (end/swap! db assoc k v))))
 
 (defn retrieve [& ks]
   (get-in @db ks))
 
 (comment
+  (def aws-credentials {:access-key (e/env :aws-access-key)
+                        :secret-key (e/env :aws-secret-key)})
 
   (def x (s3-atom {:hello :world} aws-credentials (e/env :aws-secrets-bucket) "store"))
 
