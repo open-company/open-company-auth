@@ -90,7 +90,6 @@
     or
   [false, {error-description}]"
   [params]
-  (timbre/info "oauth-callback")
   (cond
     (get params "error") [false "denied"]
     (get params "code")  (swap-code-for-token (get params "code"))
