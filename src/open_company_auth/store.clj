@@ -44,7 +44,7 @@
     {}
     {:access-key (e/env :aws-access-key)
      :secret-key (e/env :aws-secret-key)}
-    (e/env :aws-secrets-bucket)
+    "open-company-secrets" #_(e/env :aws-secrets-bucket)
     "store")))
 
 (defn store! [k v]
