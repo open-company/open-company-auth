@@ -1,5 +1,6 @@
 (ns open-company-auth.slack
-  (:require [clj-slack.oauth :as slack-oauth]
+  (:require [taoensso.timbre :as timbre]
+            [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
             [open-company-auth.config :as config]
@@ -104,6 +105,7 @@
     or
   [false, {error-description}]"
   [params]
+  (timbre/info "oauth-callback")
   (cond
     (get params "error") [false "denied"]
     (get params "code")  (swap-code-for-token (get params "code"))

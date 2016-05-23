@@ -39,4 +39,4 @@
    :middleware [] ; (fns [data]) -> ?data, applied left->right
    :timestamp-opts timbre/default-timestamp-opts ; {:pattern _ :locale _ :timezone _}
    :output-fn timbre/default-output-fn ; (fn [data]) -> string
-   :appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-api.log"})}})
+   :appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
