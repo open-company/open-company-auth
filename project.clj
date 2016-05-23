@@ -113,7 +113,7 @@
 
   :eastwood {
     ;; Dinable some linters that are enabled by default
-    :exclude-linters [:wrong-arity]
+    :exclude-linters [:constant-test :wrong-arity]
     ;; Enable some linters that are disabled by default
     :add-linters [:unused-namespaces :unused-private-vars :unused-locals]
 
