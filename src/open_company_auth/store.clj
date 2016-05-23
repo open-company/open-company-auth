@@ -54,6 +54,7 @@
         (end/swap! @db assoc k v))))
 
 (defn retrieve [& ks]
+  (timbre/info "Retrieving secrets" ks)
   (get-in @@db ks))
 
 (comment
