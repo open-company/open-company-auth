@@ -51,8 +51,8 @@
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(timbre/set-config! [:shared-appender-config :spit-filename] "/tmp/oc-auth.log")
-(timbre/set-config! [:appenders :spit :enabled?] true)
+(timbre/merge-config!
+  {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
 
 (def app
   (cond-> #'auth-routes
