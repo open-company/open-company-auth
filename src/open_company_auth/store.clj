@@ -54,8 +54,9 @@
         (end/swap! @db assoc k v))))
 
 (defn retrieve [& ks]
-  (timbre/info "Retrieving secrets" ks)
-  (get-in @@db ks))
+  (if-let [v (get-in @@db ks)]
+    (do (timbre/info "Retrieved secrets for" ks) v)
+    (timbre/info "No secrets found for" ks)))
 
 (comment
   (def aws-credentials {:access-key (e/env :aws-access-key)
