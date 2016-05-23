@@ -51,7 +51,7 @@
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(timbre/merge-config! config/log-config)
+(timbre/set-config! config/log-config)
 
 (def app
   (cond-> #'auth-routes

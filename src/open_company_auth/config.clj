@@ -1,6 +1,7 @@
 (ns open-company-auth.config
   "Namespace for the configuration parameters."
   (:require [environ.core :refer (env)]
+            [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]))
 
 (defn- bool
@@ -34,4 +35,8 @@
 ;; ----- Logging -----
 
 (def log-config
-  {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
+  {:level :info  ; e/o #{:trace :debug :info :warn :error :fatal :report}
+   :middleware [] ; (fns [data]) -> ?data, applied left->right
+   :timestamp-opts timbre/default-timestamp-opts ; {:pattern _ :locale _ :timezone _}
+   :output-fn timbre/default-output-fn ; (fn [data]) -> string
+   :appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-api.log"})}})
