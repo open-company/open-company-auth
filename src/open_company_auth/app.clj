@@ -64,12 +64,12 @@
   "Start a server"
   [port]
   (run-server app {:port port :join? false})
-    (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
-      "OpenCompany Auth Server\n"
-      "Running on port: " port "\n"
-      "Hot-reload: " config/hot-reload "\n"
-      "Sentry: " config/dsn "\n\n"
-      "Ready to serve...\n")))
+  (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
+                "OpenCompany Auth Server\n"
+                "Running on port: " port "\n"
+                "Hot-reload: " config/hot-reload "\n"
+                "Sentry: " config/dsn "\n\n"
+                "Ready to serve...\n")))
 
 (defn -main
   "Main"
