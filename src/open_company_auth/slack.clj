@@ -75,7 +75,6 @@
       (test-access-token access-token)
       (if (:ok response)
         (let [user (get-user-info access-token user-id)]
-          (timbre/info "store/retrieve")
           [true
            (if secrets
              (do (store/store! (:org-id org) secrets)
