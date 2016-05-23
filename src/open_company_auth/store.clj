@@ -39,21 +39,22 @@
    (apply hash-map opts)))
 
 (defonce db
-  (s3-atom
-   {}
-   {:access-key (e/env :aws-access-key)
-    :secret-key (e/env :aws-secret-key)}
-   (e/env :aws-secrets-bucket)
-   "store"))
+  (delay
+   (s3-atom
+    {}
+    {:access-key (e/env :aws-access-key)
+     :secret-key (e/env :aws-secret-key)}
+    (e/env :aws-secrets-bucket)
+    "store")))
 
 (defn store! [k v]
-  (if (= v (get @db k))
+  (if (= v (get @@db k))
     (timbre/infof "Same value for %s already stored: %s" k v)
     (do (timbre/info "Storing:" k v)
-        (end/swap! db assoc k v))))
+        (end/swap! @db assoc k v))))
 
 (defn retrieve [& ks]
-  (get-in @db ks))
+  (get-in @@db ks))
 
 (comment
   (def aws-credentials {:access-key (e/env :aws-access-key)
