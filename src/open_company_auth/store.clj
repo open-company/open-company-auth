@@ -65,16 +65,5 @@
   (def x (s3-atom {:hello :world} aws-credentials (e/env :aws-secrets-bucket) "store"))
 
   (deref x)
-  (time (end/swap! x assoc :my "pleasure"))
 
-  (io/input-stream (.getBytes "abc"))
-
-  )
-;; (put-object :bucket-name "two-peas"
-;;             :key "foo"
-;;             :metadata {:server-side-encryption "AES256"}
-;;             :file upload-file)
-
-;; (copy-object bucket1 "key-1" bucket2 "key-2")
-
-;; (get-object bucket2 "key-2"))
+  (time (end/swap! x assoc :my "pleasure")))
