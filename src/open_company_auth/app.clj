@@ -51,6 +51,8 @@
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
+(timbre/merge-config! config/log-config)
+
 (def app
   (cond-> #'auth-routes
     config/hot-reload wrap-reload
@@ -61,8 +63,6 @@
 (defn start
   "Start a server"
   [port]
-  (timbre/merge-config! config/log-config)
-  (timbre/info "Starting OC-Auth")
   (run-server app {:port port :join? false})
     (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
       "OpenCompany Auth Server\n"
