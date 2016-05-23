@@ -62,6 +62,7 @@
   "Start a server"
   [port]
   (timbre/merge-config! config/log-config)
+  (timbre/info "Starting OC-Auth")
   (run-server (app) {:port port :join? false})
     (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
       "OpenCompany Auth Server\n"
