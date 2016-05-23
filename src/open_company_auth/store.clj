@@ -44,8 +44,10 @@
     {}
     {:access-key (e/env :aws-access-key)
      :secret-key (e/env :aws-secret-key)}
-    "open-company-secrets" #_(e/env :aws-secrets-bucket)
-    "store")))
+    "open-company-secrets"
+    (if-let [e (e/env :env)]
+      (str "store-" e)
+      "store"))))
 
 (defn store! [k v]
   (if (= v (get @@db k))
