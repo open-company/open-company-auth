@@ -84,21 +84,6 @@
       (catch Throwable e
         [false (.getMessage e)]))))
 
-;; (defun oauth-callback
-;;   "Handle the callback from Slack, returning either a tuple of:
-;;   [true, {JWToken-contents}]
-;;     or
-;;   [false, {error-description}]"
-
-;;   ;; error, presumably user denied our app (in which case error value is "access denied")
-;;   ([_params :guard #(get % "error")] [false "denied"])
-
-;;   ;; we got back a code, use it to get user info
-;;   ([params :guard #(get % "code")] (swap-code-for-token (params "code")))
-
-;;   ;; no error and no code either, what's happening with you Slack?
-;;   ([_params] [false "no-code"]))
-
 (defn oauth-callback
   "Handle the callback from Slack, returning either a tuple of:
   [true, {JWToken-contents}]
