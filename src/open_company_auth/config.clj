@@ -1,6 +1,7 @@
 (ns open-company-auth.config
   "Namespace for the configuration parameters."
-  (:require [environ.core :refer (env)]))
+  (:require [environ.core :refer (env)]
+            [taoensso.timbre.appenders.core :as appenders]))
 
 (defn- bool
   "Handle the fact that we may have true/false strings, when we want booleans."
@@ -29,3 +30,8 @@
 ;; ----- JWT -----
 
 (defonce passphrase (env :open-company-auth-passphrase))
+
+;; ----- Logging -----
+
+(def log-config
+  {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})

@@ -1,6 +1,7 @@
 (ns open-company-auth.app
   (:require [defun :refer (defun-)]
             [clojure.java.io :as io]
+            [taoensso.timbre :as timbre]
             [compojure.core :refer :all]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.reload :refer [wrap-reload]]
@@ -60,6 +61,7 @@
 (defn start
   "Start a server"
   [port]
+  (timbre/merge-config! config/log-config)
   (run-server (app) {:port port :join? false})
     (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
       "OpenCompany Auth Server\n"
