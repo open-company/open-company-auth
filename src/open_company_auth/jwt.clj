@@ -8,7 +8,7 @@
   (-> payload
       jwt/jwt
       (jwt/sign :HS256 config/passphrase)
-      to-str))
+      jwt/to-str))
 
 (defn check-token
   "Verify a JSON Web Token"
