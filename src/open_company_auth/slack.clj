@@ -1,6 +1,5 @@
 (ns open-company-auth.slack
-  (:require [taoensso.timbre :as timbre]
-            [clj-slack.oauth :as slack-oauth]
+  (:require [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
             [open-company-auth.config :as config]
