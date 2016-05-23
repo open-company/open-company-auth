@@ -2,6 +2,7 @@
   (:require [defun :refer (defun-)]
             [clojure.java.io :as io]
             [taoensso.timbre :as timbre]
+            [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :refer :all]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.reload :refer [wrap-reload]]
