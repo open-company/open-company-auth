@@ -14,7 +14,10 @@
             [open-company-auth.ring :as ring]
             [open-company-auth.slack :as slack]))
 
-(defonce ^:private test-response (ring/ring-response "OpenCompany auth server: OK" ring/html-mime-type 200))
+(defonce ^:private test-response
+  {:body    "OpenCompany auth server: OK"
+   :headers ring/html-mime-type
+   :status  200})
 
 (def ^:private test-token {:test "test" :bago "bago"})
 
@@ -26,11 +29,11 @@
           :jwt-token jwt-token
           :jwt-verified (jwt/check-token jwt-token)
           :jwt-decoded (jwt/decode jwt-token)}]
-    (ring/json-response response ring/json-mime-type 200)))
+    (ring/json-response response 200)))
 
 (defn- auth-settings-response
   [auth-settings]
-  (ring/json-response auth-settings ring/json-mime-type 200))
+  (ring/json-response auth-settings 200))
 
 (defn- redirect-to-ui [[success? jwt-or-reason]]
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
@@ -40,7 +43,7 @@
 
 (defn- oauth-callback [callback params]
   (if (get params "test")
-    (ring/json-response {:test true :ok true} ring/json-mime-type 200)
+    (ring/json-response {:test true :ok true} 200)
     (redirect-to-ui (callback params))))
 
 (defroutes auth-routes
