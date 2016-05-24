@@ -1,5 +1,6 @@
 (ns open-company-auth.app
   (:require [clojure.java.io :as io]
+            [environ.core :as e]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :refer :all]
@@ -52,8 +53,9 @@
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(timbre/merge-config!
-  {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
+(when (= "production" (e/env :env))
+  (timbre/merge-config!
+   {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}}))
 
 (def app
   (cond-> #'auth-routes
