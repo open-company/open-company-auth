@@ -13,7 +13,6 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha8"] ; Lisp on the JVM http://clojure.org/documentation
-    [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.6.0-beta1"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta1"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.5.1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
