@@ -29,6 +29,11 @@
   it is read and becomes the initial value.
   Otherwise, the initial value is init and the bucket denoted by table-name is updated.")
   [init aws-creds bucket key & opts]
+  {:pre [(:access-key aws-creds) (:access-key aws-creds)
+         (string? bucket) (string? key)]}
+  (prn 'aws-creds aws-creds)
+  (prn 'bucket bucket)
+  (prn 'key key)
   (end/atom*
     (or (and (s3/does-object-exist aws-creds bucket key)
              (get-value aws-creds bucket key))

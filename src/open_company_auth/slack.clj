@@ -1,6 +1,7 @@
 (ns open-company-auth.slack
   (:require [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
+            [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [open-company-auth.config :as config]
@@ -36,6 +37,7 @@
   (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
         user      (:user user-info)
         profile   (:profile user)]
+    (prn 'user-info user-info)
     (if (:ok user-info)
       {:user-id (str prefix (:id user))
        :name (:name user)
@@ -47,14 +49,17 @@
       (throw (ex-info "Error response from Slack API while retrieving user data"
                       {:response user-info :user-id user-id})))))
 
-(defn- test-access-token
-  "Given a Slack access token, see if it's valid by making a test call to Slack.
-   Throw an exception if the token is invalid."
+(defn valid-access-token?
+  "Given a Slack access token, see if it's valid by making a test call to Slack."
   [access-token]
-  (let [response (slack-auth/test (merge slack-connection {:token access-token}))]
-    (when-not (:ok response)
-      (throw (ex-info "Error while testing access token"
-                      {:response response})))))
+  (let [identity  (slack/slack-request (merge slack-connection {:token access-token}) "users.identity")
+        auth-test (slack-auth/test (merge slack-connection {:token access-token}))]
+    (prn 'identity identity)
+    (prn 'auth-test auth-test)
+    (if (or (:ok identity) (:ok auth-test))
+      true
+      (timbre/warn "Error while testing access token"
+                   {:identity identity :auth-test auth-test}))))
 
 (defn- swap-code-for-token
   "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
@@ -80,7 +85,7 @@
            (if secrets
              (do (store/store! (:org-id org) secrets)
                  (jwt/generate (merge user secrets org)))
-             (jwt/generate (merge user (store/retrieve (:org-id org)) org)))])
+             (jwt/generate (merge user (store/retrieve (:org-id org)) org {:user-token access-token})))])
         (throw (ex-info "Invalid slack code" {:response response})))
       (catch Throwable e
         (timbre/error e "Exception while swapping code for token" (.getMessage e))

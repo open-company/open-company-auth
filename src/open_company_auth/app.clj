@@ -11,6 +11,7 @@
             [raven-clj.ring :as sentry-mw]
             [org.httpkit.server :refer (run-server)]
             [open-company-auth.config :as config]
+            [open-company-auth.store :as store]
             [open-company-auth.jwt :as jwt]
             [open-company-auth.ring :as ring]
             [open-company-auth.slack :as slack]))
@@ -47,10 +48,20 @@
     (ring/json-response {:test true :ok true} 200)
     (redirect-to-ui (callback params))))
 
+(defn refresh-token [params]
+  (let [decoded (jwt/decode (get params "jwt"))
+        uid     (-> decoded :claims :user-id)
+        org-id  (-> decoded :claims :org-id)]
+    (timbre/info "Refreshing token" (:claims decoded))
+    (if (slack/valid-access-token? (-> decoded :claims :user-token))
+      (ring/json-response {:jwt (jwt/generate (merge (:claims decoded) (store/retrieve org-id)))} 200)
+      (ring/error-response "could note confirm token" 400))))
+
 (defroutes auth-routes
   (GET "/" [] test-response)
   (GET "/auth-settings" [] (auth-settings-response slack/auth-settings))
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
+  (GET "/refresh-token" {params :params} (refresh-token params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
 (when (= "production" (e/env :env))
