@@ -1,6 +1,5 @@
 (ns open-company-auth.app
-  (:require [defun :refer (defun-)]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :refer :all]
@@ -33,18 +32,16 @@
   [auth-settings]
   (ring/json-response auth-settings ring/json-mime-type 200))
 
-(defun- redirect-to-ui
+(defn- redirect-to-ui [[success? jwt-or-reason]]
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
+  (if success?
+    (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))
+    (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))))
 
-  ([[false reason]] (redirect (str config/ui-server-url "/login?access=" reason)))
-
-  ([[true jwt]] (redirect (str config/ui-server-url "/login?jwt=" jwt))))
-
-(defun- oauth-callback
-  ;; for testing purpose
-  ([_callback _params :guard #(get % "test")] (ring/json-response {:test true :ok true} ring/json-mime-type 200))
-
-  ([callback params] (redirect-to-ui (callback params))))
+(defn- oauth-callback [callback params]
+  (if (get params "test")
+    (ring/json-response {:test true :ok true} ring/json-mime-type 200)
+    (redirect-to-ui (callback params))))
 
 (defroutes auth-routes
   (GET "/" [] test-response)
