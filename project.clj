@@ -27,7 +27,11 @@
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.5.1"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [amazonica "0.3.64"] ;; AWS S3 https://github.com/mcohen01/amazonica
+    ;; AWS S3 https://github.com/mcohen01/amazonica
+    [amazonica "0.3.64" :exclusions [com.amazonaws/aws-java-sdk]]
+    [com.amazonaws/aws-java-sdk-core "1.11.5"]
+    [com.amazonaws/aws-java-sdk-s3 "1.11.5"]
+    [clj-time "0.11.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
   ]
 
   :plugins [
