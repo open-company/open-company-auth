@@ -40,8 +40,8 @@
 (defn- redirect-to-ui [[success? jwt-or-reason]]
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
   (if success?
-    (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))
-    (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))))
+    (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))
+    (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))))
 
 (defn- oauth-callback [callback params]
   (if (get params "test")
