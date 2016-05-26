@@ -52,13 +52,12 @@
 (defn valid-access-token?
   "Given a Slack access token, see if it's valid by making a test call to Slack."
   [access-token]
-  (let [identity  (slack/slack-request (merge slack-connection {:token access-token}) "users.identity")
-        auth-test (slack-auth/test (merge slack-connection {:token access-token}))]
-    (prn 'identity identity)
-    (prn 'auth-test auth-test)
+  (let [conn      (merge slack-connection {:token access-token})
+        identity  (slack/slack-request conn "users.identity")
+        auth-test (slack-auth/test conn)]
     (if (or (:ok identity) (:ok auth-test))
       true
-      (timbre/warn "Error while testing access token"
+      (timbre/warn "Access token could not be validated"
                    {:identity identity :auth-test auth-test}))))
 
 (defn- swap-code-for-token
