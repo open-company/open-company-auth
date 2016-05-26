@@ -37,8 +37,9 @@
   [auth-settings]
   (ring/json-response auth-settings 200))
 
-(defn- redirect-to-ui [[success? jwt-or-reason]]
+(defn- redirect-to-ui
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
+  [[success? jwt-or-reason]]
   (if success?
     (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))
     (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))))
