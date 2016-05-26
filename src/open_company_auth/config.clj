@@ -29,3 +29,10 @@
 ;; ----- JWT -----
 
 (defonce passphrase (env :open-company-auth-passphrase))
+
+;; ----- S3 Store -----
+
+(def bucket "open-company-secrets")
+(def key (if-let [e (env :env)]
+           (str "store-" e)
+           "store"))

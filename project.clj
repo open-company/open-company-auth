@@ -62,6 +62,10 @@
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
+        :open-company-slack-client-id "FIXME"
+        :open-company-slack-client-secret "FIXME"
+        :aws-access-key "FIXME"
+        :aws-secret-key "FIXME"
         :aws-secrets-bucket "open-company-secrets"
       }
       :plugins [

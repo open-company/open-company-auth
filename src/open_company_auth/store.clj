@@ -1,6 +1,7 @@
 (ns open-company-auth.store
   (:require [alandipert.enduro :as end]
             [amazonica.aws.s3 :as s3]
+            [open-company-auth.config :as config]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
@@ -44,10 +45,8 @@
     {}
     {:access-key (e/env :aws-access-key)
      :secret-key (e/env :aws-secret-key)}
-    "open-company-secrets"
-    (if-let [e (e/env :env)]
-      (str "store-" e)
-      "store"))))
+    config/bucket
+    config/key)))
 
 (defn store! [k v]
   (if (= v (get @@db k))

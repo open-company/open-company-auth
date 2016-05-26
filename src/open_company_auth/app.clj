@@ -70,7 +70,8 @@
                 "OpenCompany Auth Server\n"
                 "Running on port: " port "\n"
                 "Hot-reload: " config/hot-reload "\n"
-                "Sentry: " config/dsn "\n\n"
+                "Sentry: " config/dsn "\n"
+                "Storage bucket/key: " config/bucket "/" config/key "\n\n"
                 "Ready to serve...\n")))
 
 (defn -main

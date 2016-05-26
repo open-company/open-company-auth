@@ -58,10 +58,29 @@ cd open-company-auth
 lein deps
 ```
 
+### Secrets
+
+Make sure you update the section in `project.clj` that looks like this to contain your actual secrets:
+
+```clojure
+;; Dev environment and dependencies
+:dev [:qa {
+  :env ^:replace {
+    :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
+    :hot-reload "true" ; reload code when changed on the file system
+    :open-company-slack-client-id "FIXME"
+    :open-company-slack-client-secret "FIXME"
+    :aws-access-key "FIXME"
+    :aws-secret-key "FIXME"
+    :aws-secrets-bucket "open-company-secrets"
+  }
+```
 
 ## Usage
 
 Users of the [OpenCompany](https://opencompany.io) platform should get started by going to [OpenCompany](https://opencompany.io). The following usage is for developers wanting to work on the platform's Auth application software.
+
+**Make sure you've updated `project.clj` as described above.**
 
 To start a production Auth server:
 
