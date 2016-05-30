@@ -45,7 +45,7 @@
       {:access-key config/aws-access-key-id
       :secret-key config/aws-secret-access-key}
       config/secrets-bucket
-      config/secrets-key)))
+      config/secrets-file)))
 
 (defn store! [k v]
   (if (= v (get @@db k))
@@ -66,4 +66,9 @@
 
   (deref x)
 
-  (time (end/swap! x assoc :my "pleasure")))
+  (time (end/swap! x assoc :my "pleasure"))
+
+  (retrieve "slack:XYZ") ; in memory
+  ((get-value aws-credentials config/secrets-bucket config/secrets-file) "slack:XYZ") ; direct to S3
+
+  (end/swap! @db dissoc "slack:XYZ"))

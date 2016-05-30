@@ -88,7 +88,9 @@
         (require '[aprint.core :refer (aprint ap)]
                  '[clojure.stacktrace :refer (print-stack-trace)]
                  '[clj-time.format :as t]
-                 '[clojure.string :as s])
+                 '[clojure.string :as s]
+                 '[open-company-auth.config :as config]
+                 '[open-company-auth.store :as store])
       ]
     }]
 

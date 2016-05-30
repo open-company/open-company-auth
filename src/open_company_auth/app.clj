@@ -71,8 +71,8 @@
                 "Running on port: " port "\n"
                 "Hot-reload: " config/hot-reload "\n"
                 "Sentry: " config/dsn "\n"
-                "AWS S3 Storage bucket: " config/secrets-bucket "\n"
-                "Storage Key: "  config/secrets-key "\n\n"
+                "AWS S3 bucket: " config/secrets-bucket "\n"
+                "AWS S3 file: "  config/secrets-file "\n\n"
                 "Ready to serve...\n")))
 
 (defn -main

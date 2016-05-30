@@ -76,7 +76,7 @@ Make sure you update the section in `project.clj` that looks like this to contai
 ```
 
 You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and
-`AWS_ACCESS_KEY`, etc. Use environmental variables to provide production secrets when running in production.
+`AWS_ACCESS_KEY_ID`, etc. Use environmental variables to provide production secrets when running in production.
 
 ## Usage
 

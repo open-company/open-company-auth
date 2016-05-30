@@ -36,6 +36,6 @@
 (defonce aws-secret-access-key (env :aws-secret-access-key))
 
 (def secrets-bucket "open-company-secrets")
-(def secrets-key (if-let [e (env :env)]
+(def secrets-file (if-let [e (env :env)]
            (str "store-" e)
            "store"))
