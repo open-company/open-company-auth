@@ -1,20 +1,20 @@
 (ns open-company-auth.store
   (:require [alandipert.enduro :as end]
             [amazonica.aws.s3 :as s3]
+            [open-company-auth.config :as config]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
-            [clojure.edn :as edn]
-            [environ.core :as e]))
+            [clojure.edn :as edn]))
 
 (defn- get-value [creds bucket key]
   (-> (s3/get-object creds bucket key) :input-stream slurp edn/read-string))
 
 (defn- store-value [creds bucket key value]
   (time
-   (let [str-val (pr-str value)]
-     (s3/put-object creds bucket key
-                    (io/input-stream (.getBytes str-val))
-                    {:content-length (count str-val)}))))
+    (let [str-val (pr-str value)]
+      (s3/put-object creds bucket key
+                     (io/input-stream (.getBytes str-val))
+                     {:content-length (count str-val)}))))
 
 (deftype S3Backend [creds bucket key]
   end/IDurableBackend
@@ -30,42 +30,45 @@
   Otherwise, the initial value is init and the bucket denoted by table-name is updated.")
   [init aws-creds bucket key & opts]
   (end/atom*
-   (or (and (s3/does-object-exist aws-creds bucket key)
-            (get-value aws-creds bucket key))
+    (or (and (s3/does-object-exist aws-creds bucket key)
+             (get-value aws-creds bucket key))
        (do
          (store-value aws-creds bucket key init)
          init))
-   (S3Backend. aws-creds bucket key)
-   (apply hash-map opts)))
+    (S3Backend. aws-creds bucket key)
+    (apply hash-map opts)))
 
 (defonce db
   (delay
-   (s3-atom
-    {}
-    {:access-key (e/env :aws-access-key)
-     :secret-key (e/env :aws-secret-key)}
-    "open-company-secrets"
-    (if-let [e (e/env :env)]
-      (str "store-" e)
-      "store"))))
+    (s3-atom
+      {}
+      {:access-key config/aws-access-key-id
+      :secret-key config/aws-secret-access-key}
+      config/secrets-bucket
+      config/secrets-file)))
 
 (defn store! [k v]
   (if (= v (get @@db k))
     (timbre/infof "Same value for %s already stored: %s" k v)
     (do (timbre/info "Storing:" k v)
-        (end/swap! @db assoc k v))))
+      (end/swap! @db assoc k v))))
 
 (defn retrieve [& ks]
   (if-let [v (get-in @@db ks)]
     (do (timbre/info "Retrieved secrets for" ks) v)
-    (timbre/info "No secrets found for" ks)))
+      (timbre/info "No secrets found for" ks)))
 
 (comment
-  (def aws-credentials {:access-key (e/env :aws-access-key)
-                        :secret-key (e/env :aws-secret-key)})
+  (def aws-credentials {:access-key config/aws-access-key-id
+                        :secret-key config/aws-secret-access-key})
 
-  (def x (s3-atom {:hello :world} aws-credentials (e/env :aws-secrets-bucket) "store"))
+  (def x (s3-atom {:hello :world} aws-credentials config/secrets-bucket "store"))
 
   (deref x)
 
-  (time (end/swap! x assoc :my "pleasure")))
+  (time (end/swap! x assoc :my "pleasure"))
+
+  (retrieve "slack:XYZ") ; in memory
+  ((get-value aws-credentials config/secrets-bucket config/secrets-file) "slack:XYZ") ; direct to S3
+
+  (end/swap! @db dissoc "slack:XYZ"))

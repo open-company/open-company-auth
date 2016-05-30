@@ -62,6 +62,10 @@
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
+        :open-company-slack-client-id "FIXME"
+        :open-company-slack-client-secret "FIXME"
+        :aws-access-key-id "FIXME"
+        :aws-secret-access-key "FIXME"
         :aws-secrets-bucket "open-company-secrets"
       }
       :plugins [
@@ -84,7 +88,9 @@
         (require '[aprint.core :refer (aprint ap)]
                  '[clojure.stacktrace :refer (print-stack-trace)]
                  '[clj-time.format :as t]
-                 '[clojure.string :as s])
+                 '[clojure.string :as s]
+                 '[open-company-auth.config :as config]
+                 '[open-company-auth.store :as store])
       ]
     }]
 
@@ -112,7 +118,7 @@
   ;; ----- Code check configuration -----
 
   :eastwood {
-    ;; Dinable some linters that are enabled by default
+    ;; Disable some linters that are enabled by default
     :exclude-linters [:constant-test :wrong-arity]
     ;; Enable some linters that are disabled by default
     :add-linters [:unused-namespaces :unused-private-vars :unused-locals]
