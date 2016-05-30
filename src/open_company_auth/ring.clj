@@ -1,4 +1,4 @@
-(ns open-company-auth.lib.ring
+(ns open-company-auth.ring
   (:require [cheshire.core :as json]))
 
 (def json-mime-type {"Content-Type" "application/json"})
