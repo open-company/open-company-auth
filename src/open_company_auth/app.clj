@@ -1,15 +1,18 @@
 (ns open-company-auth.app
   (:require [defun :refer (defun-)]
+            [clojure.java.io :as io]
+            [taoensso.timbre :as timbre]
+            [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :refer :all]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.reload :refer [wrap-reload]]
             [ring.middleware.cors :refer (wrap-cors)]
             [ring.util.response :refer [redirect]]
-            [raven-clj.ring :refer (wrap-sentry)]
+            [raven-clj.ring :as sentry-mw]
             [org.httpkit.server :refer (run-server)]
             [open-company-auth.config :as config]
             [open-company-auth.jwt :as jwt]
-            [open-company-auth.lib.ring :as ring]
+            [open-company-auth.ring :as ring]
             [open-company-auth.slack :as slack]))
 
 (defonce ^:private test-response (ring/ring-response "OpenCompany auth server: OK" ring/html-mime-type 200))
@@ -49,35 +52,28 @@
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(defonce ^:private hot-reload-routes
-  ;; Reload changed files without server restart
-  (if config/hot-reload
-    (wrap-reload #'auth-routes)
-    auth-routes))
+(timbre/merge-config!
+  {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
 
-(defonce ^:private cors-routes
-  ;; Use CORS middleware to support in-browser JavaScript requests.
-  (wrap-cors hot-reload-routes #".*"))
-
-(defonce ^:private sentry-routes
-  ;; Use sentry middleware to report runtime errors if we have a raven DSN.
-  (if config/dsn
-    (wrap-sentry cors-routes config/dsn)
-    cors-routes))
-
-(defonce app
-  (wrap-params sentry-routes))
+(def app
+  (cond-> #'auth-routes
+    config/hot-reload wrap-reload
+    true              wrap-params
+    true              (wrap-cors #".*")
+    config/dsn        (sentry-mw/wrap-sentry config/dsn)))
 
 (defn start
   "Start a server"
   [port]
   (run-server app {:port port :join? false})
-    (println (str "\n" (slurp (clojure.java.io/resource "./open_company_auth/assets/ascii_art.txt")) "\n"
-      "OpenCompany Auth Server\n"
-      "Running on port: " port "\n"
-      "Hot-reload: " config/hot-reload "\n"
-      "Sentry: " config/dsn "\n\n"
-      "Ready to serve...\n")))
+  (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
+                "OpenCompany Auth Server\n"
+                "Running on port: " port "\n"
+                "Hot-reload: " config/hot-reload "\n"
+                "Sentry: " config/dsn "\n"
+                "AWS S3 bucket: " config/secrets-bucket "\n"
+                "AWS S3 file: "  config/secrets-file "\n\n"
+                "Ready to serve...\n")))
 
 (defn -main
   "Main"

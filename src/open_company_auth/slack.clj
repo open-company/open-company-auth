@@ -1,9 +1,9 @@
 (ns open-company-auth.slack
-  (:require [defun :refer (defun)]
-            [clj-slack.oauth :as slack-oauth]
+  (:require [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
             [open-company-auth.config :as config]
+            [open-company-auth.store :as store]
             [open-company-auth.jwt :as jwt]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
@@ -55,10 +55,8 @@
                       {:response response})))))
 
 (defn- swap-code-for-token
-  "
-  Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
-  If the swap works, then test the access token.
-  "
+  "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
+  If the swap works, then test the access token."
   [slack-code]
   (let [response     (slack-oauth/access slack-connection
                                         config/slack-client-id
@@ -66,8 +64,9 @@
                                         slack-code
                                         (str config/auth-server-url (:redirectURI slack)))
         user-id      (:user_id response)
-        bot          {:bot {:id    (-> response :bot :bot_user_id)
-                            :token (-> response :bot :bot_access_token)}}
+        secrets      (when (-> response :bot :bot_user_id)
+                       {:bot {:id    (-> response :bot :bot_user_id)
+                              :token (-> response :bot :bot_access_token)}})
         org          {:org-id   (str prefix (:team_id response))
                       :org-name (:team response)}
         access-token (:access_token response)]
@@ -75,27 +74,22 @@
       (test-access-token access-token)
       (if (:ok response)
         (let [user (get-user-info access-token user-id)]
-          [true (jwt/generate (merge user bot org))])
+          [true
+           (if secrets
+             (do (store/store! (:org-id org) secrets)
+                 (jwt/generate (merge user secrets org)))
+             (jwt/generate (merge user (store/retrieve (:org-id org)) org)))])
         (throw (ex-info "Invalid slack code" {:response response})))
       (catch Throwable e
         [false (.getMessage e)]))))
 
-(defun oauth-callback
-  "
-  Handle the callback from Slack, returning either a tuple of:
-
+(defn oauth-callback
+  "Handle the callback from Slack, returning either a tuple of:
   [true, {JWToken-contents}]
-
     or
-
-  [false, {error-description}]
-  "
-
-  ;; error, presumably user denied our app (in which case error value is "access denied")
-  ([_params :guard #(get % "error")] [false "denied"])
-
-  ;; we got back a code, use it to get user info
-  ([params :guard #(get % "code")] (swap-code-for-token (params "code")))
-
-  ;; no error and no code either, what's happening with you Slack?
-  ([_params] [false "no-code"]))
+  [false, {error-description}]"
+  [params]
+  (cond
+    (get params "error") [false "denied"]
+    (get params "code")  (swap-code-for-token (get params "code"))
+    :else                [false "no-code"]))

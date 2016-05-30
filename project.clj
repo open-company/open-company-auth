@@ -26,6 +26,12 @@
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
+    [com.taoensso/timbre "4.3.1"] ; logging https://github.com/ptaoussanis/timbre
+    [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
+    ;; AWS S3 https://github.com/mcohen01/amazonica
+    [amazonica "0.3.57" :exclusions [com.amazonaws/aws-java-sdk]]
+    [com.amazonaws/aws-java-sdk-core "1.10.77"]
+    [com.amazonaws/aws-java-sdk-s3 "1.10.77"]
   ]
 
   :plugins [
@@ -56,6 +62,11 @@
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
+        :open-company-slack-client-id "FIXME"
+        :open-company-slack-client-secret "FIXME"
+        :aws-access-key-id "FIXME"
+        :aws-secret-access-key "FIXME"
+        :aws-secrets-bucket "open-company-secrets"
       }
       :plugins [
         [lein-bikeshed "0.2.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed
@@ -77,7 +88,9 @@
         (require '[aprint.core :refer (aprint ap)]
                  '[clojure.stacktrace :refer (print-stack-trace)]
                  '[clj-time.format :as t]
-                 '[clojure.string :as s])
+                 '[clojure.string :as s]
+                 '[open-company-auth.config :as config]
+                 '[open-company-auth.store :as store])
       ]
     }]
 
@@ -105,8 +118,8 @@
   ;; ----- Code check configuration -----
 
   :eastwood {
-    ;; Dinable some linters that are enabled by default
-    :exclude-linters [:wrong-arity]
+    ;; Disable some linters that are enabled by default
+    :exclude-linters [:constant-test :wrong-arity]
     ;; Enable some linters that are disabled by default
     :add-linters [:unused-namespaces :unused-private-vars :unused-locals]
 

@@ -58,10 +58,31 @@ cd open-company-auth
 lein deps
 ```
 
+### Required Secrets
+
+Make sure you update the section in `project.clj` that looks like this to contain your actual secrets:
+
+```clojure
+;; Dev environment and dependencies
+:dev [:qa {
+  :env ^:replace {
+    :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
+    :open-company-slack-client-id "FIXME"
+    :open-company-slack-client-secret "FIXME"
+    :aws-access-key-id "FIXME"
+    :aws-secret-access-key "FIXME"
+    :aws-secrets-bucket "open-company-secrets"
+  }
+```
+
+You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and
+`AWS_ACCESS_KEY_ID`, etc. Use environmental variables to provide production secrets when running in production.
 
 ## Usage
 
 Users of the [OpenCompany](https://opencompany.io) platform should get started by going to [OpenCompany](https://opencompany.io). The following usage is for developers wanting to work on the platform's Auth application software.
+
+**Make sure you've updated `project.clj` as described above.**
 
 To start a production Auth server:
 
