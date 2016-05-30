@@ -30,9 +30,12 @@
 
 (defonce passphrase (env :open-company-auth-passphrase))
 
-;; ----- S3 Store -----
+;; ----- AWS S3 Store -----
 
-(def bucket "open-company-secrets")
-(def key (if-let [e (env :env)]
+(defonce aws-access-key-id (env :aws-access-key-id))
+(defonce aws-secret-access-key (env :aws-secret-access-key))
+
+(def secrets-bucket "open-company-secrets")
+(def secrets-key (if-let [e (env :env)]
            (str "store-" e)
            "store"))

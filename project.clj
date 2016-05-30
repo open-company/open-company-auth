@@ -64,8 +64,8 @@
         :hot-reload "true" ; reload code when changed on the file system
         :open-company-slack-client-id "FIXME"
         :open-company-slack-client-secret "FIXME"
-        :aws-access-key "FIXME"
-        :aws-secret-key "FIXME"
+        :aws-access-key-id "FIXME"
+        :aws-secret-access-key "FIXME"
         :aws-secrets-bucket "open-company-secrets"
       }
       :plugins [

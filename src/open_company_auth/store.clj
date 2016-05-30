@@ -4,8 +4,7 @@
             [open-company-auth.config :as config]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
-            [clojure.edn :as edn]
-            [environ.core :as e]))
+            [clojure.edn :as edn]))
 
 (defn- get-value [creds bucket key]
   (-> (s3/get-object creds bucket key) :input-stream slurp edn/read-string))
@@ -43,10 +42,10 @@
   (delay
    (s3-atom
     {}
-    {:access-key (e/env :aws-access-key)
-     :secret-key (e/env :aws-secret-key)}
-    config/bucket
-    config/key)))
+    {:access-key config/aws-access-key-id
+     :secret-key config/aws-secret-access-key}
+    config/secrets-bucket
+    config/secrets-key)))
 
 (defn store! [k v]
   (if (= v (get @@db k))
@@ -60,10 +59,10 @@
     (timbre/info "No secrets found for" ks)))
 
 (comment
-  (def aws-credentials {:access-key (e/env :aws-access-key)
-                        :secret-key (e/env :aws-secret-key)})
+  (def aws-credentials {:access-key config/aws-access-key-id
+                        :secret-key config/aws-secret-access-key})
 
-  (def x (s3-atom {:hello :world} aws-credentials (e/env :aws-secrets-bucket) "store"))
+  (def x (s3-atom {:hello :world} aws-credentials config/secrets-bucket "store"))
 
   (deref x)
 

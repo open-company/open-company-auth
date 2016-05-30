@@ -58,7 +58,7 @@ cd open-company-auth
 lein deps
 ```
 
-### Secrets
+### Required Secrets
 
 Make sure you update the section in `project.clj` that looks like this to contain your actual secrets:
 
@@ -67,14 +67,16 @@ Make sure you update the section in `project.clj` that looks like this to contai
 :dev [:qa {
   :env ^:replace {
     :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
-    :hot-reload "true" ; reload code when changed on the file system
     :open-company-slack-client-id "FIXME"
     :open-company-slack-client-secret "FIXME"
-    :aws-access-key "FIXME"
-    :aws-secret-key "FIXME"
+    :aws-access-key-id "FIXME"
+    :aws-secret-access-key "FIXME"
     :aws-secrets-bucket "open-company-secrets"
   }
 ```
+
+You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and
+`AWS_ACCESS_KEY`, etc. Use environmental variables to provide production secrets when running in production.
 
 ## Usage
 
