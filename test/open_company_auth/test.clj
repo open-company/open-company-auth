@@ -13,9 +13,8 @@
           body (json/parse-string (:body resp))]
       (:status resp) => 200
       (test-utils/response-mime-type resp) => "application/json"
-      (contains? body "full-url") => true
-      (> (count (body "full-url")) 0) => true
-      (contains? body "scope") => true))
+      (contains? body "auth-url") => true
+      (> (count (body "auth-url")) 0) => true))
   (fact "hit /slack-oauth"
     (let [resp (test-utils/api-request :get "/slack-oauth?code=test&test=true" {})
           body (json/parse-string (:body resp))]

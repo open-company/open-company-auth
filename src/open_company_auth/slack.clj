@@ -9,24 +9,25 @@
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
 
-(def ^:private slack {
-  :redirectURI  "/slack-oauth"
-  :state        "open-company-auth"
-  :scope        "users:read"})
+(def ^:private slack
+  {:redirectURI  "/slack-oauth"
+   :state        "open-company-auth"})
 
-(def ^:private slack-url (str
-  "https://slack.com/oauth/authorize?client_id="
-  config/slack-client-id
-  "&redirect_uri="
-  config/auth-server-url (:redirectURI slack)
-  "&state="
-  (:state slack)
-  "&scope="
-  (:scope slack)))
+(defn- slack-auth-url [scope]
+  (str "https://slack.com/oauth/authorize?client_id="
+       config/slack-client-id
+       "&redirect_uri="
+       config/auth-server-url (:redirectURI slack)
+       "&state="
+       (:state slack)
+       "&scope="
+       scope))
 
 (def ^:private prefix "slack:")
 
-(def auth-settings (merge {:full-url slack-url} slack))
+(def auth-settings (merge {:auth-url            (slack-auth-url "users:read")
+                           :extended-scopes-url (slack-auth-url "bot,users:read")}
+                          slack))
 
 (defn- get-user-info
   "Given a Slack access token, retrieve the user info from Slack for the specified user id."
