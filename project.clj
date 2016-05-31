@@ -14,8 +14,8 @@
   :dependencies [
     [org.clojure/clojure "1.8.0"] ; Lisp on the JVM http://clojure.org/documentation
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
-    [ring/ring-devel "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.4.0"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-devel "1.5.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.5.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.5.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0-alpha1"] ; Web server http://http-kit.org/
@@ -26,12 +26,12 @@
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.3.1"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.4.0-alpha1"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     ;; AWS S3 https://github.com/mcohen01/amazonica
-    [amazonica "0.3.57" :exclusions [com.amazonaws/aws-java-sdk]]
-    [com.amazonaws/aws-java-sdk-core "1.10.77"]
-    [com.amazonaws/aws-java-sdk-s3 "1.10.77"]
+    [amazonica "0.3.58" :exclusions [com.amazonaws/aws-java-sdk]]
+    [com.amazonaws/aws-java-sdk-core "1.11.5"]
+    [com.amazonaws/aws-java-sdk-s3 "1.11.5"]
   ]
 
   :plugins [
@@ -62,11 +62,11 @@
       :env ^:replace {
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
-        :open-company-slack-client-id "FIXME"
-        :open-company-slack-client-secret "FIXME"
-        :aws-access-key-id "FIXME"
-        :aws-secret-access-key "FIXME"
-        :aws-secrets-bucket "open-company-secrets"
+        :open-company-slack-client-id "CHANGE-ME"
+        :open-company-slack-client-secret "CHANGE-ME"
+        :aws-access-key-id "CHANGE-ME"
+        :aws-secret-access-key "CHANGE-ME"
+        :aws-secrets-bucket "CHANGE-ME"
       }
       :plugins [
         [lein-bikeshed "0.3.0"] ; Check for code smells https://github.com/dakrone/lein-bikeshed
