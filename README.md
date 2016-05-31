@@ -67,11 +67,11 @@ Make sure you update the section in `project.clj` that looks like this to contai
 :dev [:qa {
   :env ^:replace {
     :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
-    :open-company-slack-client-id "FIXME"
-    :open-company-slack-client-secret "FIXME"
-    :aws-access-key-id "FIXME"
-    :aws-secret-access-key "FIXME"
-    :aws-secrets-bucket "open-company-secrets"
+    :open-company-slack-client-id "CHANGE-ME"
+    :open-company-slack-client-secret "CHANGE-ME"
+    :aws-access-key-id "CHANGE-ME"
+    :aws-secret-access-key "CHANGE-ME"
+    :aws-secrets-bucket "CHANGE-ME"
   }
 ```
 
