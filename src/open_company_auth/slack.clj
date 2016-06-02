@@ -69,7 +69,7 @@
                        {:bot {:id    (-> response :bot :bot_user_id)
                               :token (-> response :bot :bot_access_token)}})
         org          {:org-id   (str prefix (:team_id response))
-                      :org-name (:team response)}
+                      :org-name (:team_name response)}
         access-token (:access_token response)]
     (try
       (test-access-token access-token)
