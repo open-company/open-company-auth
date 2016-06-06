@@ -12,7 +12,7 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.8.0"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha4"] ; Lisp on the JVM http://clojure.org/documentation
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.5.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.5.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
@@ -21,7 +21,7 @@
     [http-kit "2.2.0-alpha1"] ; Web server http://http-kit.org/
     [cheshire "5.6.1"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
-    [raven-clj "1.3.2"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
+    [raven-clj "1.4.2"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.0.3"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
@@ -112,7 +112,7 @@
     "repl" ["with-profile" "+repl-config" "repl"]
     "spell!" ["spell" "-n"] ; check spelling in docs and docstrings
     "bikeshed!" ["bikeshed" "-v" "-m" "120"] ; code check with max line length warning of 120 characters
-    "ancient" ["with-profile" "dev" "do" "ancient" ":allow-qualified," "ancient" ":plugins" ":allow-qualified"] ; check for out of date dependencies
+    "ancient" ["ancient" ":all" ":allow-qualified"] ; check for out of date dependencies
   }
   
   ;; ----- Code check configuration -----
