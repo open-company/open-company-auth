@@ -30,8 +30,8 @@
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     ;; AWS S3 https://github.com/mcohen01/amazonica
     [amazonica "0.3.58" :exclusions [com.amazonaws/aws-java-sdk]]
-    [com.amazonaws/aws-java-sdk-core "1.11.5"]
-    [com.amazonaws/aws-java-sdk-s3 "1.11.5"]
+    [com.amazonaws/aws-java-sdk-core "1.11.6"]
+    [com.amazonaws/aws-java-sdk-s3 "1.11.6"]
   ]
 
   :plugins [
