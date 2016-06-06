@@ -49,7 +49,6 @@
                                                           config/secrets-bucket
                                                           config/secrets-file)))
 
-
 (defonce db
   (delay
     (s3-atom
