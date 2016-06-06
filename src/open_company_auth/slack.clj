@@ -74,7 +74,6 @@
         access-token (:access_token response)]
     (try
       (test-access-token access-token)
-      (store/test-amazonica)
       (if (:ok response)
         (let [user (get-user-info access-token user-id)]
           [true

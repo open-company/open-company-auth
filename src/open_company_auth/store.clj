@@ -38,17 +38,6 @@
     (S3Backend. aws-creds bucket key)
     (apply hash-map opts)))
 
-(defn test-amazonica []
-  (timbre/info "Getting value from S3")
-  (timbre/info "Got Value" (get-value {:access-key config/aws-access-key-id
-                                       :secret-key config/aws-secret-access-key}
-                                      config/secrets-bucket
-                                      config/secrets-file))
-  (timbre/info "Does object exist?" (s3/does-object-exist {:access-key config/aws-access-key-id
-                                                           :secret-key config/aws-secret-access-key}
-                                                          config/secrets-bucket
-                                                          config/secrets-file)))
-
 (defonce db
   (delay
     (s3-atom
