@@ -28,10 +28,7 @@
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.4.0-alpha1"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    ;; AWS S3 https://github.com/mcohen01/amazonica
-    [amazonica "0.3.58" :exclusions [com.amazonaws/aws-java-sdk]]
-    [com.amazonaws/aws-java-sdk-core "1.11.6"]
-    [com.amazonaws/aws-java-sdk-s3 "1.11.6"]
+    [amazonica "0.3.58"] ;; AWS S3 https://github.com/mcohen01/amazonica
   ]
 
   :plugins [
