@@ -2,6 +2,7 @@
   (:require [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.users :as slack-users]
+            [taoensso.timbre :as timbre]
             [open-company-auth.config :as config]
             [open-company-auth.store :as store]
             [open-company-auth.jwt :as jwt]))
@@ -82,6 +83,7 @@
              (jwt/generate (merge user (store/retrieve (:org-id org)) org)))])
         (throw (ex-info "Invalid slack code" {:response response})))
       (catch Throwable e
+        (timbre/error e "Exception while swapping code for token" (.getMessage e))
         [false (.getMessage e)]))))
 
 (defn oauth-callback

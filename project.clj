@@ -12,13 +12,13 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha4"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha5"] ; Lisp on the JVM http://clojure.org/documentation
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
-    [ring/ring-devel "1.5.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.5.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-devel "1.5.0"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.5.0"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.5.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
-    [http-kit "2.2.0-alpha1"] ; Web server http://http-kit.org/
+    [http-kit "2.2.0-alpha2"] ; Web server http://http-kit.org/
     [cheshire "5.6.1"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.4.2"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
@@ -28,10 +28,7 @@
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.4.0-alpha1"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    ;; AWS S3 https://github.com/mcohen01/amazonica
-    [amazonica "0.3.58" :exclusions [com.amazonaws/aws-java-sdk]]
-    [com.amazonaws/aws-java-sdk-core "1.11.6"]
-    [com.amazonaws/aws-java-sdk-s3 "1.11.6"]
+    [amazonica "0.3.59"] ;; AWS S3 https://github.com/mcohen01/amazonica
   ]
 
   :plugins [
