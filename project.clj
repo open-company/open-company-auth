@@ -1,6 +1,6 @@
 (defproject open-company-auth "0.0.1-SNAPSHOT"
   :description "Handles auth calls and callbacks"
-  :url "https://open-company.io/"
+  :url "https://opencompany.com/"
   :license {
     :name "Mozilla Public License v2.0"
     :url "http://www.mozilla.org/MPL/2.0/"
