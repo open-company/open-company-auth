@@ -40,13 +40,17 @@ Most of the dependencies are internal, meaning [Leiningen](https://github.com/te
 * [Java 8](http://www.oracle.com/technetwork/java/javase/downloads/index.html) - a Java 8 JRE is needed to run Clojure
 * [Leiningen](https://github.com/technomancy/leiningen) - Clojure's build and dependency management tool
 
-Chances are your system already has Java 8 installed. You can verify this with:
+#### Java
+
+Chances are your system already has Java 8+ installed. You can verify this with:
 
 ```console
 java -version
 ```
 
-If you do not have Java 8 [download it](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and follow the installation instructions.
+If you do not have Java 8+ [download it](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and follow the installation instructions.
+
+#### Leiningen
 
 Leiningen is easy to install:
 
@@ -58,14 +62,20 @@ Leiningen is easy to install:
 Then let Leiningen install the rest of the dependencies:
 
 ```console
-git clone https://github.com/open-company/open-company-auth.git
-cd open-company-auth
+git clone https://github.com/open-company/open-company-api.git
+cd open-company-api
 lein deps
 ```
 
-### Required Secrets
+#### Required Secrets
 
-Make sure you update the section in `project.clj` that looks like this to contain your actual secrets:
+A secret is shared between the [OpenCompany API](https://github.com/open-company/open-company-api) and the Auth service for creating and validating [JSON Web Tokens](https://jwt.io/).
+
+A [Slack App](https://api.slack.com/apps) needs to be created for OAuth authentication. For local development, create a Slack app with a Redirect URI of `http://localhost:3003/slack-oauth` and get the client ID and secret from the Slack app you create.
+
+An [AWS S3](https://aws.amazon.com/s3/) bucket is used to cache bot tokens. Setup an S3 bucket and key/secret access to the bucket using the AWS Web Console or API.
+
+Make sure you update the section in `project.clj` that looks like this to contain your actual JWT, Slack, and AWS S3 secrets:
 
 ```clojure
 ;; Dev environment and dependencies
