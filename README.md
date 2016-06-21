@@ -5,7 +5,7 @@
 [![Dependency Status](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e/badge.svg?style=flat)](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e)
 [![Roadmap on Trello](http://img.shields.io/badge/roadmap-trello-blue.svg?style=flat)](https://trello.com/b/3naVWHgZ/open-company-development)
 
-## Overview
+## Background
 
 > I've come to learn there is a virtuous cycle to transparency and a very vicious cycle of obfuscation.
 
@@ -21,14 +21,19 @@ To maintain transparency, OpenCompany information is always accessible and easy 
 
 Transparency expectations are changing. Startups need to change as well if they are going to attract and retain savvy employees and investors. Just as open source changed the way we build software, transparency changes how we build successful startups with information that is open, interactive, and always accessible. The OpenCompany platform turns transparency into a competitive advantage.
 
-Like the open companies we promote and support, the [OpenCompany](https://opencompany.com/) platform is completely transparent. The company supporting this effort, OpenCompany, Inc., is an open company. The [platform](https://github.com/open-company/open-company-web) is open source software, and open company data is [open data](https://en.wikipedia.org/wiki/Open_data) accessible through the [platform API](https://github.com/open-company/open-company-api).
+Like the open companies we promote and support, the [OpenCompany](https://opencompany.com/) platform is completely transparent. The company supporting this effort, OpenCompany, LLC, is an open company. The [platform](https://github.com/open-company/open-company-web) is open source software, and open company data is [open data](https://en.wikipedia.org/wiki/Open_data) accessible through the [platform API](https://github.com/open-company/open-company-api).
 
 To get started, head to: [OpenCompany](https://opencompany.com/)
 
 
+## Overview
+
+The OpenCompany Authentication Service handles authenticating users against Slack, and creates a [JSON Web Token](https://jwt.io/) for them, which can then be used with the other OpenCompany services to assert the users identity.
+
+
 ## Local Setup
 
-Users of the [OpenCompany](https://opencompany.com/) platform should get started by going to [OpenCompany](https://opencompany.com/). The following local setup is for developers wanting to work on the platform's Auth application software.
+Users of the [OpenCompany](https://opencompany.com/) platform should get started by going to [OpenCompany](https://opencompany.com/). The following local setup is for developers wanting to work on the platform's Authentication software.
 
 Most of the dependencies are internal, meaning [Leiningen](https://github.com/technomancy/leiningen) will handle getting them for you. There are a few exceptions:
 
@@ -110,14 +115,15 @@ To create a production build run:
 lein build
 ```
 
-## Sample JWToken
+### Sample JWToken
 
-To create a sample JWToken for use in development without going through a full auth cycle, create an identity EDN file
+To create a sample [JSON Web Token](https://jwt.io/) for use in development without going through a full auth cycle, create an identity EDN file
 formated like the ones in ```/opt/identities``` or use one of the identity EDN files provided, and run the utility:
 
 ```console
 lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn
 ```
+
 
 ## Testing
 
@@ -131,6 +137,7 @@ To run the tests locally:
 lein test!
 ```
 
+
 ## Participation
 
 Please note that this project is released with a [Contributor Code of Conduct](https://github.com/open-company/open-company-auth/blob/mainline/CODE-OF-CONDUCT.md). By participating in this project you agree to abide by its terms.
@@ -140,4 +147,4 @@ Please note that this project is released with a [Contributor Code of Conduct](h
 
 Distributed under the [Mozilla Public License v2.0](http://www.mozilla.org/MPL/2.0/).
 
-Copyright © 2015-2016 OpenCompany, Inc.
+Copyright © 2015-2016 OpenCompany, LLC
