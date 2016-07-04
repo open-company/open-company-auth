@@ -37,7 +37,6 @@
   (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
         user      (:user user-info)
         profile   (:profile user)]
-    (prn 'user-info user-info)
     (if (:ok user-info)
       {:user-id (str prefix (:id user))
        :name (:name user)
