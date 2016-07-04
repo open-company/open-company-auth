@@ -75,19 +75,16 @@
         org          {:org-id   (str prefix (:team_id response))
                       :org-name (:team_name response)}
         access-token (:access_token response)]
-    (try
-      (test-access-token access-token)
-      (if (:ok response)
-        (let [user (get-user-info access-token user-id)]
-          [true
-           (if secrets
-             (do (store/store! (:org-id org) secrets)
-                 (jwt/generate (merge user secrets org)))
-             (jwt/generate (merge user (store/retrieve (:org-id org)) org {:user-token access-token})))])
-        (throw (ex-info "Invalid slack code" {:response response})))
-      (catch Throwable e
-        (timbre/error e "Exception while swapping code for token" (.getMessage e))
-        [false (.getMessage e)]))))
+    (if (and (:ok response) (valid-access-token? access-token))
+      (let [user (get-user-info access-token user-id)]
+        [true
+         (if secrets
+           (do (store/store! (:org-id org) secrets)
+               (jwt/generate (merge user secrets org {:user-token access-token})))
+           (jwt/generate (merge user (store/retrieve (:org-id org)) org {:user-token access-token})))])
+      (do
+        (timbre/warn "Could not swap code for token" {:oauth-response response})
+        [false "Could not swap code for token"]))))
 
 (defn oauth-callback
   "Handle the callback from Slack, returning either a tuple of:
