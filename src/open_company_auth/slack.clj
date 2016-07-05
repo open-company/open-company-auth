@@ -27,7 +27,7 @@
 
 (def ^:private prefix "slack:")
 
-(def auth-settings (merge {:auth-url            (slack-auth-url "users:read")
+(def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic")
                            :extended-scopes-url (slack-auth-url "bot,users:read")}
                           slack))
 
