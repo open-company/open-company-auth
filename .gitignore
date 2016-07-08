@@ -13,3 +13,6 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
+
+.ruby-gemset
+.ruby-version
