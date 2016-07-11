@@ -52,9 +52,10 @@
 (defn refresh-token [req]
   (let [decoded (jwt/decode (jwt/read-token (:headers req)))
         uid     (-> decoded :claims :user-id)
-        org-id  (-> decoded :claims :org-id)]
+        org-id  (-> decoded :claims :org-id)
+        user-tkn (-> decoded :claims :user-token)]
     (timbre/info "Refreshing token" uid)
-    (if (slack/valid-access-token? (-> decoded :claims :user-token))
+    (if (and user-tkn (slack/valid-access-token? user-tkn))
       (ring/json-response {:jwt (jwt/generate (merge (:claims decoded) (store/retrieve org-id)))} 200)
       (ring/error-response "could note confirm token" 400))))
 
