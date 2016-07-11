@@ -13,8 +13,8 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha9"] ; Lisp on the JVM http://clojure.org/documentation
-    [ring/ring-devel "1.6.0-beta2"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.6.0-beta2"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-devel "1.6.0-beta3"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.6.0-beta3"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.5.1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0-beta1"] ; Web server http://http-kit.org/
@@ -25,12 +25,9 @@
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.6.0-alpha5"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.6.0-alpha7"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    ;; AWS S3 https://github.com/mcohen01/amazonica
-    [amazonica "0.3.66" :exclusions [com.amazonaws/aws-java-sdk]]
-    [com.amazonaws/aws-java-sdk-core "1.11.15"] ; amazonica dependency
-    [com.amazonaws/aws-java-sdk-s3 "1.11.15"] ; amazonica dependency
+    [amazonica "0.3.66"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
   ]
 
@@ -87,7 +84,8 @@
       :injections [
         (require '[aprint.core :refer (aprint ap)]
                  '[clojure.stacktrace :refer (print-stack-trace)]
-                 '[clj-time.format :as t]
+                 '[clj-time.core :as t]
+                 '[clj-time.format :as format]
                  '[clojure.string :as s]
                  '[open-company-auth.config :as config]
                  '[open-company-auth.store :as store])

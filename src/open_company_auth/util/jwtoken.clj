@@ -1,13 +1,16 @@
 (ns open-company-auth.util.jwtoken
-  "Commandline client to create a JWToken for OpenCompany API use."
+  "
+  Commandline client to create a JWToken for OpenCompany API use.
+
+  Usage: lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn
+  "
   (:require [clojure.string :as s]
+            [clj-time.core :as t]
+            [clj-time.format :as format]
             [clojure.tools.cli :refer (parse-opts)]
+            [open-company-auth.config :as config]
             [open-company-auth.jwt :as jwt])
   (:gen-class))
-
-(def identity-props [:user-id :name :real-name :avatar :email :owner :admin])
-
-;; ----- CLI -----
 
 (def cli-options
   [["-h" "--help"]])
@@ -42,8 +45,10 @@
       (not= (count arguments) 1) (exit 1 (usage summary))
       errors (exit 1 (error-msg errors)))
     (try
-      (let [payload (read-string (slurp (first arguments)))
+      (let [payload (assoc (read-string (slurp (first arguments)))
+                      :expire (format/unparse (format/formatters :date-time) (t/plus (t/now) (t/years 20))))
             token (jwt/generate payload)]
+        (println "\nPassphrase:" config/passphrase)
         (println "\nIdentity:" payload)
         (println "\nJWToken:" token)
         (println (str "\nTo use this JWToken from cURL:\ncurl --header \"Authorization: Bearer " token "\"\n")))
