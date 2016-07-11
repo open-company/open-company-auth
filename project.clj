@@ -12,23 +12,23 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha5"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha9"] ; Lisp on the JVM http://clojure.org/documentation
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
-    [ring/ring-devel "1.5.0"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.5.0"] ; Web application library https://github.com/ring-clojure/ring
-    [compojure "1.5.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [ring/ring-devel "1.6.0-beta3"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.6.0-beta3"] ; Web application library https://github.com/ring-clojure/ring
+    [compojure "1.5.1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
-    [http-kit "2.2.0-alpha2"] ; Web server http://http-kit.org/
-    [cheshire "5.6.1"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
+    [http-kit "2.2.0-beta1"] ; Web server http://http-kit.org/
+    [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.4.2"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.0.3"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.4.0"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.6.0-alpha7"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [amazonica "0.3.59"] ;; AWS S3 https://github.com/mcohen01/amazonica
+    [amazonica "0.3.66"] ;; AWS S3 https://github.com/mcohen01/amazonica
   ]
 
   :plugins [
@@ -44,7 +44,7 @@
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
       :dependencies [
-        [midje "1.8.3"] ; Example-based testing https://github.com/marick/Midje
+        [midje "1.9.0-alpha3"] ; Example-based testing https://github.com/marick/Midje
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [
@@ -84,7 +84,8 @@
       :injections [
         (require '[aprint.core :refer (aprint ap)]
                  '[clojure.stacktrace :refer (print-stack-trace)]
-                 '[clj-time.format :as t]
+                 '[clj-time.core :as t]
+                 '[clj-time.format :as format]
                  '[clojure.string :as s]
                  '[open-company-auth.config :as config]
                  '[open-company-auth.store :as store])

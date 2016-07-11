@@ -67,7 +67,7 @@
   [port]
   (run-server app {:port port :join? false})
   (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
-                "OpenCompany Auth Server\n"
+                "OpenCompany Auth Server\n\n"
                 "Running on port: " port "\n"
                 "Hot-reload: " config/hot-reload "\n"
                 "Sentry: " config/dsn "\n"
