@@ -13,7 +13,6 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha9"] ; Lisp on the JVM http://clojure.org/documentation
-    [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.6.0-beta3"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta3"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.5.1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
@@ -29,6 +28,7 @@
     [com.taoensso/timbre "4.6.0-alpha7"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     [amazonica "0.3.66"] ;; AWS S3 https://github.com/mcohen01/amazonica
+    [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
   ]
 
   :plugins [
