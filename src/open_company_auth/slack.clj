@@ -34,11 +34,12 @@
 (defn- get-user-info
   "Given a Slack access token, retrieve the user info from Slack for the specified user id."
   [access-token user-id]
+  {:pre [(string? access-token) (string? user-id)]}
   (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
         user      (:user user-info)
         profile   (:profile user)]
     (if (:ok user-info)
-      {:user-id (str prefix (:id user))
+      {:user-id (str prefix user-id)
        :name (:name user)
        :real-name (:real_name profile)
        :avatar (:image_192 profile)
@@ -68,11 +69,12 @@
                                         config/slack-client-secret
                                         slack-code
                                         (str config/auth-server-url (:redirectURI slack)))
-        user-id      (:user_id response)
+        user-id      (or (:user_id response) (-> response :user :id)) ; identity.basic returns different data
         secrets      (when (-> response :bot :bot_user_id)
                        {:bot {:id    (-> response :bot :bot_user_id)
                               :token (-> response :bot :bot_access_token)}})
-        org          {:org-id   (str prefix (:team_id response))
+        org          {:org-id   (str prefix (or (:team_id response)
+                                                (-> response :team :id))) ; identity.basic returns different data
                       :org-name (:team_name response)}
         access-token (:access_token response)]
     (if (and (:ok response) (valid-access-token? access-token))
