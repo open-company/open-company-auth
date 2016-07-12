@@ -1,6 +1,6 @@
 (ns open-company-auth.app
-  (:require [defun :refer (defun-)]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
+            [environ.core :as e]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :refer :all]
@@ -11,11 +11,15 @@
             [raven-clj.ring :as sentry-mw]
             [org.httpkit.server :refer (run-server)]
             [open-company-auth.config :as config]
+            [open-company-auth.store :as store]
             [open-company-auth.jwt :as jwt]
             [open-company-auth.ring :as ring]
             [open-company-auth.slack :as slack]))
 
-(defonce ^:private test-response (ring/ring-response "OpenCompany auth server: OK" ring/html-mime-type 200))
+(defonce ^:private test-response
+  {:body    "OpenCompany auth server: OK"
+   :headers ring/html-mime-type
+   :status  200})
 
 (def ^:private test-token {:test "test" :bago "bago"})
 
@@ -27,33 +31,44 @@
           :jwt-token jwt-token
           :jwt-verified (jwt/check-token jwt-token)
           :jwt-decoded (jwt/decode jwt-token)}]
-    (ring/json-response response ring/json-mime-type 200)))
+    (ring/json-response response 200)))
 
 (defn- auth-settings-response
   [auth-settings]
-  (ring/json-response auth-settings ring/json-mime-type 200))
+  (ring/json-response auth-settings 200))
 
-(defun- redirect-to-ui
+(defn- redirect-to-ui
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
+  [[success? jwt-or-reason]]
+  (if success?
+    (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))
+    (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))))
 
-  ([[false reason]] (redirect (str config/ui-server-url "/login?access=" reason)))
+(defn- oauth-callback [callback params]
+  (if (get params "test")
+    (ring/json-response {:test true :ok true} 200)
+    (redirect-to-ui (callback params))))
 
-  ([[true jwt]] (redirect (str config/ui-server-url "/login?jwt=" jwt))))
-
-(defun- oauth-callback
-  ;; for testing purpose
-  ([_callback _params :guard #(get % "test")] (ring/json-response {:test true :ok true} ring/json-mime-type 200))
-
-  ([callback params] (redirect-to-ui (callback params))))
+(defn refresh-token [req]
+  (let [decoded (jwt/decode (jwt/read-token (:headers req)))
+        uid     (-> decoded :claims :user-id)
+        org-id  (-> decoded :claims :org-id)
+        user-tkn (-> decoded :claims :user-token)]
+    (timbre/info "Refreshing token" uid)
+    (if (and user-tkn (slack/valid-access-token? user-tkn))
+      (ring/json-response {:jwt (jwt/generate (merge (:claims decoded) (store/retrieve org-id)))} 200)
+      (ring/error-response "could note confirm token" 400))))
 
 (defroutes auth-routes
   (GET "/" [] test-response)
   (GET "/auth-settings" [] (auth-settings-response slack/auth-settings))
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
+  (GET "/refresh-token" req (refresh-token req))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
-(timbre/merge-config!
-  {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
+(when (= "production" (e/env :env))
+  (timbre/merge-config!
+   {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}}))
 
 (def app
   (cond-> #'auth-routes
