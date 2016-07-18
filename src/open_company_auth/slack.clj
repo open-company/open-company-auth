@@ -63,7 +63,7 @@
   {:pre [(string? access-token) (string? user-id)]}
   (let [resp      (slack-users/info (merge slack-connection {:token access-token}) user-id)]
     (if (:ok resp)
-      (coerce-to-user (merge (-> resp :user) (-> resp :user :profile)))
+      (coerce-to-user (merge (:user resp) (-> resp :user :profile)))
       (throw (ex-info "Error response from Slack API while retrieving user data"
                       {:response resp :user-id user-id :scope scope})))))
 
