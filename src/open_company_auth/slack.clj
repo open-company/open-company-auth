@@ -4,6 +4,7 @@
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
+            [taoensso.truss :as t]
             [open-company-auth.config :as config]
             [open-company-auth.store :as store]
             [open-company-auth.jwt :as jwt]))
@@ -27,27 +28,44 @@
 
 (def ^:private prefix "slack:")
 
-(def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic")
+(def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
                            :extended-scopes-url (slack-auth-url "bot,users:read")}
                           slack))
 
-(defn- get-user-info
-  "Given a Slack access token, retrieve the user info from Slack for the specified user id."
-  [access-token user-id]
+(defn prefixed? [s]
+  (and (string? s) (.startsWith s prefix)))
+
+(defn have-user
+  [{:keys [name real-name email avatar user-id owner admin] :as m}]
+  (t/with-dynamic-assertion-data {:user m} ; (Optional) setup some extra debug data
+    (t/have map? m)
+    (t/have [:ks= #{:name :real-name :email :avatar :user-id :owner :admin}] m)
+    (t/have string? name real-name email avatar)
+    (t/have prefixed? user-id)
+    (t/have boolean? owner admin))
+  m)
+
+(defn coerce-to-user
+  "Coerce the given map to a user, return nil if any important attributes are missing"
+  [{:keys [id name image_192 email] :as user-data}]
+  (when (and id name image_192 email)
+    {:user-id (str prefix (:id user-data))
+     :name (:name user-data)
+     :real-name (or (:real_name user-data) name)
+     :avatar (:image_192 user-data)
+     :email (:email user-data)
+     ;; if not provided we assume they're not
+     :owner (boolean (:is_owner user-data))
+     :admin (boolean (:is_admin user-data))}))
+
+(defn get-user-info
+  [access-token scope user-id]
   {:pre [(string? access-token) (string? user-id)]}
-  (let [user-info (slack-users/info (merge slack-connection {:token access-token}) user-id)
-        user      (:user user-info)
-        profile   (:profile user)]
-    (if (:ok user-info)
-      {:user-id (str prefix user-id)
-       :name (:name user)
-       :real-name (:real_name profile)
-       :avatar (:image_192 profile)
-       :email (:email profile)
-       :owner (:is_owner user)
-       :admin (:is_admin user)}
+  (let [resp      (slack-users/info (merge slack-connection {:token access-token}) user-id)]
+    (if (:ok resp)
+      (coerce-to-user (merge (-> resp :user) (-> resp :user :profile)))
       (throw (ex-info "Error response from Slack API while retrieving user data"
-                      {:response user-info :user-id user-id})))))
+                      {:response resp :user-id user-id :scope scope})))))
 
 (defn valid-access-token?
   "Given a Slack access token, see if it's valid by making a test call to Slack."
@@ -76,9 +94,13 @@
         org          {:org-id   (str prefix (or (:team_id response)
                                                 (-> response :team :id))) ; identity.basic returns different data
                       :org-name (:team_name response)}
-        access-token (:access_token response)]
+        access-token (:access_token response)
+        scope        (:scope response)]
     (if (and (:ok response) (valid-access-token? access-token))
-      (let [user (get-user-info access-token user-id)]
+      ;; w/ identity.basic this response contains all user information we can get
+      ;; so munge that into the right shape or get user info if that doesn't work
+      (let [user (have-user (or (coerce-to-user (:user response))
+                                (get-user-info access-token scope user-id)))]
         [true
          (if secrets
            (do (store/store! (:org-id org) secrets)

@@ -29,6 +29,7 @@
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     [amazonica "0.3.66"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
+    [com.taoensso/truss "1.3.3"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
   ]
 
   :plugins [
