@@ -15,7 +15,7 @@
     [org.clojure/clojure "1.9.0-alpha10"] ; Lisp on the JVM http://clojure.org/documentation
     [ring/ring-devel "1.6.0-beta4"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta4"] ; Web application library https://github.com/ring-clojure/ring
-    [compojure "1.5.1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0"] ; Web server http://http-kit.org/
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
@@ -25,11 +25,11 @@
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.7.0"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.7.2"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [amazonica "0.3.67"] ;; AWS S3 https://github.com/mcohen01/amazonica
+    [amazonica "0.3.71"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
-    [com.taoensso/truss "1.3.3"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
+    [com.taoensso/truss "1.3.4"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
   ]
 
   :plugins [
