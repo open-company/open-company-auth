@@ -21,20 +21,20 @@
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.4.2"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
-    [environ "1.0.3"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.7.2"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.7.3"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [amazonica "0.3.71"] ;; AWS S3 https://github.com/mcohen01/amazonica
+    [amazonica "0.3.73"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.4"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
   ]
 
   :plugins [
     [lein-ring "0.9.7"]
-    [lein-environ "1.0.3"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
   :profiles {
