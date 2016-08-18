@@ -13,8 +13,8 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha10"] ; Lisp on the JVM http://clojure.org/documentation
-    [ring/ring-devel "1.6.0-beta4"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.6.0-beta4"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-devel "1.6.0-beta5"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.6.0-beta5"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0"] ; Web server http://http-kit.org/
@@ -27,9 +27,9 @@
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.7.3"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [amazonica "0.3.73"] ;; AWS S3 https://github.com/mcohen01/amazonica
+    [amazonica "0.3.74"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
-    [com.taoensso/truss "1.3.4"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
+    [com.taoensso/truss "1.3.5"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
   ]
 
   :plugins [
@@ -45,7 +45,7 @@
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
       :dependencies [
-        [midje "1.9.0-alpha3"] ; Example-based testing https://github.com/marick/Midje
+        [midje "1.9.0-alpha4"] ; Example-based testing https://github.com/marick/Midje
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [
