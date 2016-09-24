@@ -1,8 +1,8 @@
-(ns open-company-auth.jwt
+(ns oc.auth.jwt
   (:require [clj-jwt.core :as jwt]
             [clj-time.core :as t]
             [clojure.string :as string]
-            [open-company-auth.config :as config]))
+            [oc.auth.config :as config]))
 
 (defn expire [payload]
   (let [expire-by (-> (if (:bot payload) 24 2)

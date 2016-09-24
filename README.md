@@ -28,7 +28,7 @@ To get started, head to: [OpenCompany](https://opencompany.com/)
 
 ## Overview
 
-The OpenCompany Authentication Service handles authenticating users against Slack, and creates a [JSON Web Token](https://jwt.io/) for them, which can then be used with the other OpenCompany services to assert the users identity.
+The OpenCompany Authentication Service handles authenticating users against Slack and email/pass, and creates a [JSON Web Token](https://jwt.io/) for them, which can then be used with the other OpenCompany services to assert the users identity.
 
 
 ## Local Setup
@@ -39,6 +39,7 @@ Most of the dependencies are internal, meaning [Leiningen](https://github.com/te
 
 * [Java 8](http://www.oracle.com/technetwork/java/javase/downloads/index.html) - a Java 8 JRE is needed to run Clojure
 * [Leiningen](https://github.com/technomancy/leiningen) - Clojure's build and dependency management tool
+* [RethinkDB](http://rethinkdb.com/) v2.3.5+ - a multi-modal (document, key/value, relational) open source NoSQL database
 
 #### Java
 
@@ -66,6 +67,102 @@ git clone https://github.com/open-company/open-company-api.git
 cd open-company-api
 lein deps
 ```
+
+#### RethinkDB
+
+RethinkDB is easy to install with official and community supported packages for most operating systems.
+
+##### RethinkDB for Mac OS X via Brew
+
+Assuming you are running Mac OS X and are a [Homebrew](http://mxcl.github.com/homebrew/) user, use brew to install RethinkDB:
+
+```console
+brew update && brew install rethinkdb
+```
+
+If you already have RethinkDB installed via brew, check the version:
+
+```console
+rethinkdb -v
+```
+
+If it's older, then upgrade it with:
+
+```console
+brew update && brew upgrade rethinkdb && brew services restart rethinkdb
+```
+
+
+Follow the instructions provided by brew to run RethinkDB every time at login:
+
+```console
+ln -sfv /usr/local/opt/rethinkdb/*.plist ~/Library/LaunchAgents
+```
+
+And to run RethinkDB now:
+
+```console
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.rethinkdb.plist
+```
+
+Verify you can access the RethinkDB admin console:
+
+```console
+open http://localhost:8080/
+```
+
+After installing with brew:
+
+* Your RethinkDB binary will be at `/usr/local/bin/rethinkdb`
+* Your RethinkDB data directory will be at `/usr/local/var/rethinkdb`
+* Your RethinkDB log will be at `/usr/local/var/log/rethinkdb/rethinkdb.log`
+* Your RethinkDB launchd file will be at `~/Library/LaunchAgents/homebrew.mxcl.rethinkdb.plist`
+
+##### RethinkDB for Mac OS X (Binary Package)
+
+If you don't use brew, there is a binary installer package available for Mac OS X from the [Mac download page](http://rethinkdb.com/docs/install/osx/).
+
+After downloading the disk image, mounting it (double click) and running the rethinkdb.pkg installer, you need to manually create the data directory:
+
+```console
+sudo mkdir -p /Library/RethinkDB
+sudo chown <your-own-user-id> /Library/RethinkDB
+mkdir /Library/RethinkDB/data
+```
+
+And you will need to manually create the launchd config file to run RethinkDB every time at login. From within this repo run:
+
+```console
+cp ./opt/com.rethinkdb.server.plist ~/Library/LaunchAgents/com.rethinkdb.server.plist
+```
+
+And to run RethinkDB now:
+
+```console
+launchctl load ~/Library/LaunchAgents/com.rethinkdb.server.plist
+```
+
+Verify you can access the RethinkDB admin console:
+
+```console
+open http://localhost:8080/
+```
+
+After installing with the binary package:
+
+* Your RethinkDB binary will be at `/usr/local/bin/rethinkdb`
+* Your RethinkDB data directory will be at `/Library/RethinkDB/data`
+* Your RethinkDB log will be at `/var/log/rethinkdb.log`
+* Your RethinkDB launchd file will be at `~/Library/LaunchAgents/com.rethinkdb.server.plist`
+
+
+##### RethinkDB for Linux
+
+If you run Linux on your development environment (good for you, hardcore!) you can get a package for you distribution or compile from source. Details are on the [installation page](http://rethinkdb.com/docs/install/).
+
+##### RethinkDB for Windows
+
+RethinkDB [isn't supported on Windows](https://github.com/rethinkdb/rethinkdb/issues/1100) directly. If you are stuck on Windows, you can run Linux in a virtualized environment to host RethinkDB.
 
 #### Required Secrets
 
@@ -131,8 +228,129 @@ To create a sample [JSON Web Token](https://jwt.io/) for use in development with
 formated like the ones in ```/opt/identities``` or use one of the identity EDN files provided, and run the utility:
 
 ```console
-lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn
+lein run -m oc.auth.util.jwtoken -- ./opt/identities/camus.edn
 ```
+
+## Technical Design
+
+### Authentication
+
+Users can onboard and authenticate using Slack or email/password as an authentication option. Authentication via Slack
+uses Slack's OAuth provider. Authentication via email uses this OpenCompany Auth Service and the
+[Buddy](https://github.com/funcool/buddy) security library.
+
+### Authorization
+
+A Slack organization provides a built-in "in-group" of users, all the users that have access to the Slack
+organization. The Slack organization works as the OpenCompany `org-id` that authorizes users to the company. The
+OpenCompany `org-id` is assigned to the Slack organization ID of the creator of the company at creation time.
+Subsequently anyone with that same Slack organization ID in their JWToken can access the company.
+
+Using email for authentication complicates authorization a bit. In some cases for email, the email domain
+(e.g. @opencompany.com) acts as the same sort of "in-group". This is not always sufficient however:
+
+* Sometimes this group will be too narrow (e.g. someone who is in the group, but does not have an email address from
+the group domain)
+* Sometimes this group will be too broad (e.g. use by a department at a large company where thousands of people or more
+have email in the domain)
+* Finally, consider a smaller or looser organization (e.g. a new startup, church group, school group, etc.) still
+using gmail or other public email addresses as their work email, so there is no "in-group" domain.
+
+Because of these possible limitations, email authorization is based on email domain and/or email invitations from
+already authorized users.
+
+### Authentication Flow
+
+Based on local settings in the OpenCompany Web application, a GET request is made to this authentication service at
+`/auth-settings` to retrieve authentication settings. The response looks like:
+
+```json
+{
+  "slack" : {
+    "basic-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
+    "extended-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=bot,users:read",
+    "redirectURI" : "/slack-oauth",
+    "state" : "open-company-auth",
+    "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
+  }, 
+  "email" : {
+    "auth-url" : "https://auth.opencompany.com/email-auth"
+    "refresh-url": "https://auth.opencompany.com/email/refresh-token"
+  }
+}
+```
+
+#### Slack Authentication Flow
+
+Upon clicking the "Sign in with Slack" button, the user is redirected to the `extended-scopes-url` to authenticate with
+Slack. The Slack app is configured to call back to this authentication service at `/slack-oauth` with an authentication
+success or failure.
+
+If the authentication was successful, the authentication service creates a JWToken and redirects the user back to the
+web application at: `/login?jwt=<JWToken>`
+
+If the authentication wasn't successful, the authentication service redirects the user back to the web application at 
+`/login?access=denied`. From there, subsequent attempts to authenticate using the `basic-scopes-url` that does not
+authorize the bot can occur.
+
+The main implication of a successful Slack authentication is the creation of a trusted JWToken that is then used to
+authorize all subsequent access to the API.
+
+![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/slack-auth-success.svg)
+
+#### Email Authentication Flow
+
+Upon clicking the "Sign in with Email" link, a `GET` request is made to the `auth-url` with HTTP Basic authentication
+(always over HTTPS) to authenticate with an email address and password. If the email/pass authentication succeeds,
+there is a 200 response with a JWToken returned in the body of the response. If the email/pass authentication fails,
+there is a 401 response.
+
+The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
+to authorize all subsequent access to the API.
+
+![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/email-auth-success.svg)
+
+#### JWToken Expiration / Refresh
+
+The JWToken contains an expiration field (24 hours for Slack users w/ an auth'd bot, and 2 hours for everyone else).
+An expired JWToken does not authorize access to services. Before each use the JWToken is checked for expiration and if
+it's expired, the user is
+
+#### Email Onboarding
+
+Unlike Slack, which doesn't need to differentiate between initial onboarding and subsequent authorizations, the
+onboarding of a new email user takes a different path. To onboard a new email user
+
+```json
+{
+  "user-id": "camus@combat.org",
+  "password": "Ssshhh!#&@!"
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
+}
+```
+
+A new user request can be one of 4 cases:
+
+* already existing user (return code status of `409 Conflict`)
+* user known by email domain (e.g. @opencompany.com)
+* user known by one or more open invitations
+* unknown user and unknown email domain (brand new)
+
+TBD.
+
+#### Email Validation
+
+TBD.
+
+#### Email Invitations
+
+TBD.
+
+#### Password Reset
+
+TBD.
 
 
 ## Testing

@@ -1,4 +1,4 @@
-(ns open-company-auth.app
+(ns oc.auth.app
   (:require [clojure.java.io :as io]
             [environ.core :as e]
             [taoensso.timbre :as timbre]
@@ -10,11 +10,11 @@
             [ring.util.response :refer [redirect]]
             [raven-clj.ring :as sentry-mw]
             [org.httpkit.server :refer (run-server)]
-            [open-company-auth.config :as config]
-            [open-company-auth.store :as store]
-            [open-company-auth.jwt :as jwt]
-            [open-company-auth.ring :as ring]
-            [open-company-auth.slack :as slack]))
+            [oc.auth.config :as config]
+            [oc.auth.store :as store]
+            [oc.auth.jwt :as jwt]
+            [oc.auth.ring :as ring]
+            [oc.auth.slack :as slack]))
 
 (defonce ^:private test-response
   {:body    "OpenCompany auth server: OK"

@@ -1,13 +1,13 @@
-(ns open-company-auth.slack
+(ns oc.auth.slack
   (:require [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [taoensso.truss :as t]
-            [open-company-auth.config :as config]
-            [open-company-auth.store :as store]
-            [open-company-auth.jwt :as jwt]))
+            [oc.auth.config :as config]
+            [oc.auth.store :as store]
+            [oc.auth.jwt :as jwt]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})

@@ -1,7 +1,7 @@
-(ns open-company-auth.store
+(ns oc.auth.store
   (:require [alandipert.enduro :as end]
             [amazonica.aws.s3 :as s3]
-            [open-company-auth.config :as config]
+            [oc.auth.config :as config]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojure.edn :as edn]))

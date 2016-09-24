@@ -1,7 +1,7 @@
-(ns open-company-auth.test
+(ns oc.auth.test
   "Namespace of data fixtures for use in tests."
   (:require [midje.sweet :refer :all]
-            [open-company-auth.lib.utils :as test-utils]
+            [oc.auth.lib.utils :as test-utils]
             [cheshire.core :as json]))
 
 (facts "Test endpoints"

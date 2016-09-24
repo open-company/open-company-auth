@@ -1,4 +1,4 @@
-(ns open-company-auth.config
+(ns oc.auth.config
   "Namespace for the configuration parameters."
   (:require [environ.core :refer (env)]))
 
@@ -7,9 +7,27 @@
   [val]
   (boolean (Boolean/valueOf val)))
 
+;; ----- System -----
+
+(defonce processors (.availableProcessors (Runtime/getRuntime)))
+(defonce core-async-limit (+ 42 (* 2 processors)))
+
 ;; ----- Sentry -----
 
 (defonce dsn (or (env :open-company-sentry-auth) false))
+
+;; ----- RethinkDB -----
+
+(defonce migrations-dir "./src/open_company_auth/db/migrations")
+(defonce migration-template "./src/open_company_auth/assets/migration.template.edn")
+
+(defonce db-host (or (env :db-host) "localhost"))
+(defonce db-port (or (env :db-port) 28015))
+(defonce db-name (or (env :db-name) "open_company_auth"))
+(defonce db-pool-size (or (env :db-pool-size) (- core-async-limit 21))) ; conservative with the core.async limit
+
+(defonce db-map {:host db-host :port db-port :db db-name})
+(defonce db-options (flatten (vec db-map))) ; k/v sequence as clj-rethinkdb wants it
 
 ;; ----- Slack -----
 
