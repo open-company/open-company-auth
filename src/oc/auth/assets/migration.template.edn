@@ -1,5 +1,6 @@
 (ns oc.auth.db.migrations.MIGRATION-NAME
-  (:require [rethinkdb.query :as r]))
+  (:require [rethinkdb.query :as r]
+            [oc.lib.rethinkdb.migrations :as m]))
 
 (defn up [conn]
   ;; Do great things

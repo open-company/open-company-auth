@@ -14,7 +14,8 @@
             [oc.auth.store :as store]
             [oc.auth.jwt :as jwt]
             [oc.auth.ring :as ring]
-            [oc.auth.slack :as slack]))
+            [oc.auth.slack :as slack]
+            [oc.auth.email :as email]))
 
 (defonce ^:private test-response
   {:body    "OpenCompany auth server: OK"
@@ -49,7 +50,7 @@
     (ring/json-response {:test true :ok true} 200)
     (redirect-to-ui (callback params))))
 
-(defn refresh-token [req]
+(defn refresh-slack-token [req]
   (let [decoded (jwt/decode (jwt/read-token (:headers req)))
         uid     (-> decoded :claims :user-id)
         org-id  (-> decoded :claims :org-id)
@@ -61,9 +62,10 @@
 
 (defroutes auth-routes
   (GET "/" [] test-response)
-  (GET "/auth-settings" [] (auth-settings-response slack/auth-settings))
+  (GET "/auth-settings" [] (auth-settings-response {:slack slack/auth-settings
+                                                    :email email/auth-settings}))
   (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
-  (GET "/refresh-token" req (refresh-token req))
+  (GET "/slack/refresh-token" req (refresh-slack-token req))
   (GET "/test-token" [] (jwt-debug-response test-token)))
 
 (when (= "production" (e/env :env))

@@ -1,5 +1,6 @@
 (ns oc.auth.slack
-  (:require [clj-slack.oauth :as slack-oauth]
+  (:require [clojure.string :as s]
+            [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
@@ -29,7 +30,8 @@
 (def ^:private prefix "slack:")
 
 (def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
-                           :extended-scopes-url (slack-auth-url "bot,users:read")}
+                           :extended-scopes-url (slack-auth-url "bot,users:read")
+                           :refresh-url (s/join "/" [config/auth-server-url "slack" "refresh-token"])}
                           slack))
 
 (defn prefixed? [s]

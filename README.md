@@ -274,7 +274,7 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
     "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
   }, 
   "email" : {
-    "auth-url" : "https://auth.opencompany.com/email-auth"
+    "auth-url" : "https://auth.opencompany.com/email-auth",
     "refresh-url": "https://auth.opencompany.com/email/refresh-token"
   }
 }
@@ -324,7 +324,7 @@ onboarding of a new email user takes a different path. To onboard a new email us
 ```json
 {
   "user-id": "camus@combat.org",
-  "password": "Ssshhh!#&@!"
+  "password": "Ssshhh!#&@!",
   "first-name": "Albert",
   "last-name": "Camus",
   "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
@@ -352,6 +352,9 @@ TBD.
 
 TBD.
 
+#### Email User Management
+
+TBD.
 
 ## Testing
 

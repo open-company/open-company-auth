@@ -18,8 +18,8 @@
 
 ;; ----- RethinkDB -----
 
-(defonce migrations-dir "./src/open_company_auth/db/migrations")
-(defonce migration-template "./src/open_company_auth/assets/migration.template.edn")
+(defonce migrations-dir "./src/oc/auth/db/migrations")
+(defonce migration-template "./src/oc/auth/assets/migration.template.edn")
 
 (defonce db-host (or (env :db-host) "localhost"))
 (defonce db-port (or (env :db-port) 28015))
