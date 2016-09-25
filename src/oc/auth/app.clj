@@ -1,21 +1,36 @@
 (ns oc.auth.app
   (:require [clojure.java.io :as io]
-            [environ.core :as e]
+            [raven-clj.core :as sentry]
+            [raven-clj.interfaces :as sentry-interfaces]
+            [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
-            [compojure.core :refer :all]
-            [ring.middleware.params :refer [wrap-params]]
-            [ring.middleware.reload :refer [wrap-reload]]
+            [compojure.core :as compojure :refer (GET)]
+            [ring.middleware.params :refer (wrap-params)]
+            [ring.middleware.reload :refer (wrap-reload)]
             [ring.middleware.cors :refer (wrap-cors)]
-            [ring.util.response :refer [redirect]]
-            [raven-clj.ring :as sentry-mw]
-            [org.httpkit.server :refer (run-server)]
-            [oc.auth.config :as config]
+            [ring.util.response :refer (redirect)]
+            [com.stuartsierra.component :as component]
+            [oc.auth.components :as components]
+            [oc.auth.config :as c]
             [oc.auth.store :as store]
             [oc.auth.jwt :as jwt]
             [oc.auth.ring :as ring]
             [oc.auth.slack :as slack]
             [oc.auth.email :as email]))
+
+;; Send unhandled exceptions to Sentry
+;; See https://stuartsierra.com/2015/05/27/clojure-uncaught-exceptions
+(Thread/setDefaultUncaughtExceptionHandler
+ (reify Thread$UncaughtExceptionHandler
+   (uncaughtException [_ thread ex]
+     (timbre/error ex "Uncaught exception on" (.getName thread) (.getMessage ex))
+     (when c/dsn
+       (sentry/capture c/dsn (-> {:message (.getMessage ex)}
+                                 (assoc-in [:extra :exception-data] (ex-data ex))
+                                 (sentry-interfaces/stacktrace ex)))))))
+
+;; ----- Request Handling Functions -----
 
 (defonce ^:private test-response
   {:body    "OpenCompany auth server: OK"
@@ -42,8 +57,8 @@
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
   [[success? jwt-or-reason]]
   (if success?
-    (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))
-    (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))))
+    (redirect (str c/ui-server-url "/login?jwt=" jwt-or-reason))
+    (redirect (str c/ui-server-url "/login?access=" jwt-or-reason))))
 
 (defn- oauth-callback [callback params]
   (if (get params "test")
@@ -60,39 +75,58 @@
       (ring/json-response {:jwt (jwt/generate (merge (:claims decoded) (store/retrieve org-id)))} 200)
       (ring/error-response "could note confirm token" 400))))
 
-(defroutes auth-routes
-  (GET "/" [] test-response)
-  (GET "/auth-settings" [] (auth-settings-response {:slack slack/auth-settings
-                                                    :email email/auth-settings}))
-  (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
-  (GET "/slack/refresh-token" req (refresh-slack-token req))
-  (GET "/test-token" [] (jwt-debug-response test-token)))
+;; ----- Request Routing -----
 
-(when (= "production" (e/env :env))
+(defn auth-routes [sys]
+  (compojure/routes
+    (GET "/" [] test-response)
+    (GET "/auth-settings" [] (auth-settings-response {:slack slack/auth-settings
+                                                       :email email/auth-settings}))
+    ;(GET "/auth-settings" [] (auth-settings-response slack/auth-settings))
+    (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
+    (GET "/slack/refresh-token" req (refresh-slack-token req))
+    (GET "/test-token" [] (jwt-debug-response test-token))))
+
+;; ----- System Startup -----
+
+;; Ring app definition
+(defn app [sys]
+  (cond-> (auth-routes sys)
+    true          wrap-params
+    true          (wrap-cors #".*")
+    c/hot-reload  wrap-reload
+    c/dsn         (sentry-mw/wrap-sentry c/dsn)))
+
+;; Start components in production (nginx-clojure)
+(when c/prod?
   (timbre/merge-config!
-   {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}}))
-
-(def app
-  (cond-> #'auth-routes
-    config/hot-reload wrap-reload
-    true              wrap-params
-    true              (wrap-cors #".*")
-    config/dsn        (sentry-mw/wrap-sentry config/dsn)))
+   {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
+  (timbre/info "Starting production system without HTTP server")
+  (def handler
+    (-> (components/auth-system {:handler-fn app})
+        (dissoc :server)
+        component/start
+        (get-in [:handler :handler])))
+  (timbre/info "Started"))
 
 (defn start
-  "Start a server"
+  "Start a development server"
   [port]
-  (run-server app {:port port :join? false})
+
+  (-> {:handler-fn app :port port}
+    components/auth-system
+    component/start)
+
   (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
                 "OpenCompany Auth Server\n\n"
                 "Running on port: " port "\n"
-                "Hot-reload: " config/hot-reload "\n"
-                "Sentry: " config/dsn "\n"
-                "AWS S3 bucket: " config/secrets-bucket "\n"
-                "AWS S3 file: "  config/secrets-file "\n\n"
+                "Database: " c/db-name "\n"
+                "Database pool: " c/db-pool-size "\n"
+                "Hot-reload: " c/hot-reload "\n"
+                "Sentry: " c/dsn "\n"
                 "Ready to serve...\n")))
 
 (defn -main
   "Main"
   []
-  (start config/auth-server-port))
+  (start c/auth-server-port))

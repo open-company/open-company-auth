@@ -12,6 +12,8 @@
 (defonce processors (.availableProcessors (Runtime/getRuntime)))
 (defonce core-async-limit (+ 42 (* 2 processors)))
 
+(defonce prod? (= "production" (env :env)))
+
 ;; ----- Sentry -----
 
 (defonce dsn (or (env :open-company-sentry-auth) false))

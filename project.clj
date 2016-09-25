@@ -18,6 +18,7 @@
     [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0"] ; Web server http://http-kit.org/
+    [com.stuartsierra/component "0.3.1"] ; Component Lifecycle
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.clojure/core.async "0.2.391"] ; Dependency of RethinkDB https://github.com/clojure/core.async
