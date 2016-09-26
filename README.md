@@ -366,6 +366,7 @@ Slack organization. An example stored Slack user:
 ```json
 {
   :user-id "slack:U06SCTYJR"
+  :org-id "slack:T07SBMH80"
   :name "camus"
   :real-name "Albert Camus"
   :first-name "Albert"
@@ -382,7 +383,8 @@ Slack organization.
 
 ```json
 {
-  :user-id "email:albert@combat.org"
+  :user-id "email:4567-a8f6"
+  :org-id "email:bb92-67ga"
   :name "albert"
   :real-name "Albert Camus"
   :first-name "Albert"
