@@ -34,10 +34,10 @@
                            :refresh-url (s/join "/" [config/auth-server-url "slack" "refresh-token"])}
                           slack))
 
-(defn prefixed? [s]
+(defn- prefixed? [s]
   (and (string? s) (.startsWith s prefix)))
 
-(defn have-user
+(defn- have-user
   [{:keys [name real-name email avatar user-id owner admin] :as m}]
   (t/with-dynamic-assertion-data {:user m} ; (Optional) setup some extra debug data
     (t/have map? m)
@@ -47,7 +47,7 @@
     (t/have boolean? owner admin))
   m)
 
-(defn coerce-to-user
+(defn- coerce-to-user
   "Coerce the given map to a user, return nil if any important attributes are missing"
   [{:keys [id name email] :as user-data}]
   (when (and id name email)
@@ -72,7 +72,7 @@
      :owner (boolean (:is_owner user-data))
      :admin (boolean (:is_admin user-data))}))
 
-(defn get-user-info
+(defn- get-user-info
   [access-token scope user-id]
   {:pre [(string? access-token) (string? user-id)]}
   (let [resp      (slack-users/info (merge slack-connection {:token access-token}) user-id)]

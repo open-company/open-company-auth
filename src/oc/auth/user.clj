@@ -1,9 +1,46 @@
 (ns oc.auth.user
   ""
   (:require [clojure.string :as s]
-            [rethinkdb.query :as r]))
+            [oc.lib.rethinkdb.common :as common]))
 
 ;; ----- RethinkDB metadata -----
 
 (def table-name "users")
-(def primary-key :id)
+(def primary-key :user-id)
+
+;; ----- User CRUD -----
+
+(defn get-user
+  "Given the user-id of the user, retrieve it from the database, or return nil if it doesn't exist."
+  [conn user-id]
+  {:pre [(string? user-id)]}
+  (common/read-resource conn table-name user-id))
+
+(defn get-user-by-email
+  "Given the slug of the company, retrieve it from the database, or return nil if it doesn't exist."
+  [conn email]
+  {:pre [(string? email)]}
+  (common/read-resource conn table-name "email-address" email))
+
+(defn create-user! 
+  "Given a map of user properties, persist it to the database."
+  [conn user-map]
+  (common/create-resource conn table-name user-map (common/current-timestamp)))
+
+(defn delete-user
+  "Given the user-id of the user, delete it and return `true` on success."
+  [conn user-id]
+  {:pre [(string? user-id)]}
+  (try
+    (common/delete-resource conn table-name user-id)
+    (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+
+(comment 
+
+  (def u (read-string (slurp "./opt/identities/simone.edn")))
+
+  (user/create-user! conn u)
+  (user/get-user conn (:user-id u))
+  (user/delete-user conn (:user-id u))
+  
+  )

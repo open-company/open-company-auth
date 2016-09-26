@@ -13,6 +13,7 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha12"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/core.async "0.2.391"] ; Async programming and communication https://github.com/clojure/core.async
     [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
@@ -22,7 +23,6 @@
     [buddy "1.1.0"] ; Security library https://github.com/funcool/buddy
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
-    [org.clojure/core.async "0.2.391"] ; Dependency of RethinkDB https://github.com/clojure/core.async
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.4.3"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
@@ -34,7 +34,7 @@
     [amazonica "0.3.76"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
-    [open-company/lib "0.0.1-774fc2d"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.0.1-803c9fa"] ; Library for OC projects https://github.com/open-company/open-company-lib
   ]
 
   :plugins [
@@ -46,6 +46,7 @@
     ;; QA environment and dependencies
     :qa {
       :env {
+        :db-name "open_company_auth_qa"
         :hot-reload "false"
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
@@ -95,7 +96,9 @@
                  '[clj-time.format :as format]
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
-                 '[oc.auth.config :as config])
+                 '[oc.auth.config :as config]
+                 '[oc.auth.email :as email]
+                 '[oc.auth.slack :as slack])
       ]
     }]
 
@@ -111,7 +114,9 @@
   :repl-options {
     :welcome (println (str "\n" (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"
                       "OpenCompany Auth REPL\n"
-                      "Database: " oc.auth.config/db-name "\n"))
+                      "Database: " oc.auth.config/db-name "\n"
+                      "\nReady to do your bidding... I suggest (go) or (go <port>) as your first command.\n"))
+      :init-ns dev
   }
 
   :aliases{

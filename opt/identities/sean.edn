@@ -1,10 +1,13 @@
 {
   :user-id "slack:U06SBTXJR"
+  :org-id "slack:T06SBMH60"
   :name "Sean Johnson"
+  :first-name "Sean"
+  :last-name "Johnson"
   :real-name "Sean Johnson"
   :avatar "https://secure.gravatar.com/avatar/f5b8fc1affa266c8072068f811f63e04.jpg?s=192&d=https%3A%2F%2Fslack.global.ssl.fastly.net%2F7fa9%2Fimg%2Favatars%2Fava_0020-192.png"
   :email "sean@opencompany.com"
   :owner false
   :admin true
-  :org-id "slack:T06SBMH60"
+  :auth-source "slack"
 }

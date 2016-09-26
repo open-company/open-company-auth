@@ -3,6 +3,8 @@
             [buddy.hashers :as hashers]
             [oc.auth.config :as config]))
 
+(def ^:private prefix "email:")
+
 (def auth-settings {:auth-url (s/join "/" [config/auth-server-url "email-auth"])
                     :refresh-url (s/join "/" [config/auth-server-url "email" "refresh-token"])})
 
