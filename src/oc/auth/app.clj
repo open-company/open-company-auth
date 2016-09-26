@@ -81,7 +81,7 @@
   (compojure/routes
     (GET "/" [] test-response)
     (GET "/auth-settings" [] (auth-settings-response {:slack slack/auth-settings
-                                                       :email email/auth-settings}))
+                                                      :email email/auth-settings}))
     ;(GET "/auth-settings" [] (auth-settings-response slack/auth-settings))
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
     (GET "/slack/refresh-token" req (refresh-slack-token req))

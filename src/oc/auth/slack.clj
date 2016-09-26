@@ -10,6 +10,8 @@
             [oc.auth.store :as store]
             [oc.auth.jwt :as jwt]))
 
+(def ^:private prefix "slack:")
+
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
 
@@ -27,8 +29,6 @@
        "&scope="
        scope))
 
-(def ^:private prefix "slack:")
-
 (def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
                            :extended-scopes-url (slack-auth-url "bot,users:read")
                            :refresh-url (s/join "/" [config/auth-server-url "slack" "refresh-token"])}
@@ -41,7 +41,7 @@
   [{:keys [name real-name email avatar user-id owner admin] :as m}]
   (t/with-dynamic-assertion-data {:user m} ; (Optional) setup some extra debug data
     (t/have map? m)
-    (t/have [:ks= #{:name :real-name :email :avatar :user-id :owner :admin}] m)
+    (t/have [:ks= #{:name :real-name :first-name :last-name :email :avatar :user-id :owner :admin}] m)
     (t/have string? name real-name email avatar)
     (t/have prefixed? user-id)
     (t/have boolean? owner admin))
@@ -49,13 +49,25 @@
 
 (defn coerce-to-user
   "Coerce the given map to a user, return nil if any important attributes are missing"
-  [{:keys [id name image_192 email] :as user-data}]
-  (when (and id name image_192 email)
-    {:user-id (str prefix (:id user-data))
-     :name (:name user-data)
-     :real-name (or (:real_name user-data) name)
-     :avatar (:image_192 user-data)
-     :email (:email user-data)
+  [{:keys [id name email] :as user-data}]
+  (when (and id name email)
+    {:user-id (str prefix id)
+     :name (or (:name user-data) "")
+     :real-name (or (:real_name_normalized user-data)
+                    (:real_name user-data)
+                    (:first_name user-data)
+                    (:last_name user-data)
+                    (:name user-data)
+                    "")
+     :first-name (:first_name user-data)
+     :last-name (:last_name user-data)
+     :avatar (or (:image_192 user-data)
+                 (:image_72 user-data)
+                 (:image_48 user-data)
+                 (:image_512 user-data)
+                 (:image_32 user-data)
+                 (:image_24 user-data))
+     :email email
      ;; if not provided we assume they're not
      :owner (boolean (:is_owner user-data))
      :admin (boolean (:is_admin user-data))}))

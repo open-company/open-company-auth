@@ -356,6 +356,65 @@ TBD.
 
 TBD.
 
+#### User Storage
+
+Users are stored as documents in the `users` table of the `open_company_auth` RethinkDB database.
+
+In the case of a Slack user, `owner` and `admin` properties have to do with their privelages in the
+Slack organization. An example stored Slack user:
+
+```json
+{
+  :user-id "slack:U06SCTYJR"
+  :name "camus"
+  :real-name "Albert Camus"
+  :first-name "Albert"
+  :last-name "Camus"
+  :avatar "http://..."
+  :email "albert@combat.org"
+  :owner "false"
+  :admin "true"
+}
+```
+
+In the case of a Slack user, `owner` and `admin` properties have to do with their privelages in the
+Slack organization.
+
+```json
+{
+  :user-id "email:albert@combat.org"
+  :name "albert"
+  :real-name "Albert Camus"
+  :first-name "Albert"
+  :last-name "Camus"
+  :avatar "http://..."
+  :email "albert@combat.org"
+  :owner "true"
+  :admin "true"
+}
+```
+
+#### JWTokens
+
+JSON Web Tokens are created as authorization tokens for authorized users. They consist of the user storage data
+(see above) as well as an expiration timestamp (in milliseconds since the epoch) for the token.
+
+An example JMToken payload:
+
+```json
+{
+  :user-id "slack:U06SCTYJR"
+  :name "camus"
+  :real-name "Albert Camus"
+  :first-name "Albert"
+  :last-name "Camus"
+  :avatar "http://..."
+  :email "albert@combat.org"
+  :owner "false"
+  :admin "true"
+  :exprire 1474975206974
+}
+
 ## Testing
 
 Tests are run in continuous integration of the `master` and `mainline` branches on [Travis CI](https://travis-ci.org/open-company/open-company-auth):
