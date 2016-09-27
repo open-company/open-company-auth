@@ -296,7 +296,7 @@ authorize the bot can occur.
 The main implication of a successful Slack authentication is the creation of a trusted JWToken that is then used to
 authorize all subsequent access to the API.
 
-![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/email/docs/slack-auth-success.svg)
+![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/slack-auth-success.svg)
 
 #### Email Authentication Flow
 
@@ -308,7 +308,7 @@ there is a 401 response.
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
 
-![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/email/docs/email-auth-success.svg)
+![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/email-auth-success.svg)
 
 #### JWToken Expiration / Refresh
 
@@ -364,16 +364,16 @@ Slack organization. An example stored Slack user:
 
 ```json
 {
-  :user-id "slack:U06SCTYJR"
-  :org-id "slack:T07SBMH80"
-  :name "camus"
-  :real-name "Albert Camus"
-  :first-name "Albert"
-  :last-name "Camus"
-  :avatar "http://..."
-  :email "albert@combat.org"
-  :owner "false"
-  :admin "true"
+  "user-id": "slack:U06SCTYJR",
+  "org-id": "slack:T07SBMH80",
+  "name": "camus",
+  "real-name": "Albert Camus",
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "avatar": "http://...",
+  "email": "albert@combat.org",
+  "owner": "false",
+  "admin": "true"
 }
 ```
 
@@ -382,16 +382,16 @@ Slack organization.
 
 ```json
 {
-  :user-id "email:4567-a8f6"
-  :org-id "email:bb92-67ga"
-  :name "albert"
-  :real-name "Albert Camus"
-  :first-name "Albert"
-  :last-name "Camus"
-  :avatar "http://..."
-  :email "albert@combat.org"
-  :owner "true"
-  :admin "true"
+  "user-id": "email:4567-a8f6",
+  "org-id": "email:bb92-67ga",
+  "name": "albert",
+  "real-name": "Albert Camus",
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "avatar": "http://...",
+  "email": "albert@combat.org",
+  "owner": "true",
+  "admin": "true"
 }
 ```
 
@@ -400,22 +400,22 @@ Slack organization.
 JSON Web Tokens are created as authorization tokens for authorized users. They consist of the user storage data
 (see above) as well as an expiration timestamp (in milliseconds since the epoch) for the token.
 
-An example JMToken payload:
+An example JWToken payload:
 
 ```json
 {
-  :user-id "slack:U06SCTYJR"
-  :org-id "slack:T07SBMH80"
-  :name "camus"
-  :real-name "Albert Camus"
-  :first-name "Albert"
-  :last-name "Camus"
-  :avatar "http://..."
-  :email "albert@combat.org"
-  :owner "false"
-  :admin "true"
-  :exprire 1474975206974
-  :auth-source "slack"
+  "user-id": "slack:U06SCTYJR",
+  "org-id": "slack:T07SBMH80",
+  "name": "camus",
+  "real-name": "Albert Camus",
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "avatar": "http://...",
+  "email": "albert@combat.org",
+  "owner": "false",
+  "admin": "true",
+  "exprire": 1474975206974,
+  "auth-source": "slack"
 }
 ```
 
@@ -423,18 +423,18 @@ and:
 
 ```json
 {
-  :user-id "email:4567-a8f6"
-  :org-id "email:bb92-67ga"
-  :name "camus"
-  :real-name "Albert Camus"
-  :first-name "Albert"
-  :last-name "Camus"
-  :avatar "http://..."
-  :email "albert@combat.org"
-  :owner "true"
-  :admin "true"
-  :exprire 1474975206974
-  :auth-source "email"
+  "user-id": "email:4567-a8f6",
+  "org-id": "email:bb92-67ga",
+  "name": "camus",
+  "real-name": "Albert Camus",
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "avatar": "http://...",
+  "email": "albert@combat.org",
+  "owner": "true",
+  "admin": "true",
+  "exprire": 1474975206974,
+  "auth-source": "email"
 }
 ```
 ## Testing
