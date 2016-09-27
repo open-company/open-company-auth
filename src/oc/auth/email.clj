@@ -4,7 +4,7 @@
             [oc.auth.config :as config]
             [oc.auth.user :as user]))
 
-(def ^:private prefix "email:")
+;(def ^:private prefix "email:")
 
 (def auth-settings {:auth-url (s/join "/" [config/auth-server-url "email-auth"])
                     :refresh-url (s/join "/" [config/auth-server-url "email" "refresh-token"])})

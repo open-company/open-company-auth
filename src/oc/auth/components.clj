@@ -41,7 +41,7 @@
   (stop [component]
     (dissoc component :handler)))
 
-(defn auth-system [{:keys [host port handler-fn] :as opts}]
+(defn auth-system [{:keys [port handler-fn]}]
   (component/system-map
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
    :handler (component/using

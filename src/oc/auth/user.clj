@@ -1,7 +1,6 @@
 (ns oc.auth.user
   ""
-  (:require [clojure.string :as s]
-            [oc.lib.rethinkdb.common :as common]))
+  (:require [oc.lib.rethinkdb.common :as common]))
 
 ;; ----- RethinkDB metadata -----
 
