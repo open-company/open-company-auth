@@ -7,7 +7,5 @@
   :real-name "Simone de Beauvoir"
   :avatar "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg"
   :email "simone@lyceela.org"
-  :owner true
-  :admin true
   :auth-source "email"
 }

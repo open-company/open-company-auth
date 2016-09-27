@@ -314,7 +314,9 @@ to authorize all subsequent access to the API.
 
 The JWToken contains an expiration field (24 hours for Slack users w/ an auth'd bot, and 2 hours for everyone else).
 An expired JWToken does not authorize access to services. Before each use the JWToken is checked for expiration and if
-it's expired, the user is
+it's expired, the user is...
+
+TBD.
 
 #### Email Onboarding
 
@@ -377,8 +379,7 @@ Slack organization. An example stored Slack user:
 }
 ```
 
-In the case of a Slack user, `owner` and `admin` properties have to do with their privelages in the
-Slack organization.
+In the case of as email user, there are no `owner` and `admin` properties.
 
 ```json
 {
@@ -390,8 +391,6 @@ Slack organization.
   "last-name": "Camus",
   "avatar": "http://...",
   "email": "albert@combat.org",
-  "owner": "true",
-  "admin": "true"
 }
 ```
 
@@ -431,8 +430,6 @@ and:
   "last-name": "Camus",
   "avatar": "http://...",
   "email": "albert@combat.org",
-  "owner": "true",
-  "admin": "true",
   "exprire": 1474975206974,
   "auth-source": "email"
 }
