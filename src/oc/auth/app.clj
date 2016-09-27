@@ -74,13 +74,28 @@
   (if-let* [email (:identity req) ; email/pass sucessfully auth'd
             db-pool (-> sys :db-pool :pool)]
     (pool/with-pool [conn db-pool]
-      (if-let [user (user/get-user-by-email conn email)] ; user from DB for JWToken
+      (if-let* [user (user/get-user-by-email conn email) ; user from DB for JWToken
+                clean-user (dissoc user :created-at :updated-at :password-hash)
+                sourced-user (assoc clean-user :auth-source "email")]
         ; respond with JWToken
-        (ring/json-response (jwt/generate (dissoc user :created-at :updated-at :password-hash)) 200)
+        (ring/json-response (jwt/generate sourced-user) 200)
         unauth-response)) ; couldn't get the auth'd user (unexpected)
     unauth-response)) ; email/pass didn't auth (expected)
 
 ;; ----- Request Handling Functions -----
+
+(defn- auth-settings [req]
+  (if-let* [token (jwt/read-token (:headers req))
+            decoded (jwt/decode token)
+            auth-source (-> decoded :claims :auth-source)]
+    ;; auth'd, give settings specific to their authentication source
+    (if (= auth-source "email")
+      (auth-settings-response {:refresh-url (:refresh-url email/auth-settings)})
+      (auth-settings-response {:refresh-url (:refresh-url slack/auth-settings)}))
+    ;; not auth'd, give them both settings
+    (auth-settings-response 
+      {:slack slack/auth-settings
+       :email email/auth-settings})))
 
 (defn- oauth-callback [callback params]
   (if (get params "test")
@@ -88,14 +103,18 @@
     (redirect-to-ui (callback params))))
 
 (defn- refresh-slack-token [req]
-  (let [decoded (jwt/decode (jwt/read-token (:headers req)))
-        uid     (-> decoded :claims :user-id)
-        org-id  (-> decoded :claims :org-id)
-        user-tkn (-> decoded :claims :user-token)]
-    (timbre/info "Refreshing token" uid)
-    (if (and user-tkn (slack/valid-access-token? user-tkn))
-      (ring/json-response (jwt/generate (merge (:claims decoded) (store/retrieve org-id))) 200)
-      (ring/error-response "could note confirm token" 400))))
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            uid      (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)
+            user-tkn (-> decoded :claims :user-token)]
+    (do (timbre/info "Refreshing token" uid)
+      (if (and user-tkn (slack/valid-access-token? user-tkn))
+        (ring/json-response (jwt/generate (merge (:claims decoded)
+                                                 (store/retrieve org-id)
+                                                 {:auth-source "slack"})) 200)
+        (ring/error-response "could note confirm token" 400)))
+    (ring/error-response "could note confirm token" 400)))
 
 (defn- email-auth [sys req auth-data]
   (let [db-pool (-> sys :db-pool :pool)
@@ -111,8 +130,7 @@
 (defn- auth-routes [sys]
   (compojure/routes
     (GET "/" [] test-response)
-    (GET "/auth-settings" [] (auth-settings-response {:slack slack/auth-settings
-                                                      :email email/auth-settings}))
+    (GET "/auth-settings" req (auth-settings req))
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
     (GET "/slack/refresh-token" req (refresh-slack-token req))
     (GET "/email-auth" req (email-auth-response sys req))

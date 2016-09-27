@@ -2,6 +2,7 @@
   (:require [clj-jwt.core :as jwt]
             [clj-time.core :as t]
             [clojure.string :as string]
+            [if-let.core :refer (when-let*)]
             [oc.auth.config :as config]))
 
 (defn expire [payload]
@@ -37,6 +38,6 @@
 
 (defn read-token
   [headers]
-  (let [auth-header (or (get headers "authorization") (get headers "Authorization"))
-        jwt         (last (string/split auth-header #" "))]
+  (when-let* [auth-header (or (get headers "authorization") (get headers "Authorization"))
+              jwt         (last (string/split auth-header #" "))]
     (when (check-token jwt) jwt)))

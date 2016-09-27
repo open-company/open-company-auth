@@ -108,6 +108,7 @@
         org          {:org-id   (str prefix (or (:team_id response)
                                                 (-> response :team :id))) ; identity.basic returns different data
                       :org-name (:team_name response)}
+        auth-source  {:auth-source "slack"}
         access-token (:access_token response)
         scope        (:scope response)]
     (if (and (:ok response) (valid-access-token? access-token))
@@ -118,8 +119,8 @@
         [true
          (if secrets
            (do (store/store! (:org-id org) secrets)
-               (jwt/generate (merge user secrets org {:user-token access-token})))
-           (jwt/generate (merge user (store/retrieve (:org-id org)) org {:user-token access-token})))])
+               (jwt/generate (merge user secrets org auth-source {:user-token access-token})))
+           (jwt/generate (merge user (store/retrieve (:org-id org)) org auth-source {:user-token access-token})))])
       (do
         (timbre/warn "Could not swap code for token" {:oauth-response response})
         [false "Could not swap code for token"]))))

@@ -262,7 +262,7 @@ already authorized users.
 ### Authentication Flow
 
 Based on local settings in the OpenCompany Web application, a GET request is made to this authentication service at
-`/auth-settings` to retrieve authentication settings. The response looks like:
+`/auth-settings` to retrieve authentication settings. An unauthenticated response looks like:
 
 ```json
 {
@@ -277,6 +277,22 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
     "auth-url" : "https://auth.opencompany.com/email-auth",
     "refresh-url": "https://auth.opencompany.com/email/refresh-token"
   }
+}
+```
+
+A response with an authenticated user is limited to just the refresh URL appropriate for that user:
+
+```json
+{
+  "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
+}
+```
+
+or:
+
+```
+{
+  "refresh-url": "https://auth.opencompany.com/email/refresh-token"
 }
 ```
 
