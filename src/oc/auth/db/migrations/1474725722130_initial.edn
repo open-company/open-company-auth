@@ -8,5 +8,5 @@
   (println "Creating table: " u/table-name)
   (println (m/create-table conn c/db-name u/table-name u/primary-key))
   (println (m/create-index conn u/table-name "org-id"))
-  (println (m/create-index conn u/table-name "email-address"))
+  (println (m/create-index conn u/table-name "email"))
   true) ; return true on success

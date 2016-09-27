@@ -296,7 +296,7 @@ authorize the bot can occur.
 The main implication of a successful Slack authentication is the creation of a trusted JWToken that is then used to
 authorize all subsequent access to the API.
 
-![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/slack-auth-success.svg)
+![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/email/docs/slack-auth-success.svg)
 
 #### Email Authentication Flow
 
@@ -308,7 +308,7 @@ there is a 401 response.
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
 
-![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/email-auth-success.svg)
+![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/email/docs/email-auth-success.svg)
 
 #### JWToken Expiration / Refresh
 
@@ -323,11 +323,10 @@ onboarding of a new email user takes a different path. To onboard a new email us
 
 ```json
 {
-  "user-id": "camus@combat.org",
+  "email": "camus@combat.org",
   "password": "Ssshhh!#&@!",
   "first-name": "Albert",
   "last-name": "Camus",
-  "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
 }
 ```
 

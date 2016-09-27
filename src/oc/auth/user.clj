@@ -20,9 +20,9 @@
   "Given the slug of the company, retrieve it from the database, or return nil if it doesn't exist."
   [conn email]
   {:pre [(string? email)]}
-  (common/read-resource conn table-name "email-address" email))
+  (first (common/read-resources conn table-name "email" email)))
 
-(defn create-user! 
+(defn create-user!
   "Given a map of user properties, persist it to the database."
   [conn user-map]
   (common/create-resource conn table-name user-map (common/current-timestamp)))
@@ -34,13 +34,3 @@
   (try
     (common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
-
-(comment 
-
-  (def u (read-string (slurp "./opt/identities/simone.edn")))
-
-  (user/create-user! conn u)
-  (user/get-user conn (:user-id u))
-  (user/delete-user conn (:user-id u))
-  
-  )

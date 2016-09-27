@@ -1,5 +1,6 @@
 (ns oc.auth.app
   (:require [clojure.java.io :as io]
+            [if-let.core :refer (if-let*)]
             [raven-clj.core :as sentry]
             [raven-clj.interfaces :as sentry-interfaces]
             [raven-clj.ring :as sentry-mw]
@@ -9,15 +10,19 @@
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]
             [ring.middleware.cors :refer (wrap-cors)]
+            [buddy.auth.middleware :refer (wrap-authentication)]
+            [buddy.auth.backends :as backends]
             [ring.util.response :refer (redirect)]
             [com.stuartsierra.component :as component]
+            [oc.lib.rethinkdb.pool :as pool]
             [oc.auth.components :as components]
             [oc.auth.config :as c]
             [oc.auth.store :as store]
             [oc.auth.jwt :as jwt]
             [oc.auth.ring :as ring]
             [oc.auth.slack :as slack]
-            [oc.auth.email :as email]))
+            [oc.auth.email :as email]
+            [oc.auth.user :as user]))
 
 ;; Send unhandled exceptions to Sentry
 ;; See https://stuartsierra.com/2015/05/27/clojure-uncaught-exceptions
@@ -30,14 +35,17 @@
                                  (assoc-in [:extra :exception-data] (ex-data ex))
                                  (sentry-interfaces/stacktrace ex)))))))
 
-;; ----- Request Handling Functions -----
+;; ----- Response Functions -----
+
+(def ^:private test-token {:test "test" :bago "bago"})
 
 (defonce ^:private test-response
   {:body    "OpenCompany auth server: OK"
    :headers ring/html-mime-type
    :status  200})
 
-(def ^:private test-token {:test "test" :bago "bago"})
+(defonce ^:private unauth-response
+  (ring/json-response "" 401))
 
 (defn- jwt-debug-response
   "Helper to format a JWT debug response"
@@ -60,31 +68,54 @@
     (redirect (str c/ui-server-url "/login?jwt=" jwt-or-reason))
     (redirect (str c/ui-server-url "/login?access=" jwt-or-reason))))
 
+(defn- email-auth-response
+  "Return a JWToken for the email auth'd user, or a 401 Unauthorized."
+  [sys req]
+  (if-let* [email (:identity req) ; email/pass sucessfully auth'd
+            db-pool (-> sys :db-pool :pool)]
+    (pool/with-pool [conn db-pool]
+      (if-let [user (user/get-user-by-email conn email)] ; user from DB for JWToken
+        ; respond with JWToken
+        (ring/json-response (jwt/generate (dissoc user :created-at :updated-at :password-hash)) 200)
+        unauth-response)) ; couldn't get the auth'd user (unexpected)
+    unauth-response)) ; email/pass didn't auth (expected)
+
+;; ----- Request Handling Functions -----
+
 (defn- oauth-callback [callback params]
   (if (get params "test")
     (ring/json-response {:test true :ok true} 200)
     (redirect-to-ui (callback params))))
 
-(defn refresh-slack-token [req]
+(defn- refresh-slack-token [req]
   (let [decoded (jwt/decode (jwt/read-token (:headers req)))
         uid     (-> decoded :claims :user-id)
         org-id  (-> decoded :claims :org-id)
         user-tkn (-> decoded :claims :user-token)]
     (timbre/info "Refreshing token" uid)
     (if (and user-tkn (slack/valid-access-token? user-tkn))
-      (ring/json-response {:jwt (jwt/generate (merge (:claims decoded) (store/retrieve org-id)))} 200)
+      (ring/json-response (jwt/generate (merge (:claims decoded) (store/retrieve org-id))) 200)
       (ring/error-response "could note confirm token" 400))))
+
+(defn- email-auth [sys req auth-data]
+  (let [db-pool (-> sys :db-pool :pool)
+        email (:username auth-data)
+        password (:password auth-data)]
+    (pool/with-pool [conn db-pool] 
+      (if (email/authenticate? conn email password)
+        email
+        false))))
 
 ;; ----- Request Routing -----
 
-(defn auth-routes [sys]
+(defn- auth-routes [sys]
   (compojure/routes
     (GET "/" [] test-response)
     (GET "/auth-settings" [] (auth-settings-response {:slack slack/auth-settings
                                                       :email email/auth-settings}))
-    ;(GET "/auth-settings" [] (auth-settings-response slack/auth-settings))
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
     (GET "/slack/refresh-token" req (refresh-slack-token req))
+    (GET "/email-auth" req (email-auth-response sys req))
     (GET "/test-token" [] (jwt-debug-response test-token))))
 
 ;; ----- System Startup -----
@@ -94,6 +125,8 @@
   (cond-> (auth-routes sys)
     true          wrap-params
     true          (wrap-cors #".*")
+    true          (wrap-authentication (backends/basic {:realm "oc-auth"
+                                                        :authfn (partial email-auth sys)}))
     c/hot-reload  wrap-reload
     c/dsn         (sentry-mw/wrap-sentry c/dsn)))
 

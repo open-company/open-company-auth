@@ -14,6 +14,7 @@
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha12"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/core.async "0.2.391"] ; Async programming and communication https://github.com/clojure/core.async
+    [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
     [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
@@ -21,6 +22,7 @@
     [http-kit "2.2.0"] ; Web server http://http-kit.org/
     [com.stuartsierra/component "0.3.1"] ; Component Lifecycle
     [buddy "1.1.0"] ; Security library https://github.com/funcool/buddy
+    [buddy/buddy-auth "1.2.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
