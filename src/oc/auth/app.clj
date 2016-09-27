@@ -116,6 +116,21 @@
         (ring/error-response "could note confirm token" 400)))
     (ring/error-response "could note confirm token" 400)))
 
+(defn- refresh-email-token [sys req]
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            uid      (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)
+            db-pool (-> sys :db-pool :pool)]
+    (do (timbre/info "Refreshing token" uid)
+      (pool/with-pool [conn db-pool]
+        (let [user (user/get-user conn uid)]
+          (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
+            (ring/json-response (jwt/generate (merge (:claims decoded)
+                                                   {:auth-source "email"})) 200)
+            (ring/error-response "could note confirm token" 400)))))
+    (ring/error-response "could note confirm token" 400)))
+
 (defn- email-auth [sys req auth-data]
   (let [db-pool (-> sys :db-pool :pool)
         email (:username auth-data)
@@ -134,6 +149,7 @@
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
     (GET "/slack/refresh-token" req (refresh-slack-token req))
     (GET "/email-auth" req (email-auth-response sys req))
+    (GET "/email/refresh-token" req (refresh-email-token sys req))
     (GET "/test-token" [] (jwt-debug-response test-token))))
 
 ;; ----- System Startup -----
