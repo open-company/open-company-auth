@@ -12,7 +12,7 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha12"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha13"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/core.async "0.2.391"] ; Async programming and communication https://github.com/clojure/core.async
     [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
     [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
@@ -36,7 +36,7 @@
     [amazonica "0.3.76"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
-    [open-company/lib "0.0.1-803c9fa"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.0.1-9333c9a"] ; Library for OC projects https://github.com/open-company/open-company-lib
   ]
 
   :plugins [
@@ -122,11 +122,11 @@
   }
 
   :aliases{
+    "build" ["do" "clean," "deps," "compile"] ; clean and build code
     "create-migration" ["run" "-m" "oc.auth.db.migrations" "create"] ; create a data migration
     "migrate-db" ["run" "-m" "oc.auth.db.migrations" "migrate"] ; run pending data migrations
-    "start" ["do" "run"] ; start a development server
-    "start!" ["with-profile" "prod" "do" "build," "run"] ; start a server in production
-    "build" ["do" "clean," "deps," "compile"] ; clean and build code
+    "start" ["do" "migrate-db," "run"] ; start a development server
+    "start!" ["with-profile" "prod" "do" "build," "migrate-db," "run"] ; start a server in production
     "midje!" ["with-profile" "qa" "midje"] ; run all tests
     "test!" ["with-profile" "qa" "do" "clean," "build," "midje"] ; build, init the DB and run all tests
     "autotest" ["with-profile" "qa" "midje" ":autotest"] ; watch for code changes and run affected tests
