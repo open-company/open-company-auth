@@ -36,7 +36,7 @@
     [amazonica "0.3.76"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
-    [open-company/lib "0.0.1-9333c9a"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.0.1-803c9fa"] ; Library for OC projects https://github.com/open-company/open-company-lib
   ]
 
   :plugins [
