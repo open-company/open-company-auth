@@ -83,10 +83,9 @@
 
 (defn- auth-settings [req]
   (if-let* [token (jwt/read-token (:headers req))
-            decoded (jwt/decode token)
-            auth-source (-> decoded :claims :auth-source)]
+            decoded (jwt/decode token)]
     ;; auth'd, give settings specific to their authentication source
-    (if (= auth-source "email")
+    (if (= (-> decoded :claims :auth-source) "email")
       (auth-settings-response {:refresh-url (:refresh-url email/auth-settings)})
       (auth-settings-response {:refresh-url (:refresh-url slack/auth-settings)}))
     ;; not auth'd, give them both settings
