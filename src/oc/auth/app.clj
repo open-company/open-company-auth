@@ -39,13 +39,10 @@
 
 (def ^:private test-token {:test "test" :bago "bago"})
 
-(defonce ^:private test-response
-  {:body    "OpenCompany auth server: OK"
-   :headers ring/html-mime-type
-   :status  200})
+(defonce ^:private test-response (ring/text-response  "OpenCompany auth server: OK" 200))
 
 (defonce ^:private unauth-response
-  (ring/json-response "" 401))
+  (ring/text-response "" 401))
 
 (defn- jwt-debug-response
   "Helper to format a JWT debug response"
@@ -78,7 +75,7 @@
                 clean-user (dissoc user :created-at :updated-at :password-hash)
                 sourced-user (assoc clean-user :auth-source "email")]
         ; respond with JWToken
-        (ring/json-response (jwt/generate sourced-user) 200)
+        (ring/text-response (jwt/generate sourced-user) 200)
         unauth-response)) ; couldn't get the auth'd user (unexpected)
     unauth-response)) ; email/pass didn't auth (expected)
 
@@ -110,7 +107,7 @@
             user-tkn (-> decoded :claims :user-token)]
     (do (timbre/info "Refreshing token" uid)
       (if (and user-tkn (slack/valid-access-token? user-tkn))
-        (ring/json-response (jwt/generate (merge (:claims decoded)
+        (ring/text-response (jwt/generate (merge (:claims decoded)
                                                  (store/retrieve org-id)
                                                  {:auth-source "slack"})) 200)
         (ring/error-response "could note confirm token" 400)))
@@ -126,7 +123,7 @@
       (pool/with-pool [conn db-pool]
         (let [user (user/get-user conn uid)]
           (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
-            (ring/json-response (jwt/generate (merge (:claims decoded)
+            (ring/text-response (jwt/generate (merge (:claims decoded)
                                                    {:auth-source "email"})) 200)
             (ring/error-response "could note confirm token" 400)))))
     (ring/error-response "could note confirm token" 400)))
