@@ -134,8 +134,12 @@
         password (:password auth-data)]
     (pool/with-pool [conn db-pool] 
       (if (email/authenticate? conn email password)
-        email
-        false))))
+        (do 
+          (timbre/info "Authed:" email)
+          email)
+        (do
+          (timbre/info "Failed to auth:" email) 
+          false)))))
 
 ;; ----- Request Routing -----
 
