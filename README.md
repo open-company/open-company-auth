@@ -298,7 +298,7 @@ A response with an authenticated user is limited to just the refresh URL appropr
 {
   "links" :[
     {
-      "rel" : "authenticate",
+      "rel" : "refresh",
       "method" : "GET",
       "href" : "https://auth.opencompany.com/slack/refresh-token",
       "type" : "text/plain"
@@ -313,7 +313,7 @@ or:
 {
   "links" :[
     {
-      "rel" : "authenticate",
+      "rel" : "refresh",
       "method" : "GET",
       "href" : "https://auth.opencompany.com/email/refresh-token",
       "type" : "text/plain"
