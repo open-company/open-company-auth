@@ -1,7 +1,7 @@
-(ns open-company-auth.store
+(ns oc.auth.store
   (:require [alandipert.enduro :as end]
             [amazonica.aws.s3 :as s3]
-            [open-company-auth.config :as config]
+            [oc.auth.config :as config]
             [taoensso.timbre :as timbre]
             [clojure.java.io :as io]
             [clojure.edn :as edn]))
@@ -29,7 +29,7 @@
   it is read and becomes the initial value.
   Otherwise, the initial value is init and the bucket denoted by table-name is updated.")
   [init aws-creds bucket key & opts]
-  {:pre [(:access-key aws-creds) (:access-key aws-creds)
+  {:pre [(string? (:access-key aws-creds)) (string? (:secret-key aws-creds))
          (string? bucket) (string? key)]}
   (end/atom*
     (or (and (s3/does-object-exist aws-creds bucket key)

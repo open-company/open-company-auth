@@ -1,0 +1,11 @@
+{
+  :user-id "email:67890"
+  :org-id "email:12345"
+  :name "Simone"
+  :first-name "Simone"
+  :last-name "de Beauvoir"
+  :real-name "Simone de Beauvoir"
+  :avatar "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg"
+  :email "simone@lyceela.org"
+  :auth-source "email"
+}

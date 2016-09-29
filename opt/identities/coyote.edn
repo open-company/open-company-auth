@@ -1,10 +1,13 @@
 {
   :user-id "slack:123456"
+  :org-id "slack:98765"
   :name "coyote"
+  :first-name "Wile"
+  :last-name "Coyote"
   :real-name "Wile E. Coyote"
   :avatar "http://www.emoticonswallpapers.com/avatar/cartoons/Wiley-Coyote-Dazed.jpg"
   :email "wile.e.coyote@acme.com"
   :owner false
   :admin false
-  :org-id "slack:98765"
+  :auth-source "slack"
 }
