@@ -274,8 +274,20 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
     "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
   }, 
   "email" : {
-    "auth-url" : "https://auth.opencompany.com/email-auth",
-    "refresh-url": "https://auth.opencompany.com/email/refresh-token"
+    "links" : [
+      {
+        "rel" : "authenticate",
+        "method" : "GET",
+        "href" : "https://auth.opencompany.com/email-auth",
+        "type" : "text/plain"
+      },
+      {
+        "rel" : "create",
+        "method" : "POST",
+        "href": "https://auth.opencompany.com/email/users"
+        "type" : "application/vnd.open-company.user.v1+json"
+      }
+    ]
   }
 }
 ```
@@ -284,7 +296,14 @@ A response with an authenticated user is limited to just the refresh URL appropr
 
 ```json
 {
-  "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
+  "links" :[
+    {
+      "rel" : "authenticate",
+      "method" : "GET",
+      "href" : "https://auth.opencompany.com/slack/refresh-token",
+      "type" : "text/plain"
+    }
+  ]
 }
 ```
 
@@ -292,7 +311,14 @@ or:
 
 ```
 {
-  "refresh-url": "https://auth.opencompany.com/email/refresh-token"
+  "links" :[
+    {
+      "rel" : "authenticate",
+      "method" : "GET",
+      "href" : "https://auth.opencompany.com/email/refresh-token",
+      "type" : "text/plain"
+    }
+  ]
 }
 ```
 
