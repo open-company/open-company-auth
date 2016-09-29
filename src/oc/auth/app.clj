@@ -1,12 +1,15 @@
 (ns oc.auth.app
   (:require [clojure.java.io :as io]
+            [clojure.string :as s]
+            [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (if-let*)]
+            [cheshire.core :as json]
             [raven-clj.core :as sentry]
             [raven-clj.interfaces :as sentry-interfaces]
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
-            [compojure.core :as compojure :refer (GET)]
+            [compojure.core :as compojure :refer (GET POST)]
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]
             [ring.middleware.cors :refer (wrap-cors)]
@@ -67,17 +70,20 @@
 
 (defn- email-auth-response
   "Return a JWToken for the email auth'd user, or a 401 Unauthorized."
-  [sys req]
-  (if-let* [email (:identity req) ; email/pass sucessfully auth'd
-            db-pool (-> sys :db-pool :pool)]
-    (pool/with-pool [conn db-pool]
+  ([sys req] (email-auth-response sys req false))
+  
+  ([sys req location]
+  (if-let [email (:identity req)] ; email/pass sucessfully auth'd
+    (pool/with-pool [conn (-> sys :db-pool :pool)]
       (if-let* [user (user/get-user-by-email conn email) ; user from DB for JWToken
                 clean-user (dissoc user :created-at :updated-at :password-hash)
                 sourced-user (assoc clean-user :auth-source "email")]
         ; respond with JWToken
-        (ring/text-response (jwt/generate sourced-user) 200)
+        (let [headers (if location {"Location" (s/join "/" [c/auth-server-url "email" (:user-id user)])} {})
+              status (if location 201 200)]
+          (ring/text-response (jwt/generate sourced-user) status headers))
         unauth-response)) ; couldn't get the auth'd user (unexpected)
-    unauth-response)) ; email/pass didn't auth (expected)
+    unauth-response))) ; email/pass didn't auth (expected)
 
 ;; ----- Request Handling Functions -----
 
@@ -92,6 +98,8 @@
     (auth-settings-response 
       {:slack slack/auth-settings
        :email email/auth-settings})))
+
+;; ----- Slack Request Handling Functions -----
 
 (defn- oauth-callback [callback params]
   (if (get params "test")
@@ -112,14 +120,15 @@
         (ring/error-response "could note confirm token" 400)))
     (ring/error-response "could note confirm token" 400)))
 
+;; ----- Email Request Handling Functions -----
+
 (defn- refresh-email-token [sys req]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
             uid      (-> decoded :claims :user-id)
-            org-id   (-> decoded :claims :org-id)
-            db-pool (-> sys :db-pool :pool)]
+            org-id   (-> decoded :claims :org-id)]
     (do (timbre/info "Refreshing token" uid)
-      (pool/with-pool [conn db-pool]
+      (pool/with-pool [conn (-> sys :db-pool :pool)]
         (let [user (user/get-user conn uid)]
           (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
             (ring/text-response (jwt/generate (merge (:claims decoded)
@@ -127,11 +136,28 @@
             (ring/error-response "could note confirm token" 400)))))
     (ring/error-response "could note confirm token" 400)))
 
+(defn- email-user-create [sys req]
+  ;; check if the request is well formed JSON
+  (if-let* [post-body (:body req)
+            json-body (slurp post-body)
+            map-body (try (json/parse-string json-body) (catch Exception e false))
+            body (keywordize-keys map-body)]
+    ;; request is well formed, check if it's valid
+    (if-let* [email (:email body)
+              password (:password body)]
+      ;; request is valid, check if the user already exists
+      (pool/with-pool [conn (-> sys :db-pool :pool)]
+        (if-let [prior-user (user/get-user-by-email conn email)]
+          (ring/error-response "user with email already exists" 409) ; already exists
+          (let [user (email/create-user! conn (email/->user body password))] ; doesn't exist, so create the user
+            (email-auth-response sys (assoc req :identity email) true)))) ; respond w/ JWToken and location
+      (ring/error-response "invalid request body" 400)) ; request not valid
+    (ring/error-response "could not parse request body" 400))) ; request not well formed
+
 (defn- email-auth [sys req auth-data]
-  (let [db-pool (-> sys :db-pool :pool)
-        email (:username auth-data)
-        password (:password auth-data)]
-    (pool/with-pool [conn db-pool] 
+  (if-let* [email (:username auth-data)
+            password (:password auth-data)]
+    (pool/with-pool [conn (-> sys :db-pool :pool)] 
       (if (email/authenticate? conn email password)
         (do 
           (timbre/info "Authed:" email)
@@ -144,11 +170,12 @@
 
 (defn- auth-routes [sys]
   (compojure/routes
-    (GET "/" [] test-response)
+    (GET "/ping" [] test-response)
     (GET "/auth-settings" req (auth-settings req))
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
     (GET "/slack/refresh-token" req (refresh-slack-token req))
     (GET "/email-auth" req (email-auth-response sys req))
+    (POST "/email/users" req (email-user-create sys req))
     (GET "/email/refresh-token" req (refresh-email-token sys req))
     (GET "/test-token" [] (jwt-debug-response test-token))))
 

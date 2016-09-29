@@ -1,5 +1,4 @@
-(ns oc.auth.test
-  "Namespace of data fixtures for use in tests."
+(ns oc.auth.integration.static-test
   (:require [midje.sweet :refer :all]
             [cheshire.core :as json]
             [oc.auth.lib.utils :as test-utils]
@@ -8,11 +7,13 @@
 (with-state-changes [(before :contents (ts/setup-system!))
                      (after :contents (ts/teardown-system!))]
 
-  (facts "Test endpoints"
-    (fact "hit /"
+  (facts "Test static endpoints"
+    
+    (fact "by requesting HATEOAS /"
       (let [resp (test-utils/api-request :get "/" {})]
         (:status resp) => 200))
-    (fact "hit /auth-settings"
+    
+    (fact "by requesting auth-settings anonymously"
       (let [resp (test-utils/api-request :get "/auth-settings" {})
             body (json/parse-string (:body resp))]
         (:status resp) => 200
@@ -22,11 +23,16 @@
         (contains? (body "slack") "refresh-url") => true
         (contains? body "email") => true
         (contains? (body "email") "refresh-url") => true))
-    (fact "hit /slack-oauth"
-      (let [resp (test-utils/api-request :get "/slack-oauth?code=test&test=true" {})
-            body (json/parse-string (:body resp))]
-        (:status resp) => 200))
-    (fact "hit /test-token"
+    
+    (future-fact "by requesting auth-settings with an invalid JWToken")
+
+    (future-fact "by requesting auth-settings with an old JWToken")
+
+    (future-fact "by requesting auth-settings with a Slack JWToken")
+
+    (future-fact "by requesting auth-settings with an Email JWToken")
+
+    (fact "by requesting token debugging with /test-token"
       (let [resp (test-utils/api-request :get "/test-token" {})
             body (json/parse-string (:body resp))]
         (:status resp) => 200

@@ -21,12 +21,13 @@
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0"] ; Web server http://http-kit.org/
     [com.stuartsierra/component "0.3.1"] ; Component Lifecycle
-    [buddy "1.1.0"] ; Security library https://github.com/funcool/buddy
-    [buddy/buddy-auth "1.2.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
+    [prismatic/schema "1.1.3"] ; Data validation https://github.com/Prismatic/schema
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.4.3"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
+    [buddy "1.1.0"] ; Security library https://github.com/funcool/buddy
+    [buddy/buddy-auth "1.2.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt

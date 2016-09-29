@@ -337,7 +337,18 @@ TBD.
 #### Email Onboarding
 
 Unlike Slack, which doesn't need to differentiate between initial onboarding and subsequent authorizations, the
-onboarding of a new email user takes a different path. To onboard a new email user
+onboarding of a new email user takes a different path. 
+
+To onboard a new email user, POST the following to: `/email/users`
+
+Headers:
+
+```
+Content-Type: application/vnd.open-company.user.v1+json
+Accept: text/plain
+```
+
+Body:
 
 ```json
 {
@@ -347,6 +358,10 @@ onboarding of a new email user takes a different path. To onboard a new email us
   "last-name": "Camus",
 }
 ```
+
+If successful, the `201` response will contain a `Location` header with the location of the newly created user,
+as well as a JWToken for the user in the body.
+
 
 A new user request can be one of 4 cases:
 

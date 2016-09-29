@@ -1,11 +1,27 @@
 (ns oc.auth.user
-  ""
-  (:require [oc.lib.rethinkdb.common :as common]))
+  "Users stored in RethinDB."
+  (:require [oc.lib.rethinkdb.common :as common]
+            [schema.core :as schema]))
 
 ;; ----- RethinkDB metadata -----
 
 (def table-name "users")
 (def primary-key :user-id)
+
+;; ----- Schema -----
+
+(def User {
+   :user-id schema/Str
+   :org-id schema/Str
+   :name schema/Str
+   :first-name schema/Str
+   :last-name schema/Str
+   :real-name schema/Str
+   :avatar (schema/maybe schema/Str)
+   (schema/optional-key :email) schema/Str
+   (schema/optional-key :password-hash) schema/Str
+   (schema/optional-key :owner) schema/Bool
+   (schema/optional-key :admin) schema/Bool})
 
 ;; ----- User CRUD -----
 
@@ -26,10 +42,17 @@
   [conn user-map]
   (common/create-resource conn table-name user-map (common/current-timestamp)))
 
-(defn delete-user
+(defn delete-user!
   "Given the user-id of the user, delete it and return `true` on success."
   [conn user-id]
   {:pre [(string? user-id)]}
   (try
     (common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+
+;; ----- Armageddon -----
+
+(defn delete-all-users!
+  "Use with caution! Failure can result in partial deletes. Returns `true` if successful."
+  [conn]
+  (common/delete-all-resources! conn table-name))

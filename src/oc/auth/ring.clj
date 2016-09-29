@@ -7,27 +7,35 @@
 
 (defn ring-response
   "Helper to format a generic JSON body ring response"
-  [body status mime-type]
+  [body status headers]
   {:body body
    :status status
-   :headers {"Content-Type" mime-type}})
+   :headers headers})
 
 (defn json-response
   "Helper to format a generic JSON body ring response"
-  [body status]
-  (ring-response (json/generate-string body {:pretty true}) status json-mime-type))
+  ([body status] (json-response body status {}))
+  
+  ([body status headers]
+  (ring-response (json/generate-string body {:pretty true}) status (merge {"Content-Type" json-mime-type} headers))))
 
 (defn html-response
   "Helper to format a generic JSON body ring response"
-  [body status]
-  (ring-response body status html-mime-type))
+  ([body status] (html-response body status {}))
+  
+  ([body status headers]
+  (ring-response body status (merge {"Content-Type" html-mime-type} headers))))
 
 (defn text-response
   "Helper to format a generic JSON body ring response"
-  [body status]
-  (ring-response body status text-mime-type))
+  ([body status] (text-response body status {}))
+  
+  ([body status headers]
+  (ring-response body status (merge {"Content-Type" text-mime-type} headers))))
 
 (defn error-response
   "Helper to format a JSON ring response with an error and :ok false"
-  [error status]
-  (json-response {:ok false :error error} status))
+  ([error status] (error-response error status {}))
+  
+  ([error status headers]
+  (json-response {:ok false :error error} status headers)))

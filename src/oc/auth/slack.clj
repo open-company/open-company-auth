@@ -10,7 +10,7 @@
             [oc.auth.store :as store]
             [oc.auth.jwt :as jwt]))
 
-(def ^:private prefix "slack:")
+(def ^:private prefix "slack-")
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
@@ -55,10 +55,13 @@
      :name (or (:name user-data) "")
      :real-name (or (:real_name_normalized user-data)
                     (:real_name user-data)
-                    (:first_name user-data)
-                    (:last_name user-data)
-                    (:name user-data)
-                    "")
+                    (if (and (:first_name user-data) (:last_name user-data))
+                      (s/join " " [(:first_name user-data) (:last_name user-data)]) 
+                      (or
+                        (:first_name user-data)
+                        (:last_name user-data)
+                        (:name user-data)
+                        "")))
      :first-name (:first_name user-data)
      :last-name (:last_name user-data)
      :avatar (or (:image_192 user-data)
