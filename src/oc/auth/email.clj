@@ -3,14 +3,29 @@
             [clojure.walk :refer (keywordize-keys)]
             [schema.core :as schema]
             [buddy.hashers :as hashers]
+            [oc.lib.hateoas :as hateoas]
             [oc.lib.slugify :refer (slugify)]
             [oc.auth.config :as config]
             [oc.auth.user :as user]))
 
 (def ^:private prefix "email-")
 
-(def auth-settings {:auth-url (s/join "/" [config/auth-server-url "email-auth"])
-                    :refresh-url (s/join "/" [config/auth-server-url "email" "refresh-token"])})
+(def auth-link (hateoas/link-map "authenticate" 
+                                 hateoas/GET
+                                 (s/join "/" [config/auth-server-url "email-auth"])
+                                 "text/plain"))
+
+(def refresh-link (hateoas/link-map "refresh" 
+                                    hateoas/GET
+                                    (s/join "/" [config/auth-server-url "email" "refresh-token"])
+                                    "text/plain"))
+
+(def create-link (hateoas/link-map "create" 
+                                 hateoas/POST
+                                 (s/join "/" [config/auth-server-url "email" "users"])
+                                 "application/vnd.open-company.user.v1+json"))
+
+(def auth-settings {:links [auth-link create-link]})
 
 (defn- short-uuid []
   (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))

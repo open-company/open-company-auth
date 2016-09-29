@@ -271,7 +271,6 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
     "extended-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=bot,users:read",
     "redirectURI" : "/slack-oauth",
     "state" : "open-company-auth",
-    "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
   }, 
   "email" : {
     "links" : [

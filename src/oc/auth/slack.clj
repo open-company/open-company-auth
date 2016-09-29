@@ -6,6 +6,7 @@
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [taoensso.truss :as t]
+            [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
             [oc.auth.store :as store]
             [oc.auth.jwt :as jwt]))
@@ -29,9 +30,13 @@
        "&scope="
        scope))
 
+(def refresh-link (hateoas/link-map "refresh" 
+                                     hateoas/GET
+                                     (s/join "/" [config/auth-server-url "slack" "refresh-token"])
+                                     "text/plain"))
+
 (def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
-                           :extended-scopes-url (slack-auth-url "bot,users:read")
-                           :refresh-url (s/join "/" [config/auth-server-url "slack" "refresh-token"])}
+                           :extended-scopes-url (slack-auth-url "bot,users:read")}
                           slack))
 
 (defn- prefixed? [s]

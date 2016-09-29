@@ -57,10 +57,6 @@
           :jwt-decoded (jwt/decode jwt-token)}]
     (ring/json-response response 200)))
 
-(defn- auth-settings-response
-  [auth-settings]
-  (ring/json-response auth-settings 200))
-
 (defn- redirect-to-ui
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
   [[success? jwt-or-reason]]
@@ -91,13 +87,12 @@
   (if-let* [token (jwt/read-token (:headers req))
             decoded (jwt/decode token)]
     ;; auth'd, give settings specific to their authentication source
-    (if (= (-> decoded :claims :auth-source) "email")
-      (auth-settings-response {:refresh-url (:refresh-url email/auth-settings)})
-      (auth-settings-response {:refresh-url (:refresh-url slack/auth-settings)}))
+    (let [refresh-link (if (= (-> decoded :claims :auth-source) "email") email/refresh-link slack/refresh-link)]
+      (ring/json-response {:links [refresh-link]} 200))
     ;; not auth'd, give them both settings
-    (auth-settings-response 
+    (ring/json-response 
       {:slack slack/auth-settings
-       :email email/auth-settings})))
+       :email email/auth-settings} 200)))
 
 ;; ----- Slack Request Handling Functions -----
 
