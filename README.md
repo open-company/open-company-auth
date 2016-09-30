@@ -326,7 +326,7 @@ or:
     {
       "rel" : "create",
       "method" : "POST",
-      "href": "https://auth.opencompany.com/email/users"
+      "href": "https://auth.opencompany.com/email/users",
       "type" : "application/vnd.open-company.user.v1+json"
     },
     {
@@ -428,7 +428,7 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
   "collection" : {
     "version" : "1.0",
     "href" : "/email/users",
-    "org-id": "email:1234-5678"
+    "org-id": "email:1234-5678",
     "links" : [
       {
         "rel" : "self",
@@ -544,10 +544,6 @@ user (see above). The response will be the same as an initial invite.
 #### Password Reset
 
 TBD.
-
-
-```
-
 
 #### User Storage
 
