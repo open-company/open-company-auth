@@ -12,17 +12,17 @@
 
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
-                                 (s/join "/" [config/auth-server-url "email-auth"])
+                                 "/email-auth"
                                  "text/plain"))
 
 (def refresh-link (hateoas/link-map "refresh" 
                                     hateoas/GET
-                                    (s/join "/" [config/auth-server-url "email" "refresh-token"])
+                                    "/email/refresh-token"
                                     "text/plain"))
 
 (def create-link (hateoas/link-map "create" 
                                  hateoas/POST
-                                 (s/join "/" [config/auth-server-url "email" "users"])
+                                 "/email/users"
                                  "application/vnd.open-company.user.v1+json"))
 
 (def auth-settings {:links [auth-link create-link]})

@@ -32,7 +32,7 @@
 
 (def refresh-link (hateoas/link-map "refresh" 
                                      hateoas/GET
-                                     (s/join "/" [config/auth-server-url "slack" "refresh-token"])
+                                     "/slack/refresh-token"
                                      "text/plain"))
 
 (def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
