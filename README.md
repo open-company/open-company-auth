@@ -283,7 +283,7 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
       {
         "rel" : "create",
         "method" : "POST",
-        "href": "https://auth.opencompany.com/email/users"
+        "href": "https://auth.opencompany.com/email/users",
         "type" : "application/vnd.open-company.user.v1+json"
       }
     ]
@@ -314,7 +314,7 @@ A response with an authenticated user is limited to just the refresh URL appropr
 
 or:
 
-```
+```json
 {
   "links" :[
     {
@@ -423,7 +423,7 @@ TBD.
 
 Authenticated users can enumerate the users with the same `org-id` with a GET request to `/slack/users` or  `/email/users` respectively:
 
-```
+```json
 {
   "collection" : {
     "version" : "1.0",
@@ -463,7 +463,7 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
         "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg",
         "email": "albert@combat.org",
         "status": "pending",
-        links" : [
+        "links" : [
           {
             "rel" : "self",
             "method" : "GET",
@@ -485,6 +485,7 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
     ]
   }
 }
+```
 
 #### Email Invitations
 
@@ -516,7 +517,7 @@ as well as a JSON body with user properties and links.
   "avatar": "",
   "email": "albert@combat.org",
   "status": "pending",
-  links" : [
+  "links" : [
     {
       "rel" : "self",
       "method" : "GET",
