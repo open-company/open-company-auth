@@ -262,7 +262,7 @@ already authorized users.
 ### Authentication Flow
 
 Based on local settings in the OpenCompany Web application, a GET request is made to this authentication service at
-`/auth-settings` to retrieve authentication settings. An unauthenticated response looks like:
+`/` to retrieve authentication settings. An unauthenticated response looks like:
 
 ```json
 {

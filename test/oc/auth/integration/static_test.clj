@@ -9,20 +9,20 @@
 
   (facts "Test static endpoints"
     
-    (fact "by requesting HATEOAS /"
-      (let [resp (test-utils/api-request :get "/" {})]
+    (fact "by requesting status"
+      (let [resp (test-utils/api-request :get "/ping" {})]
         (:status resp) => 200))
     
     (fact "by requesting auth-settings anonymously"
-      (let [resp (test-utils/api-request :get "/auth-settings" {})
+      (let [resp (test-utils/api-request :get "/" {})
             body (json/parse-string (:body resp))]
         (:status resp) => 200
         (test-utils/response-mime-type resp) => "application/json"
         (contains? body "slack") => true
         (contains? (body "slack") "basic-scopes-url") => true
-        (contains? (body "slack") "refresh-url") => true
+        (contains? (body "slack") "extended-scopes-url") => true
         (contains? body "email") => true
-        (contains? (body "email") "refresh-url") => true))
+        (contains? (body "email") "links") => true))
     
     (future-fact "by requesting auth-settings with an invalid JWToken")
 

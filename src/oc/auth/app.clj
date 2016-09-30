@@ -166,7 +166,7 @@
 (defn- auth-routes [sys]
   (compojure/routes
     (GET "/ping" [] test-response)
-    (GET "/auth-settings" req (auth-settings req))
+    (GET "/" req (auth-settings req))
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
     (GET "/slack/refresh-token" req (refresh-slack-token req))
     (GET "/email-auth" req (email-auth-response sys req))
