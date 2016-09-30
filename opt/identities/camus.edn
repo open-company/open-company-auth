@@ -1,6 +1,6 @@
 {
-  :user-id "slack:1960-01-04"
-  :org-id "slack:98765"
+  :user-id "slack-1960-01-04"
+  :org-id "slack-98765"
   :name "camus"
   :first-name "Albert"
   :last-name "Camus"

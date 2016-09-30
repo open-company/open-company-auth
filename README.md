@@ -301,6 +301,12 @@ A response with an authenticated user is limited to just the refresh URL appropr
       "method" : "GET",
       "href" : "https://auth.opencompany.com/slack/refresh-token",
       "type" : "text/plain"
+    },
+    {
+      "rel" : "users",
+      "method" : "GET",
+      "href" : "https://auth.opencompany.com/slack/users",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
     }
   ]
 }
@@ -316,6 +322,18 @@ or:
       "method" : "GET",
       "href" : "https://auth.opencompany.com/email/refresh-token",
       "type" : "text/plain"
+    },
+    {
+      "rel" : "create",
+      "method" : "POST",
+      "href": "https://auth.opencompany.com/email/users"
+      "type" : "application/vnd.open-company.user.v1+json"
+    },
+    {
+      "rel" : "users",
+      "method" : "GET",
+      "href" : "https://auth.opencompany.com/email/users",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
     }
   ]
 }
@@ -401,17 +419,134 @@ TBD.
 
 TBD.
 
+#### Email User Management
+
+Authenticated users can enumerate the users with the same `org-id` with a GET request to `/slack/users` or  `/email/users` respectively:
+
+```
+{
+  "collection" : {
+    "version" : "1.0",
+    "href" : "/email/users",
+    "org-id": "email:1234-5678"
+    "links" : [
+      {
+        "rel" : "self",
+        "method" : "GET",
+        "href" : "/email/users",
+        "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+      }],
+    "users" : [
+      {
+        "user-id": "email-6789-0123",
+        "real-name": "Simone de Beauvoir",
+        "avatar": "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg",
+        "email": "simone@lyceela.org",
+        "status": "active",
+        "links" : [
+          {
+            "rel" : "self",
+            "method" : "GET",
+            "href" : "/email/users/email-1234-5678",
+            "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+          },
+          {
+            "rel" : "delete",
+            "method" : "DELETE",
+            "href" : "/email/users/email-1234-5678"
+          }
+        ]
+      },
+      {
+        "user-id": "email-abcd-efgh",
+        "real-name": "Albert Camus",
+        "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg",
+        "email": "albert@combat.org",
+        "status": "pending",
+        links" : [
+          {
+            "rel" : "self",
+            "method" : "GET",
+            "href" : "/email/users/email-abcd-efgh",
+            "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+          },
+          {
+            "rel" : "invite",
+            "method" : "POST",
+            "href" : "/email/users/email-abcd-efgh/invite"
+          },
+          {
+            "rel" : "delete",
+            "method" : "DELETE",
+            "href" : "/email/users/email-abcd-efgh"
+          }
+        ]
+      }      
+    ]
+  }
+}
+
 #### Email Invitations
 
-TBD.
+To invite a new email user, with an authenticated user, POST their email address to: `/email/users`
+
+Headers:
+
+```
+Authorization: Bearer <JWToken>
+Content-Type: application/vnd.open-company.user.v1+json
+Accept: application/vnd.open-company.user.v1+json
+```
+
+Body:
+
+```json
+{
+  "email": "camus@combat.org"
+}
+```
+
+If successful, the `201` response will contain a `Location` header with the location of the newly created user,
+as well as a JSON body with user properties and links.
+
+```json
+{
+  "user-id": "email-abcd-efgh",
+  "real-name": "",
+  "avatar": "",
+  "email": "albert@combat.org",
+  "status": "pending",
+  links" : [
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/email/users/email-abcd-efgh",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href" : "/email/users/email-abcd-efgh/invite"
+    },
+    {
+      "rel" : "delete",
+      "method" : "DELETE",
+      "href" : "/email/users/email-abcd-efgh"
+    }
+  ]
+}
+```
+
+To re-invite a user that's failed to heed their invitation, POST an empty body to the `rel` `invite` link from the
+user (see above). The response will be the same as an initial invite.
 
 #### Password Reset
 
 TBD.
 
-#### Email User Management
 
-TBD.
+```
+
 
 #### User Storage
 
