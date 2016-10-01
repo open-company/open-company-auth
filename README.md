@@ -277,7 +277,7 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
       {
         "rel" : "authenticate",
         "method" : "GET",
-        "href" : "https://auth.opencompany.com/email-auth",
+        "href" : "https://auth.opencompany.com/email/auth",
         "type" : "text/plain"
       },
       {
@@ -296,6 +296,12 @@ A response with an authenticated user is limited to just the refresh URL appropr
 ```json
 {
   "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/slack/users/slack-1234-5678",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+    },
     {
       "rel" : "refresh",
       "method" : "GET",
@@ -317,6 +323,12 @@ or:
 ```json
 {
   "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/email/users/slack-1234-5678",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+    },
     {
       "rel" : "refresh",
       "method" : "GET",
@@ -359,10 +371,10 @@ authorize all subsequent access to the API.
 
 #### Email Authentication Flow
 
-Upon clicking the "Sign in with Email" link, a `GET` request is made to the `auth-url` with HTTP Basic authentication
-(always over HTTPS) to authenticate with an email address and password. If the email/pass authentication succeeds,
-there is a 200 response with a JWToken returned in the body of the response. If the email/pass authentication fails,
-there is a 401 response.
+Upon clicking the "Sign in with Email" link, a `GET` request is made to the `rel` `authenticate` URL with HTTP
+Basic authentication (always over HTTPS) to authenticate with an email address and password. If the email/password
+authentication succeeds, there is a 200 response with a JWToken returned in the body of the response. If the
+email/password authentication fails, there is a 401 response.
 
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
@@ -567,7 +579,7 @@ Slack organization. An example stored Slack user:
 }
 ```
 
-In the case of as email user, there are no `owner` and `admin` properties.
+In the case of as email user, there are no `owner` and `admin` properties, but there is a `status` property.
 
 ```json
 {
@@ -579,6 +591,7 @@ In the case of as email user, there are no `owner` and `admin` properties.
   "last-name": "Camus",
   "avatar": "http://...",
   "email": "albert@combat.org",
+  "status": "active"
 }
 ```
 

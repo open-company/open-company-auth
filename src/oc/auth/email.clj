@@ -12,7 +12,7 @@
 
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
-                                 "/email-auth"
+                                 "/email/auth"
                                  "text/plain"))
 
 (def refresh-link (hateoas/link-map "refresh" 
@@ -25,7 +25,14 @@
                                  "/email/users"
                                  "application/vnd.open-company.user.v1+json"))
 
+(def enumerate-link (hateoas/link-map "users" 
+                                 hateoas/GET
+                                 "/email/users"
+                                 "application/vnd.collection+vnd.open-company.user+json;version=1"))
+
 (def auth-settings {:links [auth-link create-link]})
+
+(def authed-settings {:links [auth-link refresh-link create-link enumerate-link]})
 
 (defn- short-uuid []
   (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))

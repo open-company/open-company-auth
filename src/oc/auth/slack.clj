@@ -35,9 +35,16 @@
                                      "/slack/refresh-token"
                                      "text/plain"))
 
+(def enumerate-link (hateoas/link-map "users" 
+                                 hateoas/GET
+                                 "/slack/users"
+                                 "application/vnd.collection+vnd.open-company.user+json;version=1"))
+
 (def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
                            :extended-scopes-url (slack-auth-url "bot,users:read")}
                           slack))
+
+(def authed-settings {:links [refresh-link enumerate-link]})
 
 (defn- prefixed? [s]
   (and (string? s) (.startsWith s prefix)))

@@ -9,7 +9,7 @@
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
-            [compojure.core :as compojure :refer (GET POST)]
+            [compojure.core :as compojure :refer (GET POST DELETE)]
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]
             [ring.middleware.cors :refer (wrap-cors)]
@@ -87,8 +87,8 @@
   (if-let* [token (jwt/read-token (:headers req))
             decoded (jwt/decode token)]
     ;; auth'd, give settings specific to their authentication source
-    (let [refresh-link (if (= (-> decoded :claims :auth-source) "email") email/refresh-link slack/refresh-link)]
-      (ring/json-response {:links [refresh-link]} 200))
+    (let [authed-settings (if (= (-> decoded :claims :auth-source) "email") email/authed-settings slack/authed-settings)]
+      (ring/json-response authed-settings 200))
     ;; not auth'd, give them both settings
     (ring/json-response 
       {:slack slack/auth-settings
@@ -107,13 +107,19 @@
             uid      (-> decoded :claims :user-id)
             org-id   (-> decoded :claims :org-id)
             user-tkn (-> decoded :claims :user-token)]
-    (do (timbre/info "Refreshing token" uid)
-      (if (and user-tkn (slack/valid-access-token? user-tkn))
-        (ring/text-response (jwt/generate (merge (:claims decoded)
-                                                 (store/retrieve org-id)
-                                                 {:auth-source "slack"})) 200)
-        (ring/error-response "could note confirm token" 400)))
-    (ring/error-response "could note confirm token" 400)))
+    (do (timbre/info "Refresh token request for user" uid "of org" org-id)
+      (if (slack/valid-access-token? user-tkn)
+        (do
+          (timbre/info "Refreshing token" uid)
+          (ring/text-response (jwt/generate (merge (:claims decoded)
+                                                   (store/retrieve org-id)
+                                                   {:auth-source "slack"})) 200))
+        (do
+          (timbre/warn "Invalid access token for" uid)            
+          (ring/error-response "could note confirm token" 400))))
+    (do
+      (timbre/warn "Bad refresh token request")      
+      (ring/error-response "could note confirm token" 400))))
 
 ;; ----- Email Request Handling Functions -----
 
@@ -122,14 +128,19 @@
             decoded  (jwt/decode token)
             uid      (-> decoded :claims :user-id)
             org-id   (-> decoded :claims :org-id)]
-    (do (timbre/info "Refreshing token" uid)
+    (do (timbre/info "Refresh token request for user" uid " of org" org-id)
       (pool/with-pool [conn (-> sys :db-pool :pool)]
         (let [user (user/get-user conn uid)]
           (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
-            (ring/text-response (jwt/generate (merge (:claims decoded)
-                                                   {:auth-source "email"})) 200)
-            (ring/error-response "could note confirm token" 400)))))
-    (ring/error-response "could note confirm token" 400)))
+            (do 
+              (timbre/info "Refreshing token" uid)
+              (ring/text-response (jwt/generate (merge (:claims decoded) {:auth-source "email"})) 200))
+            (do
+              (timbre/warn "No user or org-id match for token refresh of" uid)            
+              (ring/error-response "could note confirm token" 400))))))
+    (do
+      (timbre/warn "Bad refresh token request")      
+      (ring/error-response "could note confirm token" 400))))
 
 (defn- email-user-create [sys req]
   ;; check if the request is well formed JSON
@@ -165,14 +176,30 @@
 
 (defn- auth-routes [sys]
   (compojure/routes
-    (GET "/ping" [] test-response)
+
+    ;; Auth API
+    
+    ;; HATEOAS entry-point
     (GET "/" req (auth-settings req))
-    (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params))
-    (GET "/slack/refresh-token" req (refresh-slack-token req))
-    (GET "/email-auth" req (email-auth-response sys req))
-    (POST "/email/users" req (email-user-create sys req))
-    (GET "/email/refresh-token" req (refresh-email-token sys req))
-    (GET "/test-token" [] (jwt-debug-response test-token))))
+
+    ;; Slack
+    (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
+    (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
+    (GET "/slack/users" req nil) ; user enumeration
+    (GET "/slack/users/:user-id{^slack-.*}" {user-id :user-id req :request} nil) ; user retrieval
+    
+    ;; Email
+    (GET "/email/auth" req (email-auth-response sys req)) ; authentication request
+    (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
+    (POST "/email/users" req (email-user-create sys req)) ; user/invite creation
+    (GET "/email/users" req nil) ; user enumeration
+    (GET ["/email/users/:user-id" :user-id #"^email-\w{4}-\w{4}"] {user-id :user-id req :request} nil) ; user retrieval
+    (POST ["/email/users/:user-id/invite" :user-id #"^email-\w.{4}-\w{4}"] {user-id :user-id req :request} nil) ; Re-invite
+    (DELETE ["/email/users/:user-id" :user-id #"^email-\w.{4}-\w{4}"] {user-id :user-id req :request} nil) ; user/invite removal
+    
+    ;; Utilities
+    (GET "/ping" [] test-response) ; Up-time monitor
+    (GET "/test-token" [] (jwt-debug-response test-token)))) ; JWToken decoding
 
 ;; ----- System Startup -----
 
