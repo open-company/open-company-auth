@@ -17,6 +17,7 @@
             [buddy.auth.backends :as backends]
             [ring.util.response :refer (redirect)]
             [com.stuartsierra.component :as component]
+            [oc.lib.hateoas :as hateoas]
             [oc.lib.rethinkdb.pool :as pool]
             [oc.auth.components :as components]
             [oc.auth.config :as c]
@@ -80,6 +81,17 @@
           (ring/text-response (jwt/generate sourced-user) status headers))
         unauth-response)) ; couldn't get the auth'd user (unexpected)
     unauth-response))) ; email/pass didn't auth (expected)
+
+(defn- user-enumeration-response
+  "Return a JSON collection of users for the org."
+  [users org-id url]
+  (let [response {:collection {
+                  :version "1.0"
+                  :href url
+                  :org-id org-id
+                  :links [(hateoas/self-link url "application/vnd.collection+vnd.open-company.user+json;version=1")]
+                  :users users}}]
+  (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
 
 ;; ----- Request Handling Functions -----
 
@@ -147,7 +159,8 @@
   (if-let* [post-body (:body req)
             json-body (slurp post-body)
             map-body (try (json/parse-string json-body) (catch Exception e false))
-            body (keywordize-keys map-body)]
+            dirty-body (keywordize-keys map-body)
+            body (dissoc dirty-body :user-id :org-id)] ; tsk, tsk
     ;; request is well formed, check if it's valid
     (if-let* [email (:email body)
               password (:password body)]
@@ -159,6 +172,22 @@
             (email-auth-response sys (assoc req :identity email) true)))) ; respond w/ JWToken and location
       (ring/error-response "invalid request body" 400)) ; request not valid
     (ring/error-response "could not parse request body" 400))) ; request not well formed
+
+(defn- email-user-enumerate [sys req]
+  (if-let [email (:identity req)] ; email/pass sucessfully auth'd
+    (pool/with-pool [conn (-> sys :db-pool :pool)]
+      (if-let* [user (user/get-user-by-email conn email)
+                user-id (:user-id user)
+                org-id (:org-id user)
+                users (email/user-links conn org-id) ; list of all users in the org
+                clean-users (filter #(not= (:user-id %) user-id) users)] ; Remove the requesting user from the list
+        (user-enumeration-response clean-users org-id "/email/users")
+        (do
+          (timbre/warn "No user for" email)      
+          (ring/error-response "could note confirm user identity" 400))))
+    (do
+      (timbre/warn "Bad refresh token request")      
+      (ring/error-response nil 401))))
 
 (defn- email-auth [sys req auth-data]
   (if-let* [email (:username auth-data)
@@ -192,7 +221,7 @@
     (GET "/email/auth" req (email-auth-response sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; user/invite creation
-    (GET "/email/users" req nil) ; user enumeration
+    (GET "/email/users" req (email-user-enumerate sys req)) ; user enumeration
     (GET ["/email/users/:user-id" :user-id #"^email-\w{4}-\w{4}"] {user-id :user-id req :request} nil) ; user retrieval
     (POST ["/email/users/:user-id/invite" :user-id #"^email-\w.{4}-\w{4}"] {user-id :user-id req :request} nil) ; Re-invite
     (DELETE ["/email/users/:user-id" :user-id #"^email-\w.{4}-\w{4}"] {user-id :user-id req :request} nil) ; user/invite removal

@@ -4,12 +4,14 @@
             [clj-slack.auth :as slack-auth]
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
+            [schema.core :as schema]
             [taoensso.timbre :as timbre]
             [taoensso.truss :as t]
             [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
             [oc.auth.store :as store]
-            [oc.auth.jwt :as jwt]))
+            [oc.auth.jwt :as jwt]
+            [oc.auth.user :as user]))
 
 (def ^:private prefix "slack-")
 
@@ -150,3 +152,10 @@
     (get params "error") [false "denied"]
     (get params "code")  (swap-code-for-token (get params "code"))
     :else                [false "no-code"]))
+
+;; ----- Schema -----
+
+(def SlackUser 
+  (merge user/User {
+   :owner schema/Bool
+   :admin schema/Bool}))

@@ -18,10 +18,7 @@
    :last-name schema/Str
    :real-name schema/Str
    :avatar (schema/maybe schema/Str)
-   (schema/optional-key :email) schema/Str
-   (schema/optional-key :password-hash) schema/Str
-   (schema/optional-key :owner) schema/Bool
-   (schema/optional-key :admin) schema/Bool})
+})
 
 ;; ----- User CRUD -----
 
@@ -49,6 +46,13 @@
   (try
     (common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+
+;; ----- Collection of users -----
+
+(defn list-users
+  "Given an org-id, return the users for the org."
+  [conn org-id]
+  (common/read-resources-in-order conn table-name :org-id org-id [:user-id :real-name :email :avatar :status]))
 
 ;; ----- Armageddon -----
 
