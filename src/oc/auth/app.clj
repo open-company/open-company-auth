@@ -174,19 +174,19 @@
     (ring/error-response "could not parse request body" 400))) ; request not well formed
 
 (defn- email-user-enumerate [sys req]
-  (if-let [email (:identity req)] ; email/pass sucessfully auth'd
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)]
     (pool/with-pool [conn (-> sys :db-pool :pool)]
-      (if-let* [user (user/get-user-by-email conn email)
-                user-id (:user-id user)
-                org-id (:org-id user)
-                users (email/user-links conn org-id) ; list of all users in the org
-                clean-users (filter #(not= (:user-id %) user-id) users)] ; Remove the requesting user from the list
-        (user-enumeration-response clean-users org-id "/email/users")
+      (if-let [users (email/user-links conn org-id)] ; list of all users in the org
+        ;; Remove the requesting user from the list and respond
+        (user-enumeration-response (filter #(not= (:user-id %) user-id) users) org-id "/email/users")
         (do
-          (timbre/warn "No user for" email)      
+          (timbre/warn "No org for" org-id)      
           (ring/error-response "could note confirm user identity" 400))))
     (do
-      (timbre/warn "Bad refresh token request")      
+      (timbre/warn "Bad token")      
       (ring/error-response nil 401))))
 
 (defn- email-auth [sys req auth-data]
