@@ -19,7 +19,7 @@
 (def ^:private slack-connection {:api-url slack-endpoint})
 
 (def ^:private slack
-  {:redirectURI  "/slack-oauth"
+  {:redirectURI  "/slack/auth"
    :state        "open-company-auth"})
 
 (defn- slack-auth-url [scope]
@@ -32,19 +32,27 @@
        "&scope="
        scope))
 
+(def auth-link (hateoas/link-map "authenticate"
+                                 hateoas/GET
+                                 (slack-auth-url "bot,users:read")
+                                 "text/plain"))
+
+(def auth-retry-link (hateoas/link-map "authenticate-retry"
+                                 hateoas/GET
+                                 (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
+                                 "text/plain"))
+
 (def refresh-link (hateoas/link-map "refresh" 
                                      hateoas/GET
                                      "/slack/refresh-token"
                                      "text/plain"))
 
 (def enumerate-link (hateoas/link-map "users" 
-                                 hateoas/GET
-                                 "/slack/users"
-                                 "application/vnd.collection+vnd.open-company.user+json;version=1"))
+                                      hateoas/GET
+                                      "/slack/users"
+                                      "application/vnd.collection+vnd.open-company.user+json;version=1"))
 
-(def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
-                           :extended-scopes-url (slack-auth-url "bot,users:read")}
-                          slack))
+(def auth-settings {:links [auth-link auth-retry-link]})
 
 (def authed-settings {:links [refresh-link enumerate-link]})
 

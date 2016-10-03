@@ -267,10 +267,20 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
 ```json
 {
   "slack" : {
-    "basic-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
-    "extended-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=bot,users:read",
-    "redirectURI" : "/slack-oauth",
-    "state" : "open-company-auth",
+    "links" : [
+      {
+        "rel" : "authenticate",
+        "method" : "GET",
+        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack/auth&state=open-company-auth&scope=bot,users:read",
+        "type" : "text/plain"
+      },
+      {
+        "rel" : "authenticate-retry",
+        "method" : "GET",
+        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack/auth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
+        "type" : "text/plain"
+      }
+    ]
   }, 
   "email" : {
     "links" : [
@@ -291,7 +301,7 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
 }
 ```
 
-A response with an authenticated user is limited to just the refresh URL appropriate for that user:
+A response with an authenticated user is limited to just the URLs appropriate for that user. For a Slack user:
 
 ```json
 {
@@ -318,7 +328,7 @@ A response with an authenticated user is limited to just the refresh URL appropr
 }
 ```
 
-or:
+or for an email user:
 
 ```json
 {
@@ -353,21 +363,20 @@ or:
 
 #### Slack Authentication Flow
 
-Upon clicking the "Sign in with Slack" button, the user is redirected to the `extended-scopes-url` to authenticate with
-Slack. The Slack app is configured to call back to this authentication service at `/slack-oauth` with an authentication
-success or failure.
+Upon clicking the "Sign in with Slack" button, the user is redirected to the `rel` `authenticate` URL to authenticate with
+Slack. Slack then calls back to this authentication service with an authentication success or failure.
 
 If the authentication was successful, the authentication service creates a JWToken and redirects the user back to the
 web application at: `/login?jwt=<JWToken>`
 
 If the authentication wasn't successful, the authentication service redirects the user back to the web application at 
-`/login?access=denied`. From there, subsequent attempts to authenticate using the `basic-scopes-url` that does not
-authorize the bot can occur.
+`/login?access=denied`. From there, subsequent attempts to authenticate using the `rel` `authenticate-retry` URL that
+does not authorize the bot can occur.
 
 The main implication of a successful Slack authentication is the creation of a trusted JWToken that is then used to
 authorize all subsequent access to the API.
 
-![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/mainline/docs/slack-auth-success.svg)
+![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/email/docs/slack-auth-success.svg)
 
 #### Email Authentication Flow
 
@@ -379,22 +388,25 @@ email/password authentication fails, there is a 401 response.
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
 
-![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/mainline/docs/email-auth-success.svg)
+![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/email/docs/email-auth-success.svg)
 
 #### JWToken Expiration / Refresh
 
 The JWToken contains an expiration field (24 hours for Slack users w/ an auth'd bot, and 2 hours for everyone else).
 An expired JWToken does not authorize access to services. Before each use the JWToken is checked for expiration and if
-it's expired, the user is...
+it's expired, a request is made to `rel` refresh` from the `/` response. If the JWToken is successfully refreshed,
+a 200 is returned with a new JWToken in the response body.
 
-TBD.
+If the token can't be refreshed (a non-200 response), this typically means the user is not longer valid for the org,
+and the client forgets the expired JWToken, makes a unauth'd request to `/` and presents the login UI to the user to
+start the authentication process again.
 
 #### Email Onboarding
 
 Unlike Slack, which doesn't need to differentiate between initial onboarding and subsequent authorizations, the
 onboarding of a new email user takes a different path. 
 
-To onboard a new email user, POST the following to: `/email/users`
+To onboard a new email user, POST the following to `rel` `create` from the `/` response:
 
 Headers:
 
@@ -414,18 +426,35 @@ Body:
 }
 ```
 
-If successful, the `201` response will contain a `Location` header with the location of the newly created user,
-as well as a JWToken for the user in the body.
-
+If successful, the `20x` response will contain a `Location` header with the location of the newly created user,
+as well as potentially a JWToken for the user in the body depending on the user sate.
 
 A new user request can be one of 4 cases:
 
-* already existing user (return code status of `409 Conflict`)
-* user known by email domain (e.g. @opencompany.com)
-* user known by one or more open invitations
-* unknown user and unknown email domain (brand new)
+1) Unknown user and unknown email domain (brand new)
 
-TBD.
+  Return: 201 Created, JWToken
+  Email: Email validation sent via email
+  Next step: Authenticated user accesses web application with JWToken
+
+2) User known by their email domain (e.g. @opencompany.com)
+
+  Return status: 204 No content
+  Email: Email validation sent via email
+  Next step: User must validate their email address from the validation email sent
+
+3) User known by an open invitation
+
+  Return status: 204 No content
+  Email: Pending invite resent
+  Next step: User must validate their email address from the invite email sent
+
+4) Already existing user
+
+  Return status: 409 Conflict
+  Email: No
+  Next step: UI error displayed to user
+
 
 #### Email Validation
 
@@ -433,7 +462,7 @@ TBD.
 
 #### Email User Management
 
-Authenticated users can enumerate the users with the same `org-id` with a GET request to `/slack/users` or  `/email/users` respectively:
+Authenticated users can enumerate the users with the same `org-id` with a GET request to `rel` `users`:
 
 ```json
 {
@@ -483,11 +512,6 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
             "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
           },
           {
-            "rel" : "invite",
-            "method" : "POST",
-            "href" : "/email/users/email-abcd-efgh/invite"
-          },
-          {
             "rel" : "delete",
             "method" : "DELETE",
             "href" : "/email/users/email-abcd-efgh"
@@ -501,7 +525,7 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
 
 #### Email Invitations
 
-To invite a new email user, with an authenticated user, POST their email address to: `/email/users`
+To invite (or re-invite) a new email user, POST the following to `rel` `create` from the `/` response:
 
 Headers:
 
@@ -549,9 +573,6 @@ as well as a JSON body with user properties and links.
   ]
 }
 ```
-
-To re-invite a user that's failed to heed their invitation, POST an empty body to the `rel` `invite` link from the
-user (see above). The response will be the same as an initial invite.
 
 #### Password Reset
 

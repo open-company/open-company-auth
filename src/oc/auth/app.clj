@@ -251,7 +251,7 @@
     (GET "/" req (auth-settings req))
 
     ;; Slack
-    (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
+    (GET "/slack/auth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
     (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
     (GET "/slack/users" req nil) ; user enumeration
     (GET "/slack/users/:user-id" req nil) ; user retrieval
