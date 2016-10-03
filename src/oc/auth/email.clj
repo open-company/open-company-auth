@@ -11,33 +11,49 @@
 
 (def prefix "email-")
 
+(def ^:private text "text/plain")
+(def ^:private user-type "application/vnd.open-company.user.v1+json")
+(def ^:private user-collection-type "application/vnd.collection+vnd.open-company.user+json;version=1")
+
+(def ^:private crypto-algo "bcrypt+sha512$")
+
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
                                  "/email/auth"
-                                 "text/plain"))
+                                 text))
 
 (def refresh-link (hateoas/link-map "refresh" 
                                     hateoas/GET
                                     "/email/refresh-token"
-                                    "text/plain"))
+                                    text))
 
 (def create-link (hateoas/link-map "create" 
                                  hateoas/POST
                                  "/email/users"
-                                 "application/vnd.open-company.user.v1+json"))
+                                 user-type))
 
-(defn self-link [user-id] (hateoas/self-link (str "/email/users/" user-id) "application/vnd.open-company.user.v1+json"))
+(def invite-link (hateoas/link-map "invite" 
+                                   hateoas/POST
+                                   "/email/users"
+                                   user-type))
+
+(defn self-link [user-id] (hateoas/self-link (str "/email/users/" user-id) user-type))
+
+(defn re-invite-link [user-id] (hateoas/link-map "invite"
+                                                 hateoas/POST
+                                                 (str "/email/users/" user-id)
+                                                 text))
 
 (defn delete-link [user-id] (hateoas/delete-link (str "/email/users/" user-id)))
 
 (def enumerate-link (hateoas/link-map "users" 
                                  hateoas/GET
                                  "/email/users"
-                                 "application/vnd.collection+vnd.open-company.user+json;version=1"))
+                                 user-collection-type))
 
 (def auth-settings {:links [auth-link create-link]})
 
-(def authed-settings {:links [auth-link refresh-link create-link enumerate-link]})
+(def authed-settings {:links [auth-link refresh-link create-link invite-link enumerate-link]})
 
 (defn- short-uuid []
   (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))
@@ -46,7 +62,7 @@
   (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
 
 (defn- password-match? [password password-hash]
-  (hashers/check password (str "bcrypt+sha512$" password-hash) {:alg :bcrypt+sha512}))
+  (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512}))
 
 (defn authenticate? [conn email password]
   (if-let [user (user/get-user-by-email conn email)]
@@ -99,8 +115,10 @@
 
 (defn user-link [user]
   (if-let* [user-id (:user-id user)
-           user-response (select-keys user [:user-id :real-name :avatar :email :status])]
-    (assoc user-response :links [(self-link user-id) (delete-link user-id)])))
+            user-response (select-keys user [:user-id :real-name :avatar :email :status])
+            everyone-links [(self-link user-id) (delete-link user-id)]
+            links (if (= (:status user) "pending") (conj everyone-links (re-invite-link user-id)) everyone-links)]
+    (assoc user-response :links links)))
 
 (defn user-links
   [conn org-id]
