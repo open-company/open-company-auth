@@ -352,6 +352,12 @@ or for an email user:
       "type" : "application/vnd.open-company.user.v1+json"
     },
     {
+      "rel" : "invite",
+      "method" : "POST",
+      "href": "https://auth.opencompany.com/email/users",
+      "type" : "application/vnd.open-company.user.v1+json"
+    },
+    {
       "rel" : "users",
       "method" : "GET",
       "href" : "https://auth.opencompany.com/email/users",
@@ -510,6 +516,12 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
             "method" : "GET",
             "href" : "/email/users/email-abcd-efgh",
             "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+          },
+          {
+            "rel" : "invite",
+            "method" : "POST",
+            "href" : "/email/users/email-abcd-efgh/invite",
+            "type" : "text/plain"
           },
           {
             "rel" : "delete",
