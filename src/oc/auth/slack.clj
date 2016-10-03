@@ -13,7 +13,7 @@
             [oc.auth.jwt :as jwt]
             [oc.auth.user :as user]))
 
-(def ^:private prefix "slack-")
+(def prefix "slack-")
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})

@@ -93,6 +93,24 @@
                   :users users}}]
   (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
 
+;; ----- JWToken auth'ing macro -----
+
+(defmacro with-valid-token
+  "TODO: not working yet."
+  [[req] & body]
+  '(if-let [token#    (jwt/read-token (:headers ~req))]
+    (if-let [decoded#  (jwt/decode token#)]
+      (let [user-id   (-> decoded# :claims :user-id)
+            user-tkn (-> decoded :claims :user-token)
+            org-id    (-> decoded# :claims :org-id)]
+        (do ~@body))
+      (do
+        (timbre/warn "Bad token for request")      
+        (ring/error-response "Could note confirm token." 401)))
+    (do
+      (timbre/warn "No token for request")      
+      (ring/error-response "Could note confirm token." 401))))
+
 ;; ----- Request Handling Functions -----
 
 (defn- auth-settings [req]
@@ -106,6 +124,27 @@
       {:slack slack/auth-settings
        :email email/auth-settings} 200)))
 
+(defn- user-delete [sys req prefix]
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)]
+    (pool/with-pool [conn (-> sys :db-pool :pool)]
+      (if-let* [del-user-id (-> req :params :user-id)
+                _valid-prefix (s/starts-with? del-user-id prefix)
+                del-user (user/get-user conn del-user-id)] ; user to delete
+        (do (timbre/info "Delete request for" del-user-id)
+          (if (= (:org-id del-user) org-id) ; member of the same org
+            (do (timbre/info "Deleting " del-user-id)
+                (user/delete-user! conn del-user-id)
+                (ring/text-response "" 204)) ; All good
+            (do (timbre/warn "Unauth'd delete request of" del-user-id)
+                (ring/error-response nil 401))))
+        (do (timbre/warn "No user for delete request")
+            (ring/error-response nil 404))))
+    (do (timbre/warn "Bad token for request")      
+        (ring/error-response "Could note confirm token." 401))))
+
 ;; ----- Slack Request Handling Functions -----
 
 (defn- oauth-callback [callback params]
@@ -116,43 +155,43 @@
 (defn- refresh-slack-token [req]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
-            uid      (-> decoded :claims :user-id)
-            org-id   (-> decoded :claims :org-id)
-            user-tkn (-> decoded :claims :user-token)]
-    (do (timbre/info "Refresh token request for user" uid "of org" org-id)
+            user-id  (-> decoded :claims :user-id)
+            user-tkn (-> decoded :claims :user-token)
+            org-id   (-> decoded :claims :org-id)]
+    (do (timbre/info "Refresh token request for user" user-id "of org" org-id)
       (if (slack/valid-access-token? user-tkn)
         (do
-          (timbre/info "Refreshing token" uid)
+          (timbre/info "Refreshing token" user-id)
           (ring/text-response (jwt/generate (merge (:claims decoded)
                                                    (store/retrieve org-id)
                                                    {:auth-source "slack"})) 200))
         (do
-          (timbre/warn "Invalid access token for" uid)            
-          (ring/error-response "could note confirm token" 400))))
+          (timbre/warn "Invalid access token for" user-id)            
+          (ring/error-response "Could note confirm token." 400))))
     (do
       (timbre/warn "Bad refresh token request")      
-      (ring/error-response "could note confirm token" 400))))
+      (ring/error-response "Could note confirm token." 400))))
 
 ;; ----- Email Request Handling Functions -----
 
 (defn- refresh-email-token [sys req]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
-            uid      (-> decoded :claims :user-id)
+            user-id  (-> decoded :claims :user-id)
             org-id   (-> decoded :claims :org-id)]
-    (do (timbre/info "Refresh token request for user" uid " of org" org-id)
+    (do (timbre/info "Refresh token request for user" user-id " of org" org-id)
       (pool/with-pool [conn (-> sys :db-pool :pool)]
-        (let [user (user/get-user conn uid)]
+        (let [user (user/get-user conn user-id)]
           (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
             (do 
-              (timbre/info "Refreshing token" uid)
+              (timbre/info "Refreshing token" user-id)
               (ring/text-response (jwt/generate (merge (:claims decoded) {:auth-source "email"})) 200))
             (do
-              (timbre/warn "No user or org-id match for token refresh of" uid)            
-              (ring/error-response "could note confirm token" 400))))))
+              (timbre/warn "No user or org-id match for token refresh of" user-id)            
+              (ring/error-response "Could note confirm token." 401))))))
     (do
       (timbre/warn "Bad refresh token request")      
-      (ring/error-response "could note confirm token" 400))))
+      (ring/error-response "Could note confirm token." 401))))
 
 (defn- email-user-create [sys req]
   ;; check if the request is well formed JSON
@@ -167,11 +206,11 @@
       ;; request is valid, check if the user already exists
       (pool/with-pool [conn (-> sys :db-pool :pool)]
         (if-let [prior-user (user/get-user-by-email conn email)]
-          (ring/error-response "user with email already exists" 409) ; already exists
+          (ring/error-response "User with email already exists." 409) ; already exists
           (let [user (email/create-user! conn (email/->user body password))] ; doesn't exist, so create the user
             (email-auth-response sys (assoc req :identity email) true)))) ; respond w/ JWToken and location
-      (ring/error-response "invalid request body" 400)) ; request not valid
-    (ring/error-response "could not parse request body" 400))) ; request not well formed
+      (ring/error-response "Invalid request body." 400)) ; request not valid
+    (ring/error-response "Could not parse request body." 400))) ; request not well formed
 
 (defn- email-user-enumerate [sys req]
   (if-let* [token    (jwt/read-token (:headers req))
@@ -183,11 +222,11 @@
         ;; Remove the requesting user from the list and respond
         (user-enumeration-response (filter #(not= (:user-id %) user-id) users) org-id "/email/users")
         (do
-          (timbre/warn "No org for" org-id)      
-          (ring/error-response "could note confirm user identity" 400))))
+          (timbre/warn "No org for" org-id)
+          (user-enumeration-response [] org-id "/email/users"))))
     (do
-      (timbre/warn "Bad token")      
-      (ring/error-response nil 401))))
+      (timbre/warn "Bad token for request")      
+      (ring/error-response "Could note confirm token." 401))))
 
 (defn- email-auth [sys req auth-data]
   (if-let* [email (:username auth-data)
@@ -215,16 +254,16 @@
     (GET "/slack-oauth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
     (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
     (GET "/slack/users" req nil) ; user enumeration
-    (GET "/slack/users/:user-id{^slack-.*}" {user-id :user-id req :request} nil) ; user retrieval
+    (GET "/slack/users/:user-id" req nil) ; user retrieval
     
     ;; Email
     (GET "/email/auth" req (email-auth-response sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; user/invite creation
     (GET "/email/users" req (email-user-enumerate sys req)) ; user enumeration
-    (GET ["/email/users/:user-id" :user-id #"^email-\w{4}-\w{4}"] {user-id :user-id req :request} nil) ; user retrieval
-    (POST ["/email/users/:user-id/invite" :user-id #"^email-\w.{4}-\w{4}"] {user-id :user-id req :request} nil) ; Re-invite
-    (DELETE ["/email/users/:user-id" :user-id #"^email-\w.{4}-\w{4}"] {user-id :user-id req :request} nil) ; user/invite removal
+    (GET "/email/users/:user-id" req nil) ; user retrieval
+    (DELETE "/email/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
+    (POST "/email/users/:user-id/invite" req nil) ; Re-invite
     
     ;; Utilities
     (GET "/ping" [] test-response) ; Up-time monitor
@@ -268,7 +307,7 @@
                 "Database: " c/db-name "\n"
                 "Database pool: " c/db-pool-size "\n"
                 "Hot-reload: " c/hot-reload "\n"
-                "Sentry: " c/dsn "\n"
+                "Sentry: " c/dsn "\n\n"
                 "Ready to serve...\n")))
 
 (defn -main

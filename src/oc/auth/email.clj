@@ -9,7 +9,7 @@
             [oc.auth.config :as config]
             [oc.auth.user :as user]))
 
-(def ^:private prefix "email-")
+(def prefix "email-")
 
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
