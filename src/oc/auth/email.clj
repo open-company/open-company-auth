@@ -43,7 +43,7 @@
 (defn re-invite-link [user-id] (hateoas/link-map "invite"
                                                  hateoas/POST
                                                  (str "/email/users/" user-id)
-                                                 invite))
+                                                 invite-type))
 
 (defn delete-link [user-id] (hateoas/delete-link (str "/email/users/" user-id)))
 

@@ -259,8 +259,9 @@
     ;; Email
     (GET "/email/auth" req (email-auth-response sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
-    (POST "/email/users" req (email-user-create sys req)) ; user/invite creation
+    (POST "/email/users" req (email-user-create sys req)) ; brand new user creation
     (GET "/email/users" req (email-user-enumerate sys req)) ; user enumeration
+    (POST "/email/users/invite" req (email-user-create sys req)) ; brand new user creation
     (GET "/email/users/:user-id" req nil) ; user retrieval
     (DELETE "/email/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
     (POST "/email/users/:user-id/invite" req nil) ; Re-invite
