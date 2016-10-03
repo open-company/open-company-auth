@@ -12,24 +12,31 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha12"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha13"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/core.async "0.2.391"] ; Async programming and communication https://github.com/clojure/core.async
+    [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
     [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.2.0"] ; Web server http://http-kit.org/
+    [com.stuartsierra/component "0.3.1"] ; Component Lifecycle
+    [buddy "1.1.0"] ; Security library https://github.com/funcool/buddy
+    [buddy/buddy-auth "1.2.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
+    [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.4.3"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.7.4"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.8.0-alpha1"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     [amazonica "0.3.76"] ;; AWS S3 https://github.com/mcohen01/amazonica
     [clj-time "0.12.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
+    [open-company/lib "0.0.1-803c9fa"] ; Library for OC projects https://github.com/open-company/open-company-lib
   ]
 
   :plugins [
@@ -41,6 +48,7 @@
     ;; QA environment and dependencies
     :qa {
       :env {
+        :db-name "open_company_auth_qa"
         :hot-reload "false"
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
@@ -58,6 +66,7 @@
     ;; Dev environment and dependencies
     :dev [:qa {
       :env ^:replace {
+        :db-name "open_company_auth_dev"
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
         :open-company-slack-client-id "CHANGE-ME"
@@ -88,23 +97,36 @@
                  '[clj-time.core :as t]
                  '[clj-time.format :as format]
                  '[clojure.string :as s]
-                 '[open-company-auth.config :as config]
-                 '[open-company-auth.store :as store])
+                 '[rethinkdb.query :as r]
+                 '[oc.auth.config :as config]
+                 '[oc.auth.email :as email]
+                 '[oc.auth.slack :as slack])
       ]
     }]
 
     ;; Production environment
     :prod {
       :env {
+        :db-name "open_company_auth"
         :hot-reload "false"
       }
     }
   }
 
+  :repl-options {
+    :welcome (println (str "\n" (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"
+                      "OpenCompany Auth REPL\n"
+                      "Database: " oc.auth.config/db-name "\n"
+                      "\nReady to do your bidding... I suggest (go) or (go <port>) as your first command.\n"))
+      :init-ns dev
+  }
+
   :aliases{
-    "start" ["do" "run"] ; start a development server
-    "start!" ["with-profile" "prod" "do" "build," "run"] ; start a server in production
     "build" ["do" "clean," "deps," "compile"] ; clean and build code
+    "create-migration" ["run" "-m" "oc.auth.db.migrations" "create"] ; create a data migration
+    "migrate-db" ["run" "-m" "oc.auth.db.migrations" "migrate"] ; run pending data migrations
+    "start" ["do" "migrate-db," "run"] ; start a development server
+    "start!" ["with-profile" "prod" "do" "build," "migrate-db," "run"] ; start a server in production
     "midje!" ["with-profile" "qa" "midje"] ; run all tests
     "test!" ["with-profile" "qa" "do" "clean," "build," "midje"] ; build, init the DB and run all tests
     "autotest" ["with-profile" "qa" "midje" ":autotest"] ; watch for code changes and run affected tests
@@ -130,12 +152,12 @@
   ;; ----- Web Application -----
 
   :ring {
-    :handler open-company-auth.app/app
+    :handler oc.auth.app/app
     :reload-paths ["src"] ; work around issue https://github.com/weavejester/lein-ring/issues/68
     :port 3003
   }
 
   :resource-paths ["resources" ]
 
-  :main open-company-auth.app
+  :main oc.auth.app
 )

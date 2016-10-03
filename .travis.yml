@@ -1,15 +1,17 @@
 language: clojure
+sudo: false
 jdk:
 - oraclejdk8
 lein: lein2
+addons:
+  rethinkdb: '2.3.5'
+cache:
+  directories:
+  - "$HOME/.m2"
 before_script:
   - "export JAVA_OPTS=-Xmx512m"
   - "echo $JAVA_OPTS"
   - lein2 clean
-sudo: false
-cache:
-  directories:
-  - "$HOME/.m2"
 script:
 - lein2 test!
 - lein2 eastwood

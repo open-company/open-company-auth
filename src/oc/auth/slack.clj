@@ -1,13 +1,16 @@
-(ns open-company-auth.slack
-  (:require [clj-slack.oauth :as slack-oauth]
+(ns oc.auth.slack
+  (:require [clojure.string :as s]
+            [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [taoensso.truss :as t]
-            [open-company-auth.config :as config]
-            [open-company-auth.store :as store]
-            [open-company-auth.jwt :as jwt]))
+            [oc.auth.config :as config]
+            [oc.auth.store :as store]
+            [oc.auth.jwt :as jwt]))
+
+(def ^:private prefix "slack:")
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
@@ -26,39 +29,50 @@
        "&scope="
        scope))
 
-(def ^:private prefix "slack:")
-
 (def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
-                           :extended-scopes-url (slack-auth-url "bot,users:read")}
+                           :extended-scopes-url (slack-auth-url "bot,users:read")
+                           :refresh-url (s/join "/" [config/auth-server-url "slack" "refresh-token"])}
                           slack))
 
-(defn prefixed? [s]
+(defn- prefixed? [s]
   (and (string? s) (.startsWith s prefix)))
 
-(defn have-user
+(defn- have-user
   [{:keys [name real-name email avatar user-id owner admin] :as m}]
   (t/with-dynamic-assertion-data {:user m} ; (Optional) setup some extra debug data
     (t/have map? m)
-    (t/have [:ks= #{:name :real-name :email :avatar :user-id :owner :admin}] m)
+    (t/have [:ks= #{:name :real-name :first-name :last-name :email :avatar :user-id :owner :admin}] m)
     (t/have string? name real-name email avatar)
     (t/have prefixed? user-id)
     (t/have boolean? owner admin))
   m)
 
-(defn coerce-to-user
+(defn- coerce-to-user
   "Coerce the given map to a user, return nil if any important attributes are missing"
-  [{:keys [id name image_192 email] :as user-data}]
-  (when (and id name image_192 email)
-    {:user-id (str prefix (:id user-data))
-     :name (:name user-data)
-     :real-name (or (:real_name user-data) name)
-     :avatar (:image_192 user-data)
-     :email (:email user-data)
+  [{:keys [id name email] :as user-data}]
+  (when (and id name email)
+    {:user-id (str prefix id)
+     :name (or (:name user-data) "")
+     :real-name (or (:real_name_normalized user-data)
+                    (:real_name user-data)
+                    (:first_name user-data)
+                    (:last_name user-data)
+                    (:name user-data)
+                    "")
+     :first-name (:first_name user-data)
+     :last-name (:last_name user-data)
+     :avatar (or (:image_192 user-data)
+                 (:image_72 user-data)
+                 (:image_48 user-data)
+                 (:image_512 user-data)
+                 (:image_32 user-data)
+                 (:image_24 user-data))
+     :email email
      ;; if not provided we assume they're not
      :owner (boolean (:is_owner user-data))
      :admin (boolean (:is_admin user-data))}))
 
-(defn get-user-info
+(defn- get-user-info
   [access-token scope user-id]
   {:pre [(string? access-token) (string? user-id)]}
   (let [resp      (slack-users/info (merge slack-connection {:token access-token}) user-id)]
@@ -94,6 +108,7 @@
         org          {:org-id   (str prefix (or (:team_id response)
                                                 (-> response :team :id))) ; identity.basic returns different data
                       :org-name (:team_name response)}
+        auth-source  {:auth-source "slack"}
         access-token (:access_token response)
         scope        (:scope response)]
     (if (and (:ok response) (valid-access-token? access-token))
@@ -104,8 +119,8 @@
         [true
          (if secrets
            (do (store/store! (:org-id org) secrets)
-               (jwt/generate (merge user secrets org {:user-token access-token})))
-           (jwt/generate (merge user (store/retrieve (:org-id org)) org {:user-token access-token})))])
+               (jwt/generate (merge user secrets org auth-source {:user-token access-token})))
+           (jwt/generate (merge user (store/retrieve (:org-id org)) org auth-source {:user-token access-token})))])
       (do
         (timbre/warn "Could not swap code for token" {:oauth-response response})
         [false "Could not swap code for token"]))))

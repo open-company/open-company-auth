@@ -1,9 +1,9 @@
-(ns open-company-auth.lib.utils
+(ns oc.auth.lib.utils
   "Namespace for tests utilities"
-  (:require [ring.mock.request :refer (request body content-type header)]
-            [open-company-auth.app :refer (app)]
-            [clojure.string :as s]
-            [cheshire.core :as json]))
+  (:require [clojure.string :as s]
+            [cheshire.core :as json]
+            [ring.mock.request :refer (request body content-type header)]
+            [oc.auth.lib.test-setup :as ts]))
 
 (defn base-mime-type
   "Base mime type"
@@ -31,4 +31,4 @@
         headers-request (apply-headers initial-request headers)
         body-value (:body options)
         body-request (body headers-request (json/generate-string body-value))]
-    (app body-request)))
+    ((-> ts/test-system deref :handler :handler) body-request)))

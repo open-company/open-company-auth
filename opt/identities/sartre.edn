@@ -1,10 +1,14 @@
 {
   :user-id "slack:1980-06-21"
+  :org-id "slack:87654"
   :name "sartre"
+  :first-name "Jean-Paul"
+  :last-name "Sartre"
   :real-name "Jean-Paul Sartre"
   :avatar "http://existentialismtoday.com/wp-content/uploads/2015/11/sartre_22.jpg"
   :email "sartre@lyceela.org"
   :owner true
   :admin true
-  :org-id "slack:87654"
+  :bot {:id "abc" :token "xyz"}
+  :auth-source "slack"
 }

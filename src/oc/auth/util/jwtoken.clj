@@ -1,15 +1,11 @@
-(ns open-company-auth.util.jwtoken
-  "
-  Commandline client to create a JWToken for OpenCompany API use.
-
-  Usage: lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn
-  "
+(ns oc.auth.util.jwtoken
+  "Commandline client to create a JWToken for OpenCompany API use."
   (:require [clojure.string :as s]
             [clj-time.core :as t]
             [clj-time.format :as format]
             [clojure.tools.cli :refer (parse-opts)]
-            [open-company-auth.config :as config]
-            [open-company-auth.jwt :as jwt])
+            [oc.auth.config :as config]
+            [oc.auth.jwt :as jwt])
   (:gen-class))
 
 (def cli-options
@@ -19,7 +15,7 @@
   (s/join \newline
      ["This program creates an OpenCompany JWToken for command-line API usage (cURL)."
       ""
-      "Usage: lein run -m open-company-auth.util.jwtoken -- ./opt/identities/camus.edn"
+      "Usage: lein run -m oc.auth.util.jwtoken -- ./opt/identities/camus.edn"
       ""
       "Identity data: an EDN file with the user properties."
       ""
