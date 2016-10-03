@@ -433,27 +433,27 @@ A new user request can be one of 4 cases:
 
 1) Unknown user and unknown email domain (brand new)
 
-  Return: 201 Created, JWToken
-  Email: Email validation sent via email
-  Next step: Authenticated user accesses web application with JWToken
+  * Return: 20;1 Created, JWToken
+  * Email: Email validation sent via email
+  * Next step: Authenticated user accesses web application with JWToken
 
 2) User known by their email domain (e.g. @opencompany.com)
 
-  Return status: 204 No content
-  Email: Email validation sent via email
-  Next step: User must validate their email address from the validation email sent
+  * Return status: 204 No content
+  * Email: Email validation sent via email
+  * Next step: User must validate their email address from the validation email sent
 
 3) User known by an open invitation
 
-  Return status: 204 No content
-  Email: Pending invite resent
-  Next step: User must validate their email address from the invite email sent
+  * Return status: 204 No content
+  * Email: Pending invite resent
+  * Next step: User must validate their email address from the invite email sent
 
 4) Already existing user
 
-  Return status: 409 Conflict
-  Email: No
-  Next step: UI error displayed to user
+  * Return status: 409 Conflict
+  * Email: No
+  * Next step: UI error displayed to user
 
 
 #### Email Validation
