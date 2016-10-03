@@ -271,7 +271,10 @@
                     (ring/error-response "" 404)))
               (do (timbre/info "Creating user" email)
                 (if-let [user (email/create-user! conn
-                              (email/->user {:email email} "pending" (str (java.util.UUID/randomUUID))))] ; random passwd
+                              (email/->user {:email email
+                                             :one-time-secret (str (java.util.UUID/randomUUID))}
+                                            "pending"
+                                            (str (java.util.UUID/randomUUID))))] ; random passwd
                   (do (timbre/info "Inviting user" email) 
                       (invite-response user)) ; TODO send invite
                   (do (timbre/error "Failed to create user" email)

@@ -119,6 +119,9 @@
   [conn user :- EmailUser]
   (user/create-user! conn user))
 
+(defn reset-password! [conn user-id password]
+  (user/update-user conn user-id {:password-hash (password-hash password)}))
+
 ;; ----- User links -----
 
 (defn user-links [user]
@@ -151,6 +154,9 @@
 
   (user/get-user-by-email conn (:email u))
   (email/authenticate? conn (:email u) "S$cr$ts")
+  (email/reset-password! (:user-id u) "$ecret$")
+  (email/authenticate? conn (:email u) "S$cr$ts")
+  (email/authenticate? conn (:email u) "$ecret$")
   (user/delete-user conn (:user-id u))
 
   (user/list-users conn (:org-id u))

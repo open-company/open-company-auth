@@ -18,6 +18,7 @@
    :last-name schema/Str
    :real-name schema/Str
    :avatar (schema/maybe schema/Str)
+   (schema/optional-key :one-time-secret) schema/Str
 })
 
 ;; ----- User CRUD -----
@@ -46,6 +47,11 @@
   (try
     (common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+
+(defn update-user
+  [conn user-id user-map]
+  (if-let [user (get-user conn user-id)]
+    (common/update-resource conn table-name primary-key user (merge user user-map))))
 
 ;; ----- Collection of users -----
 
