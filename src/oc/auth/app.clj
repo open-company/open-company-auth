@@ -76,7 +76,7 @@
                 clean-user (dissoc user :created-at :updated-at :password-hash)
                 sourced-user (assoc clean-user :auth-source "email")]
         ; respond with JWToken
-        (let [headers (if location {"Location" (s/join "/" [c/auth-server-url "email" (:user-id user)])} {})
+        (let [headers (if location {"Location" (email/user-url (:user-id user))} {})
               status (if location 201 200)]
           (ring/text-response (jwt/generate sourced-user) status headers))
         unauth-response)) ; couldn't get the auth'd user (unexpected)
@@ -92,6 +92,12 @@
                   :links [(hateoas/self-link url "application/vnd.collection+vnd.open-company.user+json;version=1")]
                   :users users}}]
   (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
+
+(defn- invite-response
+  "Return a JSON response for the user that was just invited/re-invited."
+  [user]
+  (let [user-response (select-keys user [:user-id :real-name :avatar :email :status])]
+    (ring/json-response (email/user-links user) 201 {"Location" (email/user-url (:user-id user))})))
 
 ;; ----- JWToken auth'ing macro -----
 
@@ -200,17 +206,24 @@
             map-body (try (json/parse-string json-body) (catch Exception e false))
             dirty-body (keywordize-keys map-body)
             body (dissoc dirty-body :user-id :org-id)] ; tsk, tsk
-    ;; request is well formed, check if it's valid
+    ;; request is well formed JSON, check if it's valid
     (if-let* [email (:email body)
               password (:password body)]
       ;; request is valid, check if the user already exists
-      (pool/with-pool [conn (-> sys :db-pool :pool)]
-        (if-let [prior-user (user/get-user-by-email conn email)]
-          (ring/error-response "User with email already exists." 409) ; already exists
-          (let [user (email/create-user! conn (email/->user body password))] ; doesn't exist, so create the user
-            (email-auth-response sys (assoc req :identity email) true)))) ; respond w/ JWToken and location
-      (ring/error-response "Invalid request body." 400)) ; request not valid
-    (ring/error-response "Could not parse request body." 400))) ; request not well formed
+      (do (timbre/info "User create request for" email)
+          (pool/with-pool [conn (-> sys :db-pool :pool)]
+            (if-let [prior-user (user/get-user-by-email conn email)]
+              (do (timbre/warn "User already exists with email" email)
+                  (ring/error-response "User with email already exists." 409)) ; already exists
+              (if-let [user (email/create-user! conn (email/->user body password))] ; doesn't exist, so create the user
+                (do (timbre/info "Creating user" email)
+                    (email-auth-response sys (assoc req :identity email) true)) ; respond w/ JWToken and location
+                (do (timbre/error "Failed creating user" email)
+                    (ring/error-response "" 500))))))
+      (do (timbre/warn "Invalid request body")
+          (ring/error-response "Invalid request body." 400))) ; request not valid
+    (do (timbre/warn "Could not parse request body")
+        (ring/error-response "Could not parse request body." 400)))) ; request not well formed
 
 (defn- email-user-enumerate [sys req]
   (if-let* [token    (jwt/read-token (:headers req))
@@ -218,12 +231,55 @@
             user-id  (-> decoded :claims :user-id)
             org-id   (-> decoded :claims :org-id)]
     (pool/with-pool [conn (-> sys :db-pool :pool)]
-      (if-let [users (email/user-links conn org-id)] ; list of all users in the org
+      (if-let [users (email/users-links conn org-id)] ; list of all users in the org
         ;; Remove the requesting user from the list and respond
-        (user-enumeration-response (filter #(not= (:user-id %) user-id) users) org-id "/email/users")
+        (do (timbre/info "User enumeration for" org-id)
+            (user-enumeration-response (filter #(not= (:user-id %) user-id) users) org-id "/email/users"))
         (do
           (timbre/warn "No org for" org-id)
           (user-enumeration-response [] org-id "/email/users"))))
+    (do
+      (timbre/warn "Bad token for request")      
+      (ring/error-response "Could note confirm token." 401))))
+
+(defn- email-user-invite [sys req]
+  ;; check if the request is auth'd
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)]
+    ;; request is auth'd, check if the request is well formed JSON
+    (if-let* [post-body (:body req)
+              json-body (slurp post-body)
+              map-body (try (json/parse-string json-body) (catch Exception e false))
+              body (keywordize-keys map-body)]
+      ;; request is well formed JSON, check if it's valid
+      (if-let* [email (:email body)
+                company-name (:company-name body)
+                logo (:logo body)]
+        (do (timbre/info "Invite request for" email)
+          (pool/with-pool [conn (-> sys :db-pool :pool)]
+            (if-let* [user (user/get-user-by-email conn email)
+                      user-id (:user-id user)]
+              (if (or (nil? (-> req :params :user-id)) (= (-> req :params :user-id) user-id))
+                (if (= (:status user) "pending")
+                  (do (timbre/info "Re-inviting user" email) 
+                    (invite-response user)) ; TODO send invite
+                  (do (timbre/warn "Can't re-invite user" email "in status" (:status user))
+                      (ring/error-response "User not eligible for reinvite" 409)))
+                (do (timbre/warn "Re-invite request didn't match user" user-id)
+                    (ring/error-response "" 404)))
+              (do (timbre/info "Creating user" email)
+                (if-let [user (email/create-user! conn
+                              (email/->user {:email email} "pending" (str (java.util.UUID/randomUUID))))] ; random passwd
+                  (do (timbre/info "Inviting user" email) 
+                      (invite-response user)) ; TODO send invite
+                  (do (timbre/error "Failed to create user" email)
+                      (ring/error-response "" 500)))))))
+        (do (timbre/warn "Invalid request body")
+            (ring/error-response "Invalid request body." 400))) ; request not valid
+      (do (timbre/warn "Could not parse request body")
+          (ring/error-response "Could not parse request body." 400))) ; request not well formed
     (do
       (timbre/warn "Bad token for request")      
       (ring/error-response "Could note confirm token." 401))))
@@ -261,10 +317,10 @@
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; brand new user creation
     (GET "/email/users" req (email-user-enumerate sys req)) ; user enumeration
-    (POST "/email/users/invite" req (email-user-create sys req)) ; brand new user creation
+    (POST "/email/users/invite" req (email-user-invite sys req)) ; new user invite
     (GET "/email/users/:user-id" req nil) ; user retrieval
     (DELETE "/email/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
-    (POST "/email/users/:user-id/invite" req nil) ; Re-invite
+    (POST "/email/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     
     ;; Utilities
     (GET "/ping" [] test-response) ; Up-time monitor

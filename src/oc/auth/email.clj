@@ -16,7 +16,11 @@
 (def ^:private invite-type "application/vnd.open-company.invitation.v1+json")
 (def ^:private user-collection-type "application/vnd.collection+vnd.open-company.user+json;version=1")
 
+(def ^:private email-users-url "/email/users")
+
 (def ^:private crypto-algo "bcrypt+sha512$")
+
+(defn user-url [user-id] (s/join "/" [email-users-url user-id]))
 
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
@@ -30,26 +34,26 @@
 
 (def create-link (hateoas/link-map "create" 
                                  hateoas/POST
-                                 "/email/users"
+                                 email-users-url
                                  user-type))
 
 (def invite-link (hateoas/link-map "invite" 
                                    hateoas/POST
-                                   "/email/users"
+                                   email-users-url
                                    invite-type))
 
-(defn self-link [user-id] (hateoas/self-link (str "/email/users/" user-id) user-type))
+(defn self-link [user-id] (hateoas/self-link (user-url user-id) user-type))
 
 (defn re-invite-link [user-id] (hateoas/link-map "invite"
                                                  hateoas/POST
-                                                 (str "/email/users/" user-id)
+                                                 (user-url user-id)
                                                  invite-type))
 
-(defn delete-link [user-id] (hateoas/delete-link (str "/email/users/" user-id)))
+(defn delete-link [user-id] (hateoas/delete-link (user-url user-id)))
 
 (def enumerate-link (hateoas/link-map "users" 
                                  hateoas/GET
-                                 "/email/users"
+                                 email-users-url
                                  user-collection-type))
 
 (def auth-settings {:links [auth-link create-link]})
@@ -72,6 +76,9 @@
 
 ;; ----- Schema -----
 
+; active - verified email
+; pending - awaiting invite response
+; unverified - awaiting email verification
 (def statuses #{"pending" "unverified" "active"})
 
 (def EmailUser 
@@ -102,7 +109,7 @@
                   (update :first-name #(or % ""))
                   (update :last-name #(or % ""))
                   (update :name #(or % (:first-name user-map) (:last-name user-map) (:real-name user-map) ""))
-                  (update :avatar #(or % nil)))] ;; TODO Gravatar
+                  (update :avatar #(or % "")))] ;; TODO Gravatar
     (if (s/blank? (:real-name props))
       (assoc props :real-name (s/trim (s/join " " [(:first-name props) (:last-name props)])))
       props))))
@@ -114,17 +121,17 @@
 
 ;; ----- User links -----
 
-(defn user-link [user]
+(defn user-links [user]
   (if-let* [user-id (:user-id user)
             user-response (select-keys user [:user-id :real-name :avatar :email :status])
             everyone-links [(self-link user-id) (delete-link user-id)]
             links (if (= (:status user) "pending") (conj everyone-links (re-invite-link user-id)) everyone-links)]
     (assoc user-response :links links)))
 
-(defn user-links
+(defn users-links
   [conn org-id]
   (if-let [users (user/list-users conn org-id)]
-    (map user-link users)
+    (map user-links users)
     []))
 
 
@@ -147,8 +154,8 @@
   (user/delete-user conn (:user-id u))
 
   (user/list-users conn (:org-id u))
-  (email/user-link u)
-  (email/user-links conn (:org-id u))  
+  (email/user-links u)
+  (email/users-links conn (:org-id u))  
 
   (user/delete-all-users! conn)
 

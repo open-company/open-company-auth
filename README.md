@@ -310,7 +310,7 @@ A response with an authenticated user is limited to just the URLs appropriate fo
       "rel" : "self",
       "method" : "GET",
       "href" : "/slack/users/slack-1234-5678",
-      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+      "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
       "rel" : "refresh",
@@ -337,7 +337,7 @@ or for an email user:
       "rel" : "self",
       "method" : "GET",
       "href" : "/email/users/slack-1234-5678",
-      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+      "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
       "rel" : "refresh",
@@ -355,7 +355,7 @@ or for an email user:
       "rel" : "invite",
       "method" : "POST",
       "href": "https://auth.opencompany.com/email/users/invite",
-      "type" : "application/vnd.open-company.user.v1+json"
+      "type" : "application/vnd.open-company.invitation.v1+json"
     },
     {
       "rel" : "users",
@@ -495,7 +495,7 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
             "rel" : "self",
             "method" : "GET",
             "href" : "/email/users/email-1234-5678",
-            "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+            "type" : "application/vnd.open-company.user+json;version=1"
           },
           {
             "rel" : "delete",
@@ -515,13 +515,13 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
             "rel" : "self",
             "method" : "GET",
             "href" : "/email/users/email-abcd-efgh",
-            "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+            "type" : "application/vnd.open-company.user+json;version=1"
           },
           {
             "rel" : "invite",
             "method" : "POST",
             "href" : "/email/users/email-abcd-efgh/invite",
-            "type" : "text/plain"
+            "type" : "application/vnd.open-company.invitation+json;version=1"
           },
           {
             "rel" : "delete",
@@ -537,7 +537,7 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
 
 #### Email Invitations
 
-To invite (or re-invite) a new email user, POST the following to `rel` `create` from the `/` response:
+To invite a new email user, POST the following to `rel` `invite` from the `/` or a user response:
 
 Headers:
 
@@ -572,12 +572,13 @@ as well as a JSON body with user properties and links.
       "rel" : "self",
       "method" : "GET",
       "href" : "/email/users/email-abcd-efgh",
-      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+      "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
       "rel" : "invite",
       "method" : "POST",
-      "href" : "/email/users/email-abcd-efgh/invite"
+      "href" : "/email/users/email-abcd-efgh/invite",
+      "type" : "application/vnd.open-company.invitation+json;version=1"
     },
     {
       "rel" : "delete",
