@@ -58,7 +58,7 @@
           :jwt-decoded (jwt/decode jwt-token)}]
     (ring/json-response response 200)))
 
-(defn- redirect-to-ui
+(defn- redirect-to-web-ui
   "Send them back to the UI login page with a JWT token or a reason they don't have one."
   [[success? jwt-or-reason]]
   (if success?
@@ -150,7 +150,7 @@
 (defn- oauth-callback [callback params]
   (if (get params "test")
     (ring/json-response {:test true :ok true} 200)
-    (redirect-to-ui (callback params))))
+    (redirect-to-web-ui (callback params))))
 
 (defn- refresh-slack-token [req]
   (if-let* [token    (jwt/read-token (:headers req))

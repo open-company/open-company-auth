@@ -13,6 +13,7 @@
 
 (def ^:private text "text/plain")
 (def ^:private user-type "application/vnd.open-company.user.v1+json")
+(def ^:private invite-type "application/vnd.open-company.invitation.v1+json")
 (def ^:private user-collection-type "application/vnd.collection+vnd.open-company.user+json;version=1")
 
 (def ^:private crypto-algo "bcrypt+sha512$")
@@ -35,14 +36,14 @@
 (def invite-link (hateoas/link-map "invite" 
                                    hateoas/POST
                                    "/email/users"
-                                   user-type))
+                                   invite-type))
 
 (defn self-link [user-id] (hateoas/self-link (str "/email/users/" user-id) user-type))
 
 (defn re-invite-link [user-id] (hateoas/link-map "invite"
                                                  hateoas/POST
                                                  (str "/email/users/" user-id)
-                                                 text))
+                                                 invite))
 
 (defn delete-link [user-id] (hateoas/delete-link (str "/email/users/" user-id)))
 

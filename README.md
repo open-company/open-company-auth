@@ -354,7 +354,7 @@ or for an email user:
     {
       "rel" : "invite",
       "method" : "POST",
-      "href": "https://auth.opencompany.com/email/users",
+      "href": "https://auth.opencompany.com/email/users/invite",
       "type" : "application/vnd.open-company.user.v1+json"
     },
     {
@@ -439,7 +439,7 @@ A new user request can be one of 4 cases:
 
 1) Unknown user and unknown email domain (brand new)
 
-  * Return: 20;1 Created, JWToken
+  * Return: 201 Created, JWToken
   * Email: Email validation sent via email
   * Next step: Authenticated user accesses web application with JWToken
 
@@ -543,7 +543,7 @@ Headers:
 
 ```
 Authorization: Bearer <JWToken>
-Content-Type: application/vnd.open-company.user.v1+json
+Content-Type: application/vnd.open-company.invite.v1+json
 Accept: application/vnd.open-company.user.v1+json
 ```
 
@@ -552,6 +552,8 @@ Body:
 ```json
 {
   "email": "camus@combat.org"
+  "company-name": "Combat"
+  "logo": "https://open-company-assets.s3.amazonaws.com/combat.png"
 }
 ```
 
