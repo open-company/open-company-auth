@@ -18,6 +18,9 @@
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
 
+(def ^:private user-type "application/vnd.open-company.user.v1+json")
+(def ^:private invite-type "application/vnd.open-company.invitation.v1+json")
+
 (def ^:private slack
   {:redirectURI  "/slack/auth"
    :state        "open-company-auth"})
@@ -31,6 +34,8 @@
        (:state slack)
        "&scope="
        scope))
+
+(defn user-url [org-id user-id] (s/join "/" ["/org" org-id "users" user-id]))
 
 (def auth-link (hateoas/link-map "authenticate"
                                  hateoas/GET
@@ -47,14 +52,24 @@
                                      "/slack/refresh-token"
                                      "text/plain"))
 
-(def enumerate-link (hateoas/link-map "users" 
-                                      hateoas/GET
-                                      "/slack/users"
-                                      "application/vnd.collection+vnd.open-company.user+json;version=1"))
+(defn invite-link [org-id] (hateoas/link-map "invite" 
+                                             hateoas/POST
+                                             (s/join "/" ["/org" org-id "users" "invite"])
+                                             invite-type))
+
+(defn self-link [org-id user-id] (hateoas/self-link (user-url org-id user-id) user-type))
+
+(defn enumerate-link [org-id] (hateoas/link-map "users" 
+                                               hateoas/GET
+                                               (s/join "/" ["/org" org-id "users"])
+                                               "application/vnd.collection+vnd.open-company.user+json;version=1"))
 
 (def auth-settings {:links [auth-link auth-retry-link]})
 
-(def authed-settings {:links [refresh-link enumerate-link]})
+(defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
+                                                (refresh-link org-id)
+                                                (invite-link org-id)
+                                                (enumerate-link org-id)]})
 
 (defn- prefixed? [s]
   (and (string? s) (.startsWith s prefix)))

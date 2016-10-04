@@ -122,11 +122,12 @@
 (defn- auth-settings [req]
   (if-let* [token (jwt/read-token (:headers req))
             decoded (jwt/decode token)
-            org-id (-> decoded :claims :org-id)]
+            org-id (-> decoded :claims :org-id)
+            user-id (-> decoded :claims :user-id)]
     ;; auth'd, give settings specific to their authentication source
     (let [authed-settings (if (= (-> decoded :claims :auth-source) "email")
-                            (email/authed-settings org-id)
-                            slack/authed-settings)]
+                            (email/authed-settings org-id user-id)
+                            (slack/authed-settings org-id user-id))]
       (ring/json-response authed-settings 200))
     ;; not auth'd, give them both settings
     (ring/json-response 

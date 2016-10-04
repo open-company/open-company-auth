@@ -56,10 +56,10 @@
 
 (def auth-settings {:links [auth-link create-link]})
 
-(defn authed-settings [org-id] {:links [auth-link
-                                        refresh-link
-                                        (invite-link org-id)
-                                        (enumerate-link org-id)]})
+(defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
+                                                refresh-link
+                                                (invite-link org-id)
+                                                (enumerate-link org-id)]})
 
 (defn- short-uuid []
   (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))
