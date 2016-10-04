@@ -58,7 +58,7 @@
 (defn list-users
   "Given an org-id, return the users for the org."
   [conn org-id]
-  (common/read-resources-in-order conn table-name :org-id org-id [:user-id :real-name :email :avatar :status]))
+  (common/read-resources-in-order conn table-name :org-id org-id [:user-id :org-id :real-name :email :avatar :status]))
 
 ;; ----- Armageddon -----
 

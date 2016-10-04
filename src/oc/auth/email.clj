@@ -16,11 +16,9 @@
 (def ^:private invite-type "application/vnd.open-company.invitation.v1+json")
 (def ^:private user-collection-type "application/vnd.collection+vnd.open-company.user+json;version=1")
 
-(def ^:private email-users-url "/email/users")
-
 (def ^:private crypto-algo "bcrypt+sha512$")
 
-(defn user-url [user-id] (s/join "/" [email-users-url user-id]))
+(defn user-url [org-id user-id] (s/join "/" ["/org" org-id "users" user-id]))
 
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
@@ -34,31 +32,34 @@
 
 (def create-link (hateoas/link-map "create" 
                                  hateoas/POST
-                                 email-users-url
+                                 "/email/users"
                                  user-type))
 
-(def invite-link (hateoas/link-map "invite" 
-                                   hateoas/POST
-                                   (s/join "/" [email-users-url "invite"])
-                                   invite-type))
+(defn invite-link [org-id] (hateoas/link-map "invite" 
+                                             hateoas/POST
+                                             (s/join "/" ["/org" org-id "users" "invite"])
+                                             invite-type))
 
-(defn self-link [user-id] (hateoas/self-link (user-url user-id) user-type))
+(defn self-link [org-id user-id] (hateoas/self-link (user-url org-id user-id) user-type))
 
-(defn re-invite-link [user-id] (hateoas/link-map "invite"
-                                                 hateoas/POST
-                                                 (s/join "/" [(user-url user-id) "invite"])
-                                                 invite-type))
+(defn re-invite-link [org-id user-id] (hateoas/link-map "invite"
+                                                        hateoas/POST
+                                                        (s/join "/" [(user-url org-id user-id) "invite"])
+                                                        invite-type))
 
-(defn delete-link [user-id] (hateoas/delete-link (user-url user-id)))
+(defn delete-link [org-id user-id] (hateoas/delete-link (user-url org-id user-id)))
 
-(def enumerate-link (hateoas/link-map "users" 
-                                 hateoas/GET
-                                 email-users-url
-                                 user-collection-type))
+(defn enumerate-link [org-id] (hateoas/link-map "users" 
+                                                 hateoas/GET
+                                                 (s/join "/" ["/org" org-id "users"])
+                                                 user-collection-type))
 
 (def auth-settings {:links [auth-link create-link]})
 
-(def authed-settings {:links [auth-link refresh-link create-link invite-link enumerate-link]})
+(defn authed-settings [org-id] {:links [auth-link
+                                        refresh-link
+                                        (invite-link org-id)
+                                        (enumerate-link org-id)]})
 
 (defn- short-uuid []
   (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))
@@ -126,9 +127,12 @@
 
 (defn user-links [user]
   (if-let* [user-id (:user-id user)
+            org-id (:org-id user)
             user-response (select-keys user [:user-id :real-name :avatar :email :status])
-            everyone-links [(self-link user-id) (delete-link user-id)]
-            links (if (= (:status user) "pending") (conj everyone-links (re-invite-link user-id)) everyone-links)]
+            everyone-links [(self-link org-id user-id) (delete-link org-id user-id)]
+            links (if (= (:status user) "pending")
+                    (conj everyone-links (re-invite-link org-id user-id))
+                    everyone-links)]
     (assoc user-response :links links)))
 
 (defn users-links

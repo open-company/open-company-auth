@@ -287,13 +287,13 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
       {
         "rel" : "authenticate",
         "method" : "GET",
-        "href" : "https://auth.opencompany.com/email/auth",
+        "href" : "/email/auth",
         "type" : "text/plain"
       },
       {
         "rel" : "create",
         "method" : "POST",
-        "href": "https://auth.opencompany.com/email/users",
+        "href": "/email/users",
         "type" : "application/vnd.open-company.user.v1+json"
       }
     ]
@@ -309,19 +309,25 @@ A response with an authenticated user is limited to just the URLs appropriate fo
     {
       "rel" : "self",
       "method" : "GET",
-      "href" : "/slack/users/slack-1234-5678",
+      "href" : "/org/slack-a1b2-c3d4/users/slack-1234-5678",
       "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
       "rel" : "refresh",
       "method" : "GET",
-      "href" : "https://auth.opencompany.com/slack/refresh-token",
+      "href" : "/slack/refresh-token",
       "type" : "text/plain"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href": "/org/slack-a1b2-c3d4/users/invite",
+      "type" : "application/vnd.open-company.invitation.v1+json"
     },
     {
       "rel" : "users",
       "method" : "GET",
-      "href" : "https://auth.opencompany.com/slack/users",
+      "href" : "/org/slack-a1b2-c3d4/users",
       "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
     }
   ]
@@ -336,31 +342,25 @@ or for an email user:
     {
       "rel" : "self",
       "method" : "GET",
-      "href" : "/email/users/slack-1234-5678",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
       "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
       "rel" : "refresh",
       "method" : "GET",
-      "href" : "https://auth.opencompany.com/email/refresh-token",
+      "href" : "/email/refresh-token",
       "type" : "text/plain"
-    },
-    {
-      "rel" : "create",
-      "method" : "POST",
-      "href": "https://auth.opencompany.com/email/users",
-      "type" : "application/vnd.open-company.user.v1+json"
     },
     {
       "rel" : "invite",
       "method" : "POST",
-      "href": "https://auth.opencompany.com/email/users/invite",
+      "href": "/org/email-1234-5678/users/invite",
       "type" : "application/vnd.open-company.invitation.v1+json"
     },
     {
       "rel" : "users",
       "method" : "GET",
-      "href" : "https://auth.opencompany.com/email/users",
+      "href" : "/org/email-1234-5678/users",
       "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
     }
   ]
@@ -468,19 +468,18 @@ TBD.
 
 #### Email User Management
 
-Authenticated users can enumerate the users with the same `org-id` with a GET request to `rel` `users`:
+Authenticated users can enumerate the users within the same `org-id` with a GET request to `rel` `users`:
 
 ```json
 {
   "collection" : {
     "version" : "1.0",
-    "href" : "/email/users",
-    "org-id": "email:1234-5678",
+    "href" : "/org/email-1234-5678/users",
     "links" : [
       {
         "rel" : "self",
         "method" : "GET",
-        "href" : "/email/users",
+        "href" : "/org/email-1234-5678/users",
         "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
       }],
     "users" : [
@@ -494,13 +493,13 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
           {
             "rel" : "self",
             "method" : "GET",
-            "href" : "/email/users/email-1234-5678",
+            "href" : "/org/email-1234-5678/users/email-6789-0123",
             "type" : "application/vnd.open-company.user+json;version=1"
           },
           {
             "rel" : "delete",
             "method" : "DELETE",
-            "href" : "/email/users/email-1234-5678"
+            "href" : "/org/email-1234-5678/users/email-6789-0123"
           }
         ]
       },
@@ -514,19 +513,19 @@ Authenticated users can enumerate the users with the same `org-id` with a GET re
           {
             "rel" : "self",
             "method" : "GET",
-            "href" : "/email/users/email-abcd-efgh",
+            "href" : "/org/email-1234-5678/users/email-abcd-efgh",
             "type" : "application/vnd.open-company.user+json;version=1"
           },
           {
             "rel" : "invite",
             "method" : "POST",
-            "href" : "/email/users/email-abcd-efgh/invite",
+            "href" : "/org/email-1234-5678/users/email-abcd-efgh/invite",
             "type" : "application/vnd.open-company.invitation+json;version=1"
           },
           {
             "rel" : "delete",
             "method" : "DELETE",
-            "href" : "/email/users/email-abcd-efgh"
+            "href" : "/org/email-1234-5678/users/email-abcd-efgh"
           }
         ]
       }      
@@ -571,19 +570,19 @@ as well as a JSON body with user properties and links.
     {
       "rel" : "self",
       "method" : "GET",
-      "href" : "/email/users/email-abcd-efgh",
+      "href" : "/org/email-1234-5678/users/email-abcd-efgh",
       "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
       "rel" : "invite",
       "method" : "POST",
-      "href" : "/email/users/email-abcd-efgh/invite",
+      "href" : "/org/email-1234-5678/users/email-abcd-efgh/invite",
       "type" : "application/vnd.open-company.invitation+json;version=1"
     },
     {
       "rel" : "delete",
       "method" : "DELETE",
-      "href" : "/email/users/email-abcd-efgh"
+      "href" : "/org/email-1234-5678/users/email-abcd-efgh"
     }
   ]
 }

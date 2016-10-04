@@ -76,7 +76,7 @@
                 clean-user (dissoc user :created-at :updated-at :password-hash)
                 sourced-user (assoc clean-user :auth-source "email")]
         ; respond with JWToken
-        (let [headers (if location {"Location" (email/user-url (:user-id user))} {})
+        (let [headers (if location {"Location" (email/user-url (:org-id user) (:user-id user))} {})
               status (if location 201 200)]
           (ring/text-response (jwt/generate sourced-user) status headers))
         unauth-response)) ; couldn't get the auth'd user (unexpected)
@@ -97,7 +97,7 @@
   "Return a JSON response for the user that was just invited/re-invited."
   [user]
   (let [user-response (select-keys user [:user-id :real-name :avatar :email :status])]
-    (ring/json-response (email/user-links user) 201 {"Location" (email/user-url (:user-id user))})))
+    (ring/json-response (email/user-links user) 201 {"Location" (email/user-url (:org-id user) (:user-id user))})))
 
 ;; ----- JWToken auth'ing macro -----
 
@@ -121,9 +121,12 @@
 
 (defn- auth-settings [req]
   (if-let* [token (jwt/read-token (:headers req))
-            decoded (jwt/decode token)]
+            decoded (jwt/decode token)
+            org-id (-> decoded :claims :org-id)]
     ;; auth'd, give settings specific to their authentication source
-    (let [authed-settings (if (= (-> decoded :claims :auth-source) "email") email/authed-settings slack/authed-settings)]
+    (let [authed-settings (if (= (-> decoded :claims :auth-source) "email")
+                            (email/authed-settings org-id)
+                            slack/authed-settings)]
       (ring/json-response authed-settings 200))
     ;; not auth'd, give them both settings
     (ring/json-response 
@@ -194,10 +197,10 @@
               (ring/text-response (jwt/generate (merge (:claims decoded) {:auth-source "email"})) 200))
             (do
               (timbre/warn "No user or org-id match for token refresh of" user-id)            
-              (ring/error-response "Could note confirm token." 401))))))
+              (ring/error-response "Could note confirm token." 400))))))
     (do
       (timbre/warn "Bad refresh token request")      
-      (ring/error-response "Could note confirm token." 401))))
+      (ring/error-response "Could note confirm token." 400))))
 
 (defn- email-user-create [sys req]
   ;; check if the request is well formed JSON
@@ -234,7 +237,10 @@
       (if-let [users (email/users-links conn org-id)] ; list of all users in the org
         ;; Remove the requesting user from the list and respond
         (do (timbre/info "User enumeration for" org-id)
-            (user-enumeration-response (filter #(not= (:user-id %) user-id) users) org-id "/email/users"))
+            (println users)
+            (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
+                                       org-id
+                                       (:href (email/enumerate-link org-id))))
         (do
           (timbre/warn "No org for" org-id)
           (user-enumeration-response [] org-id "/email/users"))))
@@ -261,6 +267,7 @@
           (pool/with-pool [conn (-> sys :db-pool :pool)]
             (if-let* [user (user/get-user-by-email conn email)
                       user-id (:user-id user)]
+              ;; TODO user exists, but in a different org, need a 2nd org invite...
               (if (or (nil? (-> req :params :user-id)) (= (-> req :params :user-id) user-id))
                 (if (= (:status user) "pending")
                   (do (timbre/info "Re-inviting user" email) 
@@ -272,6 +279,7 @@
               (do (timbre/info "Creating user" email)
                 (if-let [user (email/create-user! conn
                               (email/->user {:email email
+                                             :org-id org-id
                                              :one-time-secret (str (java.util.UUID/randomUUID))}
                                             "pending"
                                             (str (java.util.UUID/randomUUID))))] ; random passwd
@@ -312,18 +320,18 @@
     ;; Slack
     (GET "/slack/auth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
     (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
-    (GET "/slack/users" req nil) ; user enumeration
-    (GET "/slack/users/:user-id" req nil) ; user retrieval
     
     ;; Email
     (GET "/email/auth" req (email-auth-response sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
-    (POST "/email/users" req (email-user-create sys req)) ; brand new user creation
-    (GET "/email/users" req (email-user-enumerate sys req)) ; user enumeration
-    (POST "/email/users/invite" req (email-user-invite sys req)) ; new user invite
-    (GET "/email/users/:user-id" req nil) ; user retrieval
-    (DELETE "/email/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
-    (POST "/email/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
+    (POST "/email/users" req (email-user-create sys req)) ; new user creation
+    
+    ;; User Management
+    (GET "/org/:org-id/users" req (email-user-enumerate sys req)) ; user enumeration
+    (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
+    (GET "/org/:org-id/users/:user-id" req nil) ; user retrieval
+    (DELETE "/org/:org-id/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
+    (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     
     ;; Utilities
     (GET "/ping" [] test-response) ; Up-time monitor
