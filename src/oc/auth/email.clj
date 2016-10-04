@@ -39,7 +39,7 @@
 
 (def invite-link (hateoas/link-map "invite" 
                                    hateoas/POST
-                                   email-users-url
+                                   (s/join "/" [email-users-url "invite"])
                                    invite-type))
 
 (defn self-link [user-id] (hateoas/self-link (user-url user-id) user-type))
@@ -157,7 +157,7 @@
   (email/reset-password! (:user-id u) "$ecret$")
   (email/authenticate? conn (:email u) "S$cr$ts")
   (email/authenticate? conn (:email u) "$ecret$")
-  (user/delete-user conn (:user-id u))
+  (user/delete-user! conn (:user-id u))
 
   (user/list-users conn (:org-id u))
   (email/user-links u)
