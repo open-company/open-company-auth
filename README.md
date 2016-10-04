@@ -346,6 +346,12 @@ or for an email user:
       "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
+      "rel" : "update",
+      "method" : "PATCH",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
       "rel" : "refresh",
       "method" : "GET",
       "href" : "/email/refresh-token",
@@ -390,6 +396,13 @@ Upon clicking the "Sign in with Email" link, a `GET` request is made to the `rel
 Basic authentication (always over HTTPS) to authenticate with an email address and password. If the email/password
 authentication succeeds, there is a 200 response with a JWToken returned in the body of the response. If the
 email/password authentication fails, there is a 401 response.
+
+Headers:
+
+```
+Authorization: Basic <Email/Password Hash>
+Accept: text/plain
+```
 
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
@@ -587,6 +600,22 @@ as well as a JSON body with user properties and links.
   ]
 }
 ```
+
+Upon receipt, an email invitation sends the user to the OC Web application at `/invite?token=<one-time-use-token>`.
+The web application GETs the `rel` `authenticate` link of `email` from the unauth'd request to `/`, passing the
+token as the authorization:
+
+Headers:
+
+```
+Authorization: Bearer <one-time-use-token>
+```
+
+If the token is accepted, the `200` response will contain a `Location` header with the `Location` of the newly
+created user.
+
+At this point, if additional information about the invited user is collected, it can be provided with a `PATCH`
+of the `rel` `update` link from the user response at the provided `Location`.
 
 #### Password Reset
 
