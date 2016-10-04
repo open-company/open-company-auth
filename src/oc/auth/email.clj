@@ -46,7 +46,7 @@
 
 (defn re-invite-link [user-id] (hateoas/link-map "invite"
                                                  hateoas/POST
-                                                 (user-url user-id)
+                                                 (s/join "/" [(user-url user-id) "invite"])
                                                  invite-type))
 
 (defn delete-link [user-id] (hateoas/delete-link (user-url user-id)))
