@@ -275,7 +275,9 @@
               (if (or (nil? (-> req :params :user-id)) (= (-> req :params :user-id) user-id))
                 (if (= status "pending")
                   (do (timbre/info "Re-inviting user" email) 
-                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link (:one-time-token user))})))
+                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link (:one-time-token user))})
+                                                      (-> decoded :claims :real-name)
+                                                      (-> decoded :claims :email)))
                       (invite-response user))
                   (do (timbre/warn "Can't re-invite user" email "in status" (:status user))
                       (ring/error-response "User not eligible for reinvite" 409)))
@@ -290,7 +292,9 @@
                                                 "pending"
                                                 (str (java.util.UUID/randomUUID))))] ; random passwd
                   (do (timbre/info "Inviting user" email)
-                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link token)})))
+                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link token)})
+                                                      (-> decoded :claims :real-name)
+                                                      (-> decoded :claims :email)))
                       (invite-response user))
                   (do (timbre/error "Failed to create user" email)
                       (ring/error-response "" 500)))))))
