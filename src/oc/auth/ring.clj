@@ -21,11 +21,7 @@
 
   ([body status mime-type :guard string?] (json-response body status mime-type {}))
 
-  ([body status mime-type headers]
-  {:pre [(map? body)
-         (integer? status)
-         (string? mime-type)
-         (map? headers)]}
+  ([body :guard map? status :guard integer? mime-type :guard string? headers :guard map?]
   (ring-response (json/generate-string body {:pretty true}) status (merge {"Content-Type" mime-type} headers))))
 
 (defn html-response

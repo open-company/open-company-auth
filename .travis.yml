@@ -15,7 +15,6 @@ before_script:
 script:
 - lein2 test!
 - lein2 eastwood
-- lein2 kibit
 branches:
   only:
   - master

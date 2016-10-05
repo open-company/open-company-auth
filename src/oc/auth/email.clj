@@ -5,8 +5,6 @@
             [schema.core :as schema]
             [buddy.hashers :as hashers]
             [oc.lib.hateoas :as hateoas]
-            [oc.lib.slugify :refer (slugify)]
-            [oc.auth.config :as config]
             [oc.auth.user :as user]))
 
 (def prefix "email-")

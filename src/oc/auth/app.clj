@@ -96,26 +96,25 @@
 (defn- invite-response
   "Return a JSON response for the user that was just invited/re-invited."
   [user]
-  (let [user-response (select-keys user [:user-id :real-name :avatar :email :status])]
-    (ring/json-response (email/user-links user) 201 {"Location" (email/user-url (:org-id user) (:user-id user))})))
+  (ring/json-response (email/user-links user) 201 {"Location" (email/user-url (:org-id user) (:user-id user))}))
 
 ;; ----- JWToken auth'ing macro -----
 
-(defmacro with-valid-token
-  "TODO: not working yet."
-  [[req] & body]
-  '(if-let [token#    (jwt/read-token (:headers ~req))]
-    (if-let [decoded#  (jwt/decode token#)]
-      (let [user-id   (-> decoded# :claims :user-id)
-            user-tkn (-> decoded :claims :user-token)
-            org-id    (-> decoded# :claims :org-id)]
-        (do ~@body))
-      (do
-        (timbre/warn "Bad token for request")      
-        (ring/error-response "Could note confirm token." 401)))
-    (do
-      (timbre/warn "No token for request")      
-      (ring/error-response "Could note confirm token." 401))))
+; (defmacro with-valid-token
+;   "TODO: not working yet."
+;   [[req] & body]
+;   '(if-let [token#    (jwt/read-token (:headers ~req))]
+;     (if-let [decoded#  (jwt/decode token#)]
+;       (let [user-id   (-> decoded# :claims :user-id)
+;             user-tkn (-> decoded :claims :user-token)
+;             org-id    (-> decoded# :claims :org-id)]
+;         (do ~@body))
+;       (do
+;         (timbre/warn "Bad token for request")      
+;         (ring/error-response "Could note confirm token." 401)))
+;     (do
+;       (timbre/warn "No token for request")      
+;       (ring/error-response "Could note confirm token." 401))))
 
 ;; ----- Request Handling Functions -----
 
@@ -137,7 +136,6 @@
 (defn- user-delete [sys req prefix]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
-            user-id  (-> decoded :claims :user-id)
             org-id   (-> decoded :claims :org-id)]
     (pool/with-pool [conn (-> sys :db-pool :pool)]
       (if-let* [del-user-id (-> req :params :user-id)
@@ -216,10 +214,10 @@
       ;; request is valid, check if the user already exists
       (do (timbre/info "User create request for" email)
           (pool/with-pool [conn (-> sys :db-pool :pool)]
-            (if-let [prior-user (user/get-user-by-email conn email)]
+            (if (user/get-user-by-email conn email) ; prior user?
               (do (timbre/warn "User already exists with email" email)
                   (ring/error-response "User with email already exists." 409)) ; already exists
-              (if-let [user (email/create-user! conn (email/->user body password))] ; doesn't exist, so create the user
+              (if (email/create-user! conn (email/->user body password)) ; doesn't exist, so create the user
                 (do (timbre/info "Creating user" email)
                     (email-auth-response sys (assoc req :identity email) true)) ; respond w/ JWToken and location
                 (do (timbre/error "Failed creating user" email)
@@ -253,7 +251,6 @@
   ;; check if the request is auth'd
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
-            user-id  (-> decoded :claims :user-id)
             org-id   (-> decoded :claims :org-id)]
     ;; request is auth'd, check if the request is well formed JSON
     (if-let* [post-body (:body req)
@@ -262,8 +259,8 @@
               body (keywordize-keys map-body)]
       ;; request is well formed JSON, check if it's valid
       (if-let* [email (:email body)
-                company-name (:company-name body)
-                logo (:logo body)]
+                _company-name (:company-name body)
+                _logo (:logo body)]
         (do (timbre/info "Invite request for" email)
           (pool/with-pool [conn (-> sys :db-pool :pool)]
             (if-let* [user (user/get-user-by-email conn email)
@@ -330,7 +327,7 @@
     ;; User Management
     (GET "/org/:org-id/users" req (email-user-enumerate sys req)) ; user enumeration
     (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
-    (GET "/org/:org-id/users/:user-id" req nil) ; user retrieval
+    ; TODO (GET "/org/:org-id/users/:user-id" req nil) ; user retrieval
     (DELETE "/org/:org-id/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     

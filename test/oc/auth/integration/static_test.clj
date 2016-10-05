@@ -19,8 +19,7 @@
         (:status resp) => 200
         (test-utils/response-mime-type resp) => "application/json"
         (contains? body "slack") => true
-        (contains? (body "slack") "basic-scopes-url") => true
-        (contains? (body "slack") "extended-scopes-url") => true
+        (contains? (body "slack") "links") => true
         (contains? body "email") => true
         (contains? (body "email") "links") => true))
     
