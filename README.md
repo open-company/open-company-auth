@@ -555,7 +555,7 @@ Headers:
 
 ```
 Authorization: Bearer <JWToken>
-Content-Type: application/vnd.open-company.invite.v1+json
+Content-Type: application/vnd.open-company.invitation.v1+json
 Accept: application/vnd.open-company.user.v1+json
 ```
 
