@@ -21,6 +21,7 @@
             [oc.lib.rethinkdb.pool :as pool]
             [oc.auth.components :as components]
             [oc.auth.config :as c]
+            [oc.auth.lib.sqs :as sqs]
             [oc.auth.lib.store :as store]
             [oc.auth.lib.jwt :as jwt]
             [oc.auth.lib.ring :as ring]
@@ -38,6 +39,11 @@
        (sentry/capture c/dsn (-> {:message (.getMessage ex)}
                                  (assoc-in [:extra :exception-data] (ex-data ex))
                                  (sentry-interfaces/stacktrace ex)))))))
+
+;; ----- Utility Functions -----
+
+(defn- token-link [token]
+  (s/join "/" [c/ui-server-url (str "invite?token=" token)]))
 
 ;; ----- Response Functions -----
 
@@ -143,7 +149,7 @@
                 del-user (user/get-user conn del-user-id)] ; user to delete
         (do (timbre/info "Delete request for" del-user-id)
           (if (= (:org-id del-user) org-id) ; member of the same org
-            (do (timbre/info "Deleting " del-user-id)
+            (do (timbre/info "Deleting" del-user-id)
                 (user/delete-user! conn del-user-id)
                 (ring/text-response "" 204)) ; All good
             (do (timbre/warn "Unauth'd delete request of" del-user-id)
@@ -263,25 +269,29 @@
         (do (timbre/info "Invite request for" email)
           (pool/with-pool [conn (-> sys :db-pool :pool)]
             (if-let* [user (user/get-user-by-email conn email)
-                      user-id (:user-id user)]
+                      user-id (:user-id user)
+                      status (:status user)]
               ;; TODO user exists, but in a different org, need a 2nd org invite...
               (if (or (nil? (-> req :params :user-id)) (= (-> req :params :user-id) user-id))
-                (if (= (:status user) "pending")
+                (if (= status "pending")
                   (do (timbre/info "Re-inviting user" email) 
-                    (invite-response user)) ; TODO send invite
+                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link (:one-time-token user))})))
+                      (invite-response user))
                   (do (timbre/warn "Can't re-invite user" email "in status" (:status user))
                       (ring/error-response "User not eligible for reinvite" 409)))
                 (do (timbre/warn "Re-invite request didn't match user" user-id)
                     (ring/error-response "" 404)))
               (do (timbre/info "Creating user" email)
-                (if-let [user (email/create-user! conn
-                              (email/->user {:email email
-                                             :org-id org-id
-                                             :one-time-token (str (java.util.UUID/randomUUID))}
-                                            "pending"
-                                            (str (java.util.UUID/randomUUID))))] ; random passwd
-                  (do (timbre/info "Inviting user" email) 
-                      (invite-response user)) ; TODO send invite
+                (if-let* [token (str (java.util.UUID/randomUUID))
+                          user (email/create-user! conn
+                                  (email/->user {:email email
+                                                 :org-id org-id
+                                                 :one-time-token token}
+                                                "pending"
+                                                (str (java.util.UUID/randomUUID))))] ; random passwd
+                  (do (timbre/info "Inviting user" email)
+                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link token)})))
+                      (invite-response user))
                   (do (timbre/error "Failed to create user" email)
                       (ring/error-response "" 500)))))))
         (do (timbre/warn "Invalid request body")
@@ -402,6 +412,7 @@
                 "Running on port: " port "\n"
                 "Database: " c/db-name "\n"
                 "Database pool: " c/db-pool-size "\n"
+                "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
                 "Hot-reload: " c/hot-reload "\n"
                 "Sentry: " c/dsn "\n\n"
                 "Ready to serve...\n")))

@@ -46,14 +46,18 @@
 (defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
 (defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
 
+;; ----- AWS SQS -----
+
+(defonce aws-access-key-id (env :aws-access-key-id))
+(defonce aws-secret-access-key (env :aws-secret-access-key))
+
+(defonce aws-sqs-email-queue (env :aws-sqs-email-queue))
+
 ;; ----- JWT -----
 
 (defonce passphrase (env :open-company-auth-passphrase))
 
 ;; ----- AWS S3 Store -----
-
-(defonce aws-access-key-id (env :aws-access-key-id))
-(defonce aws-secret-access-key (env :aws-secret-access-key))
 
 (defonce secrets-bucket (env :aws-secrets-bucket))
 (defonce secrets-file
