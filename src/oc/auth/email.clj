@@ -40,6 +40,8 @@
 
 (defn self-link [org-id user-id] (hateoas/self-link (user-url org-id user-id) user-type))
 
+(defn partial-update-link [org-id user-id] (hateoas/partial-update-link (user-url org-id user-id) user-type))
+
 (defn re-invite-link [org-id user-id] (hateoas/link-map "invite"
                                                         hateoas/POST
                                                         (s/join "/" [(user-url org-id user-id) "invite"])
@@ -55,6 +57,7 @@
 (def auth-settings {:links [auth-link create-link]})
 
 (defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
+                                                (partial-update-link org-id user-id)
                                                 refresh-link
                                                 (invite-link org-id)
                                                 (enumerate-link org-id)]})

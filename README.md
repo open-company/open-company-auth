@@ -346,7 +346,7 @@ or for an email user:
       "type" : "application/vnd.open-company.user+json;version=1"
     },
     {
-      "rel" : "update",
+      "rel" : "partial-update",
       "method" : "PATCH",
       "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
       "type" : "application/vnd.open-company.user+json;version=1"
