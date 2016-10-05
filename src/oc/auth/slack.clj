@@ -151,7 +151,6 @@
         auth-source  {:auth-source "slack"}
         access-token (:access_token response)
         scope        (:scope response)]
-    (println response)
     (if (and (:ok response) (valid-access-token? access-token))
       ;; w/ identity.basic this response contains all user information we can get
       ;; so munge that into the right shape or get user info if that doesn't work

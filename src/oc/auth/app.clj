@@ -236,7 +236,6 @@
       (if-let [users (email/users-links conn org-id)] ; list of all users in the org
         ;; Remove the requesting user from the list and respond
         (do (timbre/info "User enumeration for" org-id)
-            (println users)
             (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
                                        org-id
                                        (:href (email/enumerate-link org-id))))
@@ -278,7 +277,7 @@
                 (if-let [user (email/create-user! conn
                               (email/->user {:email email
                                              :org-id org-id
-                                             :one-time-secret (str (java.util.UUID/randomUUID))}
+                                             :one-time-token (str (java.util.UUID/randomUUID))}
                                             "pending"
                                             (str (java.util.UUID/randomUUID))))] ; random passwd
                   (do (timbre/info "Inviting user" email) 
@@ -293,7 +292,38 @@
       (timbre/warn "Bad token for request")      
       (ring/error-response "Could note confirm token." 401))))
 
-(defn- email-auth [sys req auth-data]
+(defn- email-auth
+  "An attempt to auth, could be email/pass or one time use token (invite or reset password)."
+  [sys req]
+  (if (:identity req)
+    
+    (email-auth-response sys req) ; Basic Auth
+
+    ; One time use token Auth
+    (if-let* [headers (keywordize-keys (:headers req))
+              authorization (:authorization headers)
+              valid (s/starts-with? authorization "Bearer ")
+              token (last (s/split authorization #" "))]
+      
+      ; Provided a token
+      (pool/with-pool [conn (-> sys :db-pool :pool)]
+        (timbre/info "Token auth request for" token)
+        (if-let* [user (user/get-user-by-token conn token)
+                  email (:email user)]
+          (do
+            (timbre/info "Authed" email "with token" token)
+            (user/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
+            (email-auth-response sys (assoc req :identity email)))
+          (do (timbre/warn "No email user for token" token)
+              (ring/error-response "" 401)))) ; token not found        
+      
+      ; No token
+      (do (timbre/warn "Invalid token auth request body")
+          (ring/error-response "Invalid request body." 400))))) ; request not valid
+
+(defn- email-basic-auth
+  "HTTP Basic Auth function (email/pass) for ring middleware."
+  [sys req auth-data]
   (if-let* [email (:username auth-data)
             password (:password auth-data)]
     (pool/with-pool [conn (-> sys :db-pool :pool)] 
@@ -320,7 +350,7 @@
     (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
     
     ;; Email
-    (GET "/email/auth" req (email-auth-response sys req)) ; authentication request
+    (GET "/email/auth" req (email-auth sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; new user creation
     
@@ -343,7 +373,7 @@
     true          wrap-params
     true          (wrap-cors #".*")
     true          (wrap-authentication (backends/basic {:realm "oc-auth"
-                                                        :authfn (partial email-auth sys)}))
+                                                        :authfn (partial email-basic-auth sys)}))
     c/hot-reload  wrap-reload
     c/dsn         (sentry-mw/wrap-sentry c/dsn)))
 
