@@ -147,10 +147,11 @@
                               :token (-> response :bot :bot_access_token)}})
         org          {:org-id   (str prefix (or (:team_id response)
                                                 (-> response :team :id))) ; identity.basic returns different data
-                      :org-name (:team_name response)}
+                      :org-name (or (:team_name response) (-> response :team :name) "")}
         auth-source  {:auth-source "slack"}
         access-token (:access_token response)
         scope        (:scope response)]
+    (println response)
     (if (and (:ok response) (valid-access-token? access-token))
       ;; w/ identity.basic this response contains all user information we can get
       ;; so munge that into the right shape or get user info if that doesn't work
