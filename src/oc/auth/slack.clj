@@ -67,7 +67,7 @@
 (def auth-settings {:links [auth-link auth-retry-link]})
 
 (defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
-                                                (refresh-link org-id)
+                                                refresh-link
                                                 (invite-link org-id)
                                                 (enumerate-link org-id)]})
 
