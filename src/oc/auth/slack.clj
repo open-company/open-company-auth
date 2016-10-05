@@ -9,8 +9,8 @@
             [taoensso.truss :as t]
             [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
-            [oc.auth.store :as store]
-            [oc.auth.jwt :as jwt]
+            [oc.auth.lib.store :as store]
+            [oc.auth.lib.jwt :as jwt]
             [oc.auth.user :as user]))
 
 (def prefix "slack-")

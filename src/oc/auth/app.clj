@@ -21,9 +21,9 @@
             [oc.lib.rethinkdb.pool :as pool]
             [oc.auth.components :as components]
             [oc.auth.config :as c]
-            [oc.auth.store :as store]
-            [oc.auth.jwt :as jwt]
-            [oc.auth.ring :as ring]
+            [oc.auth.lib.store :as store]
+            [oc.auth.lib.jwt :as jwt]
+            [oc.auth.lib.ring :as ring]
             [oc.auth.slack :as slack]
             [oc.auth.email :as email]
             [oc.auth.user :as user]))

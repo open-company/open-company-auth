@@ -5,7 +5,7 @@
             [clj-time.format :as format]
             [clojure.tools.cli :refer (parse-opts)]
             [oc.auth.config :as config]
-            [oc.auth.jwt :as jwt])
+            [oc.auth.lib.jwt :as jwt])
   (:gen-class))
 
 (def cli-options

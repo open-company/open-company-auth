@@ -1,4 +1,4 @@
-(ns oc.auth.ring
+(ns oc.auth.lib.ring
   (:require [defun :refer (defun)]
             [cheshire.core :as json]))
 
