@@ -89,6 +89,8 @@
    :password-hash schema/Str
    :status (schema/pred #(statuses %))}))
 
+(def updateable-props #{:email :password :name :first-name :last-name :real-name :avatar})
+
 ;; ----- Email user creation -----
 
 (schema/defn ->user :- EmailUser

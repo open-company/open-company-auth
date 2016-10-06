@@ -52,9 +52,6 @@
 
 (defonce ^:private test-response (ring/text-response  "OpenCompany auth server: OK" 200))
 
-(defonce ^:private unauth-response
-  (ring/text-response "" 401))
-
 (defn- jwt-debug-response
   "Helper to format a JWT debug response"
   [payload]
@@ -86,8 +83,8 @@
         (let [headers (if location {"Location" (email/user-url (:org-id user) (:user-id user))} {})
               status (if location 201 200)]
           (ring/text-response (jwt/generate sourced-user) status headers))
-        unauth-response)) ; couldn't get the auth'd user (unexpected)
-    unauth-response))) ; email/pass didn't auth (expected)
+        (ring/text-response "" 401))) ; couldn't get the auth'd user (unexpected)
+    (ring/text-response "" 401)))) ; email/pass didn't auth (expected)
 
 (defn- user-response
   "Return a JSON representation and HATEOAS links for a specific user."
@@ -281,7 +278,7 @@
               (ring/text-response (jwt/generate (merge (:claims decoded) {:auth-source "email"})) 200))
             (do
               (timbre/warn "No user or org-id match for token refresh of" user-id)            
-              (ring/error-response "Could note confirm token." 400))))))
+              (ring/error-response "Could note confirm token." 401))))))
     (do
       (timbre/warn "Bad refresh token request")      
       (ring/error-response "Could note confirm token." 400))))
@@ -313,6 +310,69 @@
           (ring/error-response "Invalid request body." 400))) ; request not valid
     (do (timbre/warn "Could not parse request body")
         (ring/error-response "Could not parse request body." 400)))) ; request not well formed
+
+(defn- email-update-user
+  ""
+  [sys req]
+  ;; check if the request is auth'd
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)]
+    
+    ;; check if the request is well formed JSON
+    (if-let* [post-body (:body req)
+              json-body (slurp post-body)
+              map-body (try (json/parse-string json-body) (catch Exception e false))
+              dirty-body (keywordize-keys map-body)
+              body (dissoc dirty-body :user-id :org-id)] ; tsk, tsk
+      
+      ;; request is well formed JSON, check if it's valid
+      (if-let* [req-org-id (-> req :params :org-id)
+                req-user-id (-> req :params :user-id)
+                body-keys (keys body)
+                update-keys (filter email/updateable-props body-keys) ; just the updateable props
+                no-extra-props? (= update-keys body-keys)
+                _valid (not-empty update-keys)] ; any updateable props?
+        
+        (do (timbre/info "Update request for user" req-user-id)
+          
+          (if (= user-id req-user-id)
+
+            (pool/with-pool [conn (-> sys :db-pool :pool)]
+              (if-let* [user (user/get-user conn req-user-id)]
+
+                (if (:password-hash user) ; email user?
+                  
+                  ;; Everything checks out, so try to update the user
+                  (if-let* [updated-user (user/update-user conn req-user-id body)]
+                    (user-response updated-user true)
+                    (do (timbre/error "Failed updating user" user-id)
+                        (ring/error-response "" 500)))
+
+                  ;; Not an email user
+                  (do (timbre/warn "Update request for Slack user")
+                      (ring/error-response nil 405)))
+                
+                ;; No user by that ID in the DB
+                (do (timbre/warn "No user for user request")
+                    (ring/error-response nil 404))))
+            
+            ;; JWToken and request user ID don't match, can only update your own user
+            (do (timbre/warn "Wrong user for user request")
+                (ring/error-response nil 401))))
+        
+        ;; Request not valid
+        (do (timbre/warn "Invalid request body")
+          (ring/error-response "Invalid request body." 400))) ; request not valid
+
+      ;; Request not well-formed
+      (do (timbre/warn "Could not parse request body")
+          (ring/error-response "Could not parse request body." 400))) ; request not well formed
+    
+    ;; Not auth'd
+    (do (timbre/warn "Bad token for request")      
+        (ring/error-response "Could note confirm token." 401))))
+
 
 (defn- email-user-invite
   "Invite or re-invite a user by their email address."
@@ -436,7 +496,7 @@
     (GET "/org/:org-id/users" req (user-enumerate sys req)) ; user enumeration
     (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
     (GET "/org/:org-id/users/:user-id" req (user-request sys req)) ; user retrieval
-    (PATCH "/org/:org-id/users/:user-id" req nil) ; user update
+    (PATCH "/org/:org-id/users/:user-id" req (email-update-user sys req)) ; user update
     (DELETE "/org/:org-id/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     
