@@ -1,4 +1,5 @@
 (ns oc.auth.app
+  (:gen-class)
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
