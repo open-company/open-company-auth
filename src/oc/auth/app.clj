@@ -438,6 +438,8 @@
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     
     ;; Utilities
+    (GET "/---error-test---" req (/ 1 0))
+    (GET "/---500-test---" req {:status 500 :body "Testing bad things."})
     (GET "/ping" [] test-response) ; Up-time monitor
     (GET "/test-token" [] (jwt-debug-response test-token)))) ; JWToken decoding
 
