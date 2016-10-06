@@ -129,7 +129,7 @@
 (defn user-links [user]
   (if-let* [user-id (:user-id user)
             org-id (:org-id user)
-            user-response (select-keys user [:user-id :real-name :avatar :email :status])
+            user-response (select-keys user [:real-name :avatar :email :status])
             everyone-links [(self-link org-id user-id) (delete-link org-id user-id)]
             links (if (= (:status user) "pending")
                     (conj everyone-links (re-invite-link org-id user-id))

@@ -9,7 +9,7 @@
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
-            [compojure.core :as compojure :refer (GET POST DELETE)]
+            [compojure.core :as compojure :refer (GET POST PATCH DELETE)]
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]
             [ring.middleware.cors :refer (wrap-cors)]
@@ -88,13 +88,29 @@
         unauth-response)) ; couldn't get the auth'd user (unexpected)
     unauth-response))) ; email/pass didn't auth (expected)
 
+(defn- user-response
+  "Return a JSON representation and HATEOAS links for a specific user."
+  [user self?]
+  (let [email? (:password-hash user)
+        org-id (:org-id user)
+        user-id (:user-id user)
+        status (:status user)
+        user-map (select-keys user [:email :avatar :name :first-name :last-name :real-name])
+        user-status-map (if email? (assoc user-map :status status))
+        links [(email/self-link org-id user-id)]
+        refresh-links (if self? (conj links (if email? email/refresh-link slack/refresh-link)) links)
+        delete-links (if email? (conj refresh-links (email/delete-link org-id user-id)) refresh-links)
+        update-links (if (and self? email?) (conj delete-links (email/partial-update-link org-id user-id)) delete-links)
+        invite-links (if (= status "pending") (conj update-links (email/re-invite-link org-id user-id)) update-links)
+        response (assoc user-status-map :links invite-links)]
+    (ring/json-response response 200 "application/vnd.open-company.user.v1+json")))
+
 (defn- user-enumeration-response
   "Return a JSON collection of users for the org."
-  [users org-id url]
+  [users url]
   (let [response {:collection {
                   :version "1.0"
                   :href url
-                  :org-id org-id
                   :links [(hateoas/self-link url "application/vnd.collection+vnd.open-company.user+json;version=1")]
                   :users users}}]
   (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
@@ -125,6 +141,7 @@
 ;; ----- Request Handling Functions -----
 
 (defn- auth-settings [req]
+  "Return a set of HATEOAS links appropriate to the user's auth status: none, Slack, email"
   (if-let* [token (jwt/read-token (:headers req))
             decoded (jwt/decode token)
             org-id (-> decoded :claims :org-id)
@@ -139,7 +156,61 @@
       {:slack slack/auth-settings
        :email email/auth-settings} 200)))
 
-(defn- user-delete [sys req prefix]
+(defn- user-enumerate
+  "Return the users in an org."
+  [sys req]
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)]
+    (if-let* [req-org-id (-> req :params :org-id)]
+      (do (timbre/info "Request for org" req-org-id)
+          (if (= org-id req-org-id)
+            (pool/with-pool [conn (-> sys :db-pool :pool)]
+              (if-let* [users (email/users-links conn org-id) ; list of all users in the org
+                        _any? (not-empty users)]
+                ;; Remove the requesting user from the list and respond
+                (do (timbre/info "User enumeration for" org-id)
+                    (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
+                                               (:href (email/enumerate-link org-id))))
+                (do
+                  (timbre/warn "No org for" org-id)
+                  (user-enumeration-response [] "/email/users")))) ; TODO replace with 404 once Slack orgs hold onto users
+            (do (timbre/warn "Wrong org for org request")
+                (ring/error-response nil 401))))            
+      (do (timbre/warn "No org for user request")
+          (ring/error-response nil 400)))
+    (do
+      (timbre/warn "Bad token for request")      
+      (ring/error-response "Could note confirm token." 401))))
+
+(defn- user-request
+  "Return a JSON representation and HATEOAS links for a specific user."
+  [sys req]
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            org-id   (-> decoded :claims :org-id)
+            user-id  (-> decoded :claims :user-id)]
+    (if-let* [req-org-id (-> req :params :org-id)
+              req-user-id (-> req :params :user-id)]
+      (do (timbre/info "Request for user" req-user-id "of org" req-org-id)
+          (if (= org-id req-org-id)
+            (pool/with-pool [conn (-> sys :db-pool :pool)]
+              (if-let* [user (user/get-user conn req-user-id)
+                        _valid (= req-org-id (:org-id user))]
+                (user-response user (= user-id req-user-id))
+                (do (timbre/warn "No user for user request")
+                    (ring/error-response nil 404))))
+            (do (timbre/warn "Wrong org for user request")
+                (ring/error-response nil 401))))
+      (do (timbre/warn "No user or org for user request")
+          (ring/error-response nil 400)))
+    (do (timbre/warn "Bad token for request")      
+        (ring/error-response "Could note confirm token." 401))))
+
+(defn- user-delete
+  "Delete the specified user."
+  [sys req prefix]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
             org-id   (-> decoded :claims :org-id)]
@@ -162,11 +233,14 @@
 ;; ----- Slack Request Handling Functions -----
 
 (defn- oauth-callback [callback params]
+  "Redirect browser to web UI after callback from Slack."
   (if (get params "test")
     (ring/json-response {:test true :ok true} 200)
     (redirect-to-web-ui (callback params))))
 
-(defn- refresh-slack-token [req]
+(defn- refresh-slack-token
+  "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
+  [req]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
             user-id  (-> decoded :claims :user-id)
@@ -188,7 +262,9 @@
 
 ;; ----- Email Request Handling Functions -----
 
-(defn- refresh-email-token [sys req]
+(defn- refresh-email-token
+  "Handle request to refresh an expired email JWToken by checking if the user still exists in the org."
+  [sys req]
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
             user-id  (-> decoded :claims :user-id)
@@ -207,7 +283,9 @@
       (timbre/warn "Bad refresh token request")      
       (ring/error-response "Could note confirm token." 400))))
 
-(defn- email-user-create [sys req]
+(defn- email-user-create
+  "Onboard a new user with email address and password authentication."
+  [sys req]
   ;; check if the request is well formed JSON
   (if-let* [post-body (:body req)
             json-body (slurp post-body)
@@ -233,26 +311,9 @@
     (do (timbre/warn "Could not parse request body")
         (ring/error-response "Could not parse request body." 400)))) ; request not well formed
 
-(defn- email-user-enumerate [sys req]
-  (if-let* [token    (jwt/read-token (:headers req))
-            decoded  (jwt/decode token)
-            user-id  (-> decoded :claims :user-id)
-            org-id   (-> decoded :claims :org-id)]
-    (pool/with-pool [conn (-> sys :db-pool :pool)]
-      (if-let [users (email/users-links conn org-id)] ; list of all users in the org
-        ;; Remove the requesting user from the list and respond
-        (do (timbre/info "User enumeration for" org-id)
-            (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
-                                       org-id
-                                       (:href (email/enumerate-link org-id))))
-        (do
-          (timbre/warn "No org for" org-id)
-          (user-enumeration-response [] org-id "/email/users"))))
-    (do
-      (timbre/warn "Bad token for request")      
-      (ring/error-response "Could note confirm token." 401))))
-
-(defn- email-user-invite [sys req]
+(defn- email-user-invite
+  "Invite or re-invite a user by their email address."
+  [sys req]
   ;; check if the request is auth'd
   (if-let* [token    (jwt/read-token (:headers req))
             decoded  (jwt/decode token)
@@ -369,9 +430,10 @@
     (POST "/email/users" req (email-user-create sys req)) ; new user creation
     
     ;; User Management
-    (GET "/org/:org-id/users" req (email-user-enumerate sys req)) ; user enumeration
+    (GET "/org/:org-id/users" req (user-enumerate sys req)) ; user enumeration
     (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
-    ; TODO (GET "/org/:org-id/users/:user-id" req nil) ; user retrieval
+    (GET "/org/:org-id/users/:user-id" req (user-request sys req)) ; user retrieval
+    (PATCH "/org/:org-id/users/:user-id" req nil) ; user update
     (DELETE "/org/:org-id/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     

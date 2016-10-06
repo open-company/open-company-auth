@@ -497,7 +497,6 @@ Authenticated users can enumerate the users within the same `org-id` with a GET 
       }],
     "users" : [
       {
-        "user-id": "email-6789-0123",
         "real-name": "Simone de Beauvoir",
         "avatar": "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg",
         "email": "simone@lyceela.org",
@@ -517,7 +516,6 @@ Authenticated users can enumerate the users within the same `org-id` with a GET 
         ]
       },
       {
-        "user-id": "email-abcd-efgh",
         "real-name": "Albert Camus",
         "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg",
         "email": "albert@combat.org",
@@ -546,6 +544,112 @@ Authenticated users can enumerate the users within the same `org-id` with a GET 
   }
 }
 ```
+
+Authenticated users can retrieve users within the same `org-id` with a GET request to `rel` `self`. 
+
+For their own email user:
+
+```json
+{
+  "email": "simone@lyceela.org",
+  "avatar": "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg",
+  "name": "Simone",
+  "first-name": "Simone",
+  "last-name": "de Beauvoir",
+  "real-name": "Simone de Beauvoir",
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "partial-update",
+      "method" : "PATCH",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/email/refresh-token",
+      "type" : "text/plain"
+    },
+    {
+      "rel" : "delete",
+      "method" : "DELETE",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+    }
+  ]
+}
+```
+
+For their own Slack user:
+
+```json
+{
+  "email": "sartre@lyceela.org",
+  "avatar": "http://existentialismtoday.com/wp-content/uploads/2015/11/sartre_22.jpg",
+  "name": "Jean-Paul",
+  "first-name": "Jean-Paul",
+  "last-name": "Sartre",
+  "real-name": "Jean-Paul Sartre",
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-b2c3-d4e5",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/slack/refresh-token",
+      "type" : "text/plain"
+    }
+  ]
+}
+```
+And for other email users in the org:
+
+```json
+{
+  "email": "Albert Camus",
+  "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg",
+  "name": "Albert",
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "real-name": "Albert Camus",
+  "status": "pending",
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-c3d4-e5f6",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/email/refresh-token",
+      "type" : "text/plain"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href" : "/org/email-1234-5678/users/email-c3d4-e5f6/invite",
+      "type" : "application/vnd.open-company.invitation+json;version=1"
+    },
+    {
+      "rel" : "delete",
+      "method" : "DELETE",
+      "href" : "/org/email-1234-5678/users/email-c3d4-e5f6",
+    }
+  ]
+}
+```
+
 
 #### Email Invitations
 
