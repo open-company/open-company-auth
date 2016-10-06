@@ -140,8 +140,9 @@
 
 ;; ----- Request Handling Functions -----
 
-(defn- auth-settings [req]
+(defn- auth-settings
   "Return a set of HATEOAS links appropriate to the user's auth status: none, Slack, email"
+  [req]
   (if-let* [token (jwt/read-token (:headers req))
             decoded (jwt/decode token)
             org-id (-> decoded :claims :org-id)
@@ -232,8 +233,9 @@
 
 ;; ----- Slack Request Handling Functions -----
 
-(defn- oauth-callback [callback params]
+(defn- oauth-callback
   "Redirect browser to web UI after callback from Slack."
+  [callback params]
   (if (get params "test")
     (ring/json-response {:test true :ok true} 200)
     (redirect-to-web-ui (callback params))))
