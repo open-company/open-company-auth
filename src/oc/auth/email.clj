@@ -160,11 +160,16 @@
         first-name (or new-first-name (:first-name user))
         new-last-name (:last-name user-map)
         last-name (or new-last-name (:lastname user))
-        name-map (if (:real-name user-map)
+        real-name-map (if (:real-name user-map)
                     user-map ; keep the updating real-name
                     (if (or new-first-name new-last-name)
                       (assoc user-map :real-name (s/trim (s/join " " [first-name last-name])))
                       user-map)) ; no name update
+        name-map (if (and (s/blank? (:name user)) ; don't have a name
+                          (not (:name user-map)) ; name wasn't provided
+                          (or new-first-name new-last-name)) ; but first or last name was provided
+                      (assoc real-name-map :name (or new-first-name new-last-name))
+                      real-name-map)
         password (:password user-map)
         password-map (if password (-> name-map
                                     (assoc :password-hash (password-hash password))
