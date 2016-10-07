@@ -148,8 +148,31 @@
   [conn user :- EmailUser]
   (user/create-user! conn user))
 
+;; ----- Existing user functions -----
+
 (defn reset-password! [conn user-id password]
   (user/update-user conn user-id {:password-hash (password-hash password)}))
+
+(defn update-user
+  "Given a map of user and a map of partial updates, update the user."
+  [conn user user-map]
+  (let [new-first-name (:first-name user-map)
+        first-name (or new-first-name (:first-name user))
+        new-last-name (:last-name user-map)
+        last-name (or new-last-name (:lastname user))
+        name-map (if (:real-name user-map)
+                    user-map ; keep the updating real-name
+                    (if (or new-first-name new-last-name)
+                      (assoc user-map :real-name (s/trim (s/join " " [first-name last-name])))
+                      user-map)) ; no name update
+        password (:password user-map)
+        password-map (if password (-> name-map
+                                    (assoc :password-hash (password-hash password))
+                                    (dissoc :password))
+                                  name-map)]
+        
+    (schema/validate EmailUser (merge user password-map))
+    (user/update-user conn (:user-id user) password-map)))
 
 (comment 
 
@@ -159,10 +182,10 @@
   (def u (read-string (slurp "./opt/identities/simone.edn")))
   (email/create-user! conn (email/->user u "active" "S$cr$ts"))
 
-  (def u (read-string (slurp "./opt/identities/cioran.edn")))
+  (def u (read-string (slurp "./opt/identities/nietzsche.edn")))
   (email/create-user! conn (email/->user u "active" "S$cr$ts"))
 
-  (def u (read-string (slurp "./opt/identities/nietzsche.edn")))
+  (def u (read-string (slurp "./opt/identities/cioran.edn")))
   (email/create-user! conn (email/->user u "active" "S$cr$ts"))
 
   (user/get-user-by-email conn (:email u))

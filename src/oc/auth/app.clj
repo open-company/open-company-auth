@@ -339,7 +339,7 @@
                 (if (= (:auth-source user) "email") ; email user?
                   
                   ;; Everything checks out, so try to update the user
-                  (if-let* [updated-user (user/update-user conn req-user-id body)]
+                  (if-let* [updated-user (email/update-user conn user body)]
                     (user-response updated-user true)
                     (do (timbre/error "Failed updating user" user-id)
                         (ring/error-response "" 500)))
