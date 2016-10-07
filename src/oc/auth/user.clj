@@ -18,8 +18,8 @@
    :last-name schema/Str
    :real-name schema/Str
    :avatar (schema/maybe schema/Str)
-   :updated-at schema/Str
-   :created-at schema/Str
+   (schema/optional-key :updated-at) schema/Str
+   (schema/optional-key :created-at) schema/Str
    (schema/optional-key :one-time-token) schema/Str
 })
 
