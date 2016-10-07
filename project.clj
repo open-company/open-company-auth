@@ -103,7 +103,8 @@
                  '[rethinkdb.query :as r]
                  '[oc.auth.config :as config]
                  '[oc.auth.email :as email]
-                 '[oc.auth.slack :as slack])
+                 '[oc.auth.slack :as slack]
+                 '[oc.auth.user :as u])
       ]
     }]
 
