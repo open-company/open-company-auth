@@ -9,12 +9,33 @@
 
 (def prefix "email-")
 
+(def ^:private crypto-algo "bcrypt+sha512$")
+
+;; ----- Schema -----
+
+; active - verified email
+; pending - awaiting invite response
+; unverified - awaiting email verification
+(def statuses #{"pending" "unverified" "active"})
+
+(def EmailUser 
+  (merge user/User {
+   :email schema/Str
+   :password-hash schema/Str
+   :status (schema/pred #(statuses %))
+   :auth-source (schema/pred #(= "email" %))}))
+
+(def updateable-props #{:email :password :name :first-name :last-name :real-name :avatar})
+(def public-props [:email :avatar :name :first-name :last-name :real-name])
+(def jwt-props [:user-id :org-id :name :first-name :last-name :avatar :email :aut-source])
+(def private-props [:password-hash :created-at :updated-at])
+
+;; ----- HATEOAS -----
+
 (def ^:private text "text/plain")
 (def ^:private user-type "application/vnd.open-company.user.v1+json")
 (def ^:private invite-type "application/vnd.open-company.invitation.v1+json")
 (def ^:private user-collection-type "application/vnd.collection+vnd.open-company.user+json;version=1")
-
-(def ^:private crypto-algo "bcrypt+sha512$")
 
 (defn user-url [org-id user-id] (s/join "/" ["/org" org-id "users" user-id]))
 
@@ -62,72 +83,6 @@
                                                 (invite-link org-id)
                                                 (enumerate-link org-id)]})
 
-(defn- short-uuid []
-  (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))
-
-(defn- password-hash [password]
-  (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
-
-(defn- password-match? [password password-hash]
-  (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512}))
-
-(defn authenticate? [conn email password]
-  (if-let [user (user/get-user-by-email conn email)]
-    (password-match? password (:password-hash user))
-    false))
-
-;; ----- Schema -----
-
-; active - verified email
-; pending - awaiting invite response
-; unverified - awaiting email verification
-(def statuses #{"pending" "unverified" "active"})
-
-(def EmailUser 
-  (merge user/User {
-   :email schema/Str
-   :password-hash schema/Str
-   :status (schema/pred #(statuses %))}))
-
-(def updateable-props #{:email :password :name :first-name :last-name :real-name :avatar})
-
-;; ----- Email user creation -----
-
-(schema/defn ->user :- EmailUser
-  "Take a minimal map describing a user, and a password and 'fill the blanks'"
-  
-  ([user-map password] (->user user-map "unverified" password)) ; default status is email unverified
-
-  ([user-map status password]
-  {:pre [(map? user-map)
-         (string? password)
-         (not (s/blank? password))
-         (statuses status)]}
-  (let [props (-> user-map
-                  keywordize-keys
-                  (update :user-id #(or % (short-uuid)))
-                  (update :org-id #(or % (short-uuid)))
-                  (assoc :password-hash (password-hash password))
-                  (assoc :status status)
-                  (dissoc :auth-source :password)
-                  (update :first-name #(or % ""))
-                  (update :last-name #(or % ""))
-                  (update :name #(or % (:first-name user-map) (:last-name user-map) (:real-name user-map) ""))
-                  (update :avatar #(or % "")))] ;; TODO Gravatar
-    (if (s/blank? (:real-name props))
-      (assoc props :real-name (s/trim (s/join " " [(:first-name props) (:last-name props)])))
-      props))))
-
-(schema/defn ^:always-validate create-user!
-  "Given a map of user properties, persist it to the database."
-  [conn user :- EmailUser]
-  (user/create-user! conn user))
-
-(defn reset-password! [conn user-id password]
-  (user/update-user conn user-id {:password-hash (password-hash password)}))
-
-;; ----- User links -----
-
 (defn user-links [user]
   (if-let* [user-id (:user-id user)
             org-id (:org-id user)
@@ -144,6 +99,57 @@
     (map user-links users)
     []))
 
+;; ----- Password authentication -----
+
+(defn- password-hash [password]
+  (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
+
+(defn- password-match? [password password-hash]
+  (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512}))
+
+(defn authenticate? [conn email password]
+  (if-let [user (user/get-user-by-email conn email)]
+    (password-match? password (:password-hash user))
+    false))
+
+;; ----- Email user creation -----
+
+(defn- short-uuid []
+  (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))
+
+(schema/defn ->user :- EmailUser
+  "Take a minimal map describing a user, and a password and 'fill the blanks'"
+  
+  ([user-map password] (->user user-map "unverified" password)) ; default status is email unverified
+
+  ([user-map status password]
+  {:pre [(map? user-map)
+         (string? password)
+         (not (s/blank? password))
+         (statuses status)]}
+  (let [props (-> user-map
+                  keywordize-keys
+                  (update :user-id #(or % (short-uuid)))
+                  (update :org-id #(or % (short-uuid)))
+                  (assoc :password-hash (password-hash password))
+                  (dissoc :password)
+                  (assoc :status status)
+                  (assoc :auth-source "email")
+                  (update :first-name #(or % ""))
+                  (update :last-name #(or % ""))
+                  (update :name #(or % (:first-name user-map) (:last-name user-map) (:real-name user-map) ""))
+                  (update :avatar #(or % "")))] ;; TODO Gravatar
+    (if (s/blank? (:real-name props))
+      (assoc props :real-name (s/trim (s/join " " [(:first-name props) (:last-name props)])))
+      props))))
+
+(schema/defn ^:always-validate create-user!
+  "Given a map of user properties, persist it to the database."
+  [conn user :- EmailUser]
+  (user/create-user! conn user))
+
+(defn reset-password! [conn user-id password]
+  (user/update-user conn user-id {:password-hash (password-hash password)}))
 
 (comment 
 

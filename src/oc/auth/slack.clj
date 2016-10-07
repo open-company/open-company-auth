@@ -181,5 +181,6 @@
 (def SlackUser 
   (merge user/User {
    :status (schema/pred #(= "active" %))
+   :auth-source (schema/pred #(= "slack" %))
    :owner schema/Bool
    :admin schema/Bool}))

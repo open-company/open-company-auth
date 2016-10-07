@@ -48,10 +48,6 @@
 
 ;; ----- Response Functions -----
 
-(def ^:private test-token {:test "test" :bago "bago"})
-
-(defonce ^:private test-response (ring/text-response  "OpenCompany auth server: OK" 200))
-
 (defn- jwt-debug-response
   "Helper to format a JWT debug response"
   [payload]
@@ -77,23 +73,22 @@
   (if-let [email (:identity req)] ; email/pass sucessfully auth'd
     (pool/with-pool [conn (-> sys :db-pool :pool)]
       (if-let* [user (user/get-user-by-email conn email) ; user from DB for JWToken
-                clean-user (dissoc user :created-at :updated-at :password-hash)
-                sourced-user (assoc clean-user :auth-source "email")]
+                jwt-user (zipmap email/jwt-props (map user email/jwt-props))]
         ; respond with JWToken
         (let [headers (if location {"Location" (email/user-url (:org-id user) (:user-id user))} {})
               status (if location 201 200)]
-          (ring/text-response (jwt/generate sourced-user) status headers))
+          (ring/text-response (jwt/generate jwt-user) status headers))
         (ring/text-response "" 401))) ; couldn't get the auth'd user (unexpected)
     (ring/text-response "" 401)))) ; email/pass didn't auth (expected)
 
 (defn- user-response
   "Return a JSON representation and HATEOAS links for a specific user."
   [user self?]
-  (let [email? (:password-hash user)
+  (let [email? (= (:auth-source user) "email")
         org-id (:org-id user)
         user-id (:user-id user)
         status (:status user)
-        user-map (select-keys user [:email :avatar :name :first-name :last-name :real-name])
+        user-map (select-keys user email/public-props)
         user-status-map (if email? (assoc user-map :status status))
         links [(email/self-link org-id user-id)]
         refresh-links (if self? (conj links (if email? email/refresh-link slack/refresh-link)) links)
@@ -275,7 +270,7 @@
           (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
             (do 
               (timbre/info "Refreshing token" user-id)
-              (ring/text-response (jwt/generate (merge (:claims decoded) {:auth-source "email"})) 200))
+              (ring/text-response (jwt/generate (zipmap email/jwt-props (map user email/jwt-props))) 200))
             (do
               (timbre/warn "No user or org-id match for token refresh of" user-id)            
               (ring/error-response "Could note confirm token." 401))))))
@@ -312,7 +307,7 @@
         (ring/error-response "Could not parse request body." 400)))) ; request not well formed
 
 (defn- email-update-user
-  ""
+  "Update an existing user's props."
   [sys req]
   ;; check if the request is auth'd
   (if-let* [token    (jwt/read-token (:headers req))
@@ -341,7 +336,7 @@
             (pool/with-pool [conn (-> sys :db-pool :pool)]
               (if-let* [user (user/get-user conn req-user-id)]
 
-                (if (:password-hash user) ; email user?
+                (if (= (:auth-source user) "email") ; email user?
                   
                   ;; Everything checks out, so try to update the user
                   (if-let* [updated-user (user/update-user conn req-user-id body)]
@@ -491,20 +486,20 @@
     (GET "/email/auth" req (email-auth sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; new user creation
+    (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
+    (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
+    (PATCH "/org/:org-id/users/:user-id" req (email-update-user sys req)) ; user update
     
     ;; User Management
     (GET "/org/:org-id/users" req (user-enumerate sys req)) ; user enumeration
-    (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
     (GET "/org/:org-id/users/:user-id" req (user-request sys req)) ; user retrieval
-    (PATCH "/org/:org-id/users/:user-id" req (email-update-user sys req)) ; user update
     (DELETE "/org/:org-id/users/:user-id" req (user-delete sys req email/prefix)) ; user/invite removal
-    (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     
     ;; Utilities
     (GET "/---error-test---" req (/ 1 0))
     (GET "/---500-test---" req {:status 500 :body "Testing bad things."})
-    (GET "/ping" [] test-response) ; Up-time monitor
-    (GET "/test-token" [] (jwt-debug-response test-token)))) ; JWToken decoding
+    (GET "/ping" [] (ring/text-response  "OpenCompany auth server: OK" 200)) ; Up-time monitor
+    (GET "/test-token" [] (jwt-debug-response {:test "test" :bago "bago"})))) ; JWToken decoding
 
 ;; ----- System Startup -----
 

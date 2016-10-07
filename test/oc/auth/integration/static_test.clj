@@ -9,11 +9,16 @@
 
   (facts "Test static endpoints"
     
-    (fact "by requesting status"
+    (fact "By pinging"
       (let [resp (test-utils/api-request :get "/ping" {})]
         (:status resp) => 200))
+
+    (facts "By testing errors"
+      (test-utils/api-request :get "/---error-test---" {}) => (throws Exception)
+      (let [resp (test-utils/api-request :get "/---500-test---" {})]
+        (:status resp) => 500))
     
-    (fact "by requesting auth-settings anonymously"
+    (fact "By requesting auth-settings anonymously"
       (let [resp (test-utils/api-request :get "/" {})
             body (json/parse-string (:body resp))]
         (:status resp) => 200

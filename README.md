@@ -743,7 +743,8 @@ Slack organization. An example stored Slack user:
   "avatar": "http://...",
   "email": "albert@combat.org",
   "owner": "false",
-  "admin": "true"
+  "admin": "true",
+  "auth-source": "slack"
 }
 ```
 
@@ -759,7 +760,8 @@ In the case of as email user, there are no `owner` and `admin` properties, but t
   "last-name": "Camus",
   "avatar": "http://...",
   "email": "albert@combat.org",
-  "status": "active"
+  "status": "active",
+  "auth-source": "email"
 }
 ```
 
@@ -768,7 +770,7 @@ In the case of as email user, there are no `owner` and `admin` properties, but t
 JSON Web Tokens are created as authorization tokens for authorized users. They consist of the user storage data
 (see above) as well as an expiration timestamp (in milliseconds since the epoch) for the token.
 
-An example JWToken payload:
+An example JWToken payload for a Slack user:
 
 ```json
 {
@@ -787,7 +789,7 @@ An example JWToken payload:
 }
 ```
 
-and:
+and for an email user:
 
 ```json
 {
