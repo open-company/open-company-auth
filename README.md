@@ -247,7 +247,7 @@ OpenCompany `org-id` is assigned to the Slack organization ID of the creator of 
 Subsequently anyone with that same Slack organization ID in their JWToken can access the company.
 
 Using email for authentication complicates authorization a bit. In some cases for email, the email domain
-(e.g. @opencompany.com) acts as the same sort of "in-group". This is not always sufficient however:
+(e.g. `@opencompany.com`) acts as the same sort of "in-group". This is not always sufficient however:
 
 * Sometimes this group will be too narrow (e.g. someone who is in the group, but does not have an email address from
 the group domain)
@@ -394,8 +394,8 @@ authorize all subsequent access to the API.
 
 Upon clicking the "Sign in with Email" link, a `GET` request is made to the `rel` `authenticate` URL with HTTP
 Basic authentication (always over HTTPS) to authenticate with an email address and password. If the email/password
-authentication succeeds, there is a 200 response with a JWToken returned in the body of the response. If the
-email/password authentication fails, there is a 401 response.
+authentication succeeds, there is a `200` status with a JWToken returned in the body of the response. If the
+email/password authentication fails, there is a `401` status for the response.
 
 Headers:
 
@@ -413,10 +413,10 @@ to authorize all subsequent access to the API.
 
 The JWToken contains an expiration field (24 hours for Slack users w/ an auth'd bot, and 2 hours for everyone else).
 An expired JWToken does not authorize access to services. Before each use the JWToken is checked for expiration and if
-it's expired, a request is made to `rel` refresh` from the `/` response. If the JWToken is successfully refreshed,
-a 200 is returned with a new JWToken in the response body.
+it's expired, a request is made to `rel` `refresh` from the `/` response. If the JWToken is successfully refreshed,
+a `200` status is returned with a new JWToken in the response body.
 
-If the token can't be refreshed (a non-200 response), this typically means the user is not longer valid for the org,
+If the token can't be refreshed (a non-`20x` response), this typically means the user is not longer valid for the org,
 and the client forgets the expired JWToken, makes a unauth'd request to `/` and presents the login UI to the user to
 start the authentication process again.
 
@@ -452,25 +452,25 @@ A new user request can be one of 4 cases:
 
 1) Unknown user and unknown email domain (brand new)
 
-  * Return: 201 Created, JWToken
+  * Return: `201` Created, JWToken
   * Email: Email validation sent via email
   * Next step: Authenticated user accesses web application with JWToken
 
 2) User known by their email domain (e.g. @opencompany.com)
 
-  * Return status: 204 No content
+  * Return status: `204` No content
   * Email: Email validation sent via email
   * Next step: User must validate their email address from the validation email sent
 
 3) User known by an open invitation
 
-  * Return status: 204 No content
+  * Return status: `204` No content
   * Email: Pending invite resent
   * Next step: User must validate their email address from the invite email sent
 
 4) Already existing user
 
-  * Return status: 409 Conflict
+  * Return status: `409` Conflict
   * Email: No
   * Next step: UI error displayed to user
 
@@ -667,8 +667,8 @@ Body:
 
 ```json
 {
-  "email": "camus@combat.org"
-  "company-name": "Combat"
+  "email": "camus@combat.org",
+  "company-name": "Combat",
   "logo": "https://open-company-assets.s3.amazonaws.com/combat.png"
 }
 ```
@@ -719,7 +719,7 @@ If the token is accepted, the `200` response will contain a `Location` header wi
 created user.
 
 At this point, if additional information about the invited user is collected, it can be provided with a `PATCH`
-of the `rel` `update` link from the user response at the provided `Location`.
+of the `rel` `partial-update` link from the user response at the provided `Location`.
 
 #### Password Reset
 
