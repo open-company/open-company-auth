@@ -441,7 +441,7 @@ Body:
   "email": "camus@combat.org",
   "password": "Ssshhh!#&@!",
   "first-name": "Albert",
-  "last-name": "Camus",
+  "last-name": "Camus"
 }
 ```
 
@@ -456,7 +456,7 @@ A new user request can be one of 4 cases:
   * Email: Email validation sent via email
   * Next step: Authenticated user accesses web application with JWToken
 
-2) User known by their email domain (e.g. @opencompany.com)
+2) User known by their email domain (e.g. `@opencompany.com`)
 
   * Return status: `204` No content
   * Email: Email validation sent via email
@@ -479,7 +479,9 @@ A new user request can be one of 4 cases:
 
 TBD.
 
-#### Email User Management
+#### User Management
+
+##### User Enumeration
 
 Authenticated users can enumerate the users within the same `org-id` with a GET request to `rel` `users`:
 
@@ -544,6 +546,8 @@ Authenticated users can enumerate the users within the same `org-id` with a GET 
   }
 }
 ```
+
+##### User Retrieval
 
 Authenticated users can retrieve users within the same `org-id` with a GET request to `rel` `self`. 
 
@@ -611,6 +615,7 @@ For their own Slack user:
   ]
 }
 ```
+
 And for other email users in the org:
 
 ```json
@@ -650,10 +655,35 @@ And for other email users in the org:
 }
 ```
 
+##### User Updates
+
+Email users can update their own user properties, `PATCH` the following to `rel` `partial-update` of the user
+or user enumeration response:
+
+Headers:
+
+```
+Authorization: Bearer <JWToken>
+Content-Type: application/vnd.open-company.user.v1+json
+Accept: text/plain
+```
+
+Body:
+
+```json
+{
+  "first-name": "Albert",
+  "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
+}
+```
+
+Valid properties to update are: `name`, `first-name`, `last-name`, `real-name`, `avatar` and `password`.
+
+If successful, the `200` response will contain an updated JWToken with the new user properties.
 
 #### Email Invitations
 
-To invite a new email user, POST the following to `rel` `invite` from the `/` or a user response:
+To invite a new email user, `POST` the following to `rel` `invite` from the `/` or a user response:
 
 Headers:
 
