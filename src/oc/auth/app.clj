@@ -443,32 +443,33 @@
 (defn- email-auth
   "An attempt to auth, could be email/pass or one time use token (invite or reset password)."
   [sys req]
-  (if (:identity req)
+  (let [request (keywordize-keys req)
+        headers (:headers request)
+        authorization (or (:authorization headers) (:Authorization headers))]
     
-    (email-auth-response sys req) ; Basic Auth
+    (if (s/starts-with? authorization "Basic ")
+    
+      (email-auth-response sys request) ; HTTP Basic Auth
 
-    ; One time use token Auth
-    (if-let* [headers (keywordize-keys (:headers req))
-              authorization (:authorization headers)
-              valid (s/starts-with? authorization "Bearer ")
-              token (last (s/split authorization #" "))]
-      
-      ; Provided a token
-      (pool/with-pool [conn (-> sys :db-pool :pool)]
-        (timbre/info "Token auth request for" token)
-        (if-let* [user (user/get-user-by-token conn token)
-                  email (:email user)]
-          (do
-            (timbre/info "Authed" email "with token" token)
-            (user/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
-            (email-auth-response sys (assoc req :identity email)))
-          (do (timbre/warn "No email user for token" token)
-              (ring/error-response "" 401)))) ; token not found        
-      
-      ; No token
-      (do (timbre/warn "Invalid token auth request body")
-          (timbre/warn (str req))
-          (ring/error-response "Invalid request body." 400))))) ; request not valid
+      ; One time use token Auth
+      (if-let* [valid (s/starts-with? authorization "Bearer ")
+                token (last (s/split authorization #" "))]
+        
+        ; Provided a token
+        (pool/with-pool [conn (-> sys :db-pool :pool)]
+          (timbre/info "Token auth request for" token)
+          (if-let* [user (user/get-user-by-token conn token)
+                    email (:email user)]
+            (do
+              (timbre/info "Authed" email "with token" token)
+              (user/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
+              (email-auth-response sys (assoc request :identity email)))
+            (do (timbre/warn "No email user for token" token)
+                (ring/error-response "" 401)))) ; token not found        
+        
+        ; No token
+        (do (timbre/warn "Invalid token auth request body")
+            (ring/error-response "Invalid request body." 400)))))) ; request not valid
 
 (defn- email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
