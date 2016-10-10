@@ -86,18 +86,21 @@
 (defn user-links 
   ([user] (user-links nil user))
   
-  ([this-user-id user]
+  ([listing-user-id user]
   (if-let* [user-id (:user-id user)
             org-id (:org-id user)
             user-response (select-keys user [:user-id :real-name :avatar :email :status])
+            named-response (if (and (= listing-user-id user-id) (s/blank? (:real-name user-response))) 
+                            (assoc user-response :real-name "You")
+                            user-response)
             everyone-links [(self-link org-id user-id)]
-            delete-links (if (not= this-user-id user-id)
+            delete-links (if (not= listing-user-id user-id)
                           (conj everyone-links (delete-link org-id user-id))
                           everyone-links)
-            links (if (and (not= this-user-id user-id) (= (:status user) "pending"))
+            links (if (and (not= listing-user-id user-id) (= (:status user) "pending"))
                     (conj delete-links (re-invite-link org-id user-id))
                     delete-links)]
-    (assoc user-response :links links))))
+    (assoc named-response :links links))))
 
 (defn users-links
   ([conn org-id] (user-links org-id nil))
