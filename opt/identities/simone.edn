@@ -5,7 +5,7 @@
   :first-name "Simone"
   :last-name "de Beauvoir"
   :real-name "Simone de Beauvoir"
-  :avatar "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg"
+  :avatar "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Simone_de_Beauvoir.jpg/220px-Simone_de_Beauvoir.jpg"
   :email "simone@lyceela.org"
   :auth-source "email"
 }
