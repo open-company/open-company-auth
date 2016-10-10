@@ -83,21 +83,28 @@
                                                 (invite-link org-id)
                                                 (enumerate-link org-id)]})
 
-(defn user-links [user]
+(defn user-links 
+  ([user] (user-links nil user))
+  
+  ([this-user-id user]
   (if-let* [user-id (:user-id user)
             org-id (:org-id user)
             user-response (select-keys user [:user-id :real-name :avatar :email :status])
-            everyone-links [(self-link org-id user-id) (delete-link org-id user-id)]
-            links (if (= (:status user) "pending")
-                    (conj everyone-links (re-invite-link org-id user-id))
-                    everyone-links)]
-    (assoc user-response :links links)))
+            everyone-links [(self-link org-id user-id)]
+            delete-links (if (not= this-user-id user-id)
+                          (conj everyone-links (delete-link org-id user-id))
+                          everyone-links)
+            links (if (and (not= this-user-id user-id) (= (:status user) "pending"))
+                    (conj delete-links (re-invite-link org-id user-id))
+                    delete-links)]
+    (assoc user-response :links links))))
 
 (defn users-links
-  [conn org-id]
+  ([conn org-id] (user-links org-id nil))
+  ([conn org-id user-id]
   (if-let [users (user/list-users conn org-id)]
-    (map user-links users)
-    []))
+    (map (partial user-links user-id) users)
+    [])))
 
 ;; ----- Password authentication -----
 
@@ -188,10 +195,10 @@
   (email/create-user! conn (email/->user u "active" "S$cr$ts"))
 
   (def u (read-string (slurp "./opt/identities/nietzsche.edn")))
-  (email/create-user! conn (email/->user u "active" "S$cr$ts"))
+  (email/create-user! conn (email/->user u "pending" "S$cr$ts"))
 
   (def u (read-string (slurp "./opt/identities/cioran.edn")))
-  (email/create-user! conn (email/->user u "active" "S$cr$ts"))
+  (email/create-user! conn (email/->user u "unverified" "S$cr$ts"))
 
   (user/get-user-by-email conn (:email u))
   (email/authenticate? conn (:email u) "S$cr$ts")

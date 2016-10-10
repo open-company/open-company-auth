@@ -31,7 +31,7 @@
 
 (defn send-invite!
   [invite]
-  (timbre/info "Request to send invite to" (:email invite))
+  (timbre/info "Request to send invite to" (:to invite))
   (schema/validate EmailInvite invite)
   (timbre/info "Sending...")
   (sqs/send-message

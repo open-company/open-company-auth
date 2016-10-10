@@ -161,12 +161,10 @@
       (do (timbre/info "Request for org" req-org-id)
           (if (= org-id req-org-id)
             (pool/with-pool [conn (-> sys :db-pool :pool)]
-              (if-let* [users (email/users-links conn org-id) ; list of all users in the org
+              (if-let* [users (email/users-links conn org-id user-id) ; list of all users in the org
                         _any? (not-empty users)]
-                ;; Remove the requesting user from the list and respond
                 (do (timbre/info "User enumeration for" org-id)
-                    (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
-                                               (:href (email/enumerate-link org-id))))
+                    (user-enumeration-response users (:href (email/enumerate-link org-id))))
                 (do
                   (timbre/warn "No org for" org-id)
                   (user-enumeration-response [] "/email/users")))) ; TODO replace with 404 once Slack orgs hold onto users
