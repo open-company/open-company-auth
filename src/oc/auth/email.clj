@@ -94,9 +94,12 @@
                             (assoc user-response :real-name "You")
                             user-response)
             everyone-links [(self-link org-id user-id)]
-            delete-links (if (not= listing-user-id user-id)
-                          (conj everyone-links (delete-link org-id user-id))
+            update-links (if (= listing-user-id user-id)
+                          (conj everyone-links (partial-update-link org-id user-id))
                           everyone-links)
+            delete-links (if (not= listing-user-id user-id)
+                          (conj update-links (delete-link org-id user-id))
+                          update-links)
             links (if (and (not= listing-user-id user-id) (= (:status user) "pending"))
                     (conj delete-links (re-invite-link org-id user-id))
                     delete-links)]

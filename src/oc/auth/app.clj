@@ -92,7 +92,7 @@
         user-status-map (if email? (assoc user-map :status status))
         links [(email/self-link org-id user-id)]
         refresh-links (if self? (conj links (if email? email/refresh-link slack/refresh-link)) links)
-        delete-links (if email? (conj refresh-links (email/delete-link org-id user-id)) refresh-links)
+        delete-links (if (and (not self?) email?) (conj refresh-links (email/delete-link org-id user-id)) refresh-links)
         update-links (if (and self? email?) (conj delete-links (email/partial-update-link org-id user-id)) delete-links)
         invite-links (if (= status "pending") (conj update-links (email/re-invite-link org-id user-id)) update-links)
         response (assoc user-status-map :links invite-links)]
