@@ -353,7 +353,7 @@
                   
                   ;; Everything checks out, so try to update the user
                   (if-let* [updated-user (email/update-user conn user body)]
-                    (user-response updated-user true)
+                    (email-auth-response sys (assoc req :identity (:email updated-user)) true)
                     (do (timbre/error "Failed updating user" user-id)
                         (ring/error-response "" 500)))
 

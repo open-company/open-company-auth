@@ -677,7 +677,7 @@ Body:
 }
 ```
 
-Valid properties to update are: `name`, `first-name`, `last-name`, `real-name`, `avatar` and `password`.
+Valid properties to update are: `email`, `name`, `first-name`, `last-name`, `real-name`, `avatar` and `password`.
 
 If successful, the `200` response will contain an updated JWToken with the new user properties.
 
