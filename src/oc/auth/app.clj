@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
+            [defun :refer (defun-)]
             [if-let.core :refer (if-let*)]
             [cheshire.core :as json]
             [raven-clj.core :as sentry]
@@ -113,25 +114,8 @@
   [user]
   (ring/json-response (email/user-links user) 201 {"Location" (email/user-url (:org-id user) (:user-id user))}))
 
-;; ----- JWToken auth'ing macro -----
-
-; (defmacro with-valid-token
-;   "TODO: not working yet."
-;   [[req] & body]
-;   '(if-let [token#    (jwt/read-token (:headers ~req))]
-;     (if-let [decoded#  (jwt/decode token#)]
-;       (let [user-id   (-> decoded# :claims :user-id)
-;             user-tkn (-> decoded :claims :user-token)
-;             org-id    (-> decoded# :claims :org-id)]
-;         (do ~@body))
-;       (do
-;         (timbre/warn "Bad token for request")      
-;         (ring/error-response "Could note confirm token." 401)))
-;     (do
-;       (timbre/warn "No token for request")      
-;       (ring/error-response "Could note confirm token." 401))))
-
 ;; ----- Request Handling Functions -----
+
 
 (defn- auth-settings
   "Return a set of HATEOAS links appropriate to the user's auth status: none, Slack, email"
@@ -149,6 +133,37 @@
     (ring/json-response 
       {:slack slack/auth-settings
        :email email/auth-settings} 200)))
+
+;; Suggested refactor
+; (defun- user-enumerate
+;   "Return the users in an org."
+
+;   ;; Bad JWToken
+;   ([_sys _req :guard? bad-token?] (ring/bad-token-response))
+
+;   ;; Read the JWToken
+;   ([sys req] (user-enumerate sys req (identity-from-token req))
+
+;   ;; Missing :org-id
+;   ([_sys _req :guard #(missing-param? :org-id %) _id] (ring/error-response "No org for user request" nil 400))
+
+;   ;; Read :org-id
+;   ([sys req [org-id user-id]] (user-enumerate sys req [org-id user-id (-> req :params :org-id)]))
+
+;   ;; Mismatched org-ids
+;   ([_sys _req [org_id _user_id req-org-id] :guard #(not= (first %) (last %))]
+;   (ring/error-response (str "Wrong org " org-id " for org requested " req-org-id) nil 401))
+
+;   ;; Enumerate users
+;   ([sys _req [_org_id _user_id req-org-id]]
+;   (timbre/info "User enumeration for" req-org-id)
+;   (pool/with-pool [conn (-> sys :db-pool :pool)]
+;     (if-let* [users (email/users-links conn org-id) ; list of all users in the org
+;               _any? (not-empty users)]
+;       ;; Remove the requesting user from the list and respond
+;       (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
+;                                                (:href (email/enumerate-link org-id)))
+;       (ring/error-response (str "No org for" org-id) nil 404))))
 
 (defn- user-enumerate
   "Return the users in an org."
@@ -426,31 +441,33 @@
 (defn- email-auth
   "An attempt to auth, could be email/pass or one time use token (invite or reset password)."
   [sys req]
-  (if (:identity req)
+  (let [request (keywordize-keys req)
+        headers (:headers request)
+        authorization (or (:authorization headers) (:Authorization headers))]
     
-    (email-auth-response sys req) ; Basic Auth
+    (if (s/starts-with? authorization "Basic ")
+    
+      (email-auth-response sys request) ; HTTP Basic Auth
 
-    ; One time use token Auth
-    (if-let* [headers (keywordize-keys (:headers req))
-              authorization (:authorization headers)
-              valid (s/starts-with? authorization "Bearer ")
-              token (last (s/split authorization #" "))]
-      
-      ; Provided a token
-      (pool/with-pool [conn (-> sys :db-pool :pool)]
-        (timbre/info "Token auth request for" token)
-        (if-let* [user (user/get-user-by-token conn token)
-                  email (:email user)]
-          (do
-            (timbre/info "Authed" email "with token" token)
-            (user/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
-            (email-auth-response sys (assoc req :identity email)))
-          (do (timbre/warn "No email user for token" token)
-              (ring/error-response "" 401)))) ; token not found        
-      
-      ; No token
-      (do (timbre/warn "Invalid token auth request body")
-          (ring/error-response "Invalid request body." 400))))) ; request not valid
+      ; One time use token Auth
+      (if-let* [valid (s/starts-with? authorization "Bearer ")
+                token (last (s/split authorization #" "))]
+        
+        ; Provided a token
+        (pool/with-pool [conn (-> sys :db-pool :pool)]
+          (timbre/info "Token auth request for" token)
+          (if-let* [user (user/get-user-by-token conn token)
+                    email (:email user)]
+            (do
+              (timbre/info "Authed" email "with token" token)
+              (user/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
+              (email-auth-response sys (assoc request :identity email)))
+            (do (timbre/warn "No email user for token" token)
+                (ring/error-response "" 401)))) ; token not found        
+        
+        ; No token
+        (do (timbre/warn "Invalid token auth request body")
+            (ring/error-response "Invalid request body." 400)))))) ; request not valid
 
 (defn- email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
