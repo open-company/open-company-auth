@@ -3,7 +3,6 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
-            [defun :refer (defun-)]
             [if-let.core :refer (if-let*)]
             [cheshire.core :as json]
             [raven-clj.core :as sentry]
