@@ -1,4 +1,4 @@
-(ns oc.auth.store
+(ns oc.auth.lib.store
   (:require [alandipert.enduro :as end]
             [amazonica.aws.s3 :as s3]
             [oc.auth.config :as config]

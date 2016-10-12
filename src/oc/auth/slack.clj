@@ -4,19 +4,25 @@
             [clj-slack.auth :as slack-auth]
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
+            [schema.core :as schema]
             [taoensso.timbre :as timbre]
             [taoensso.truss :as t]
+            [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
-            [oc.auth.store :as store]
-            [oc.auth.jwt :as jwt]))
+            [oc.auth.lib.store :as store]
+            [oc.auth.lib.jwt :as jwt]
+            [oc.auth.user :as user]))
 
-(def ^:private prefix "slack:")
+(def prefix "slack-")
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
 
+(def ^:private user-type "application/vnd.open-company.user.v1+json")
+(def ^:private invite-type "application/vnd.open-company.invitation.v1+json")
+
 (def ^:private slack
-  {:redirectURI  "/slack-oauth"
+  {:redirectURI  "/slack/auth"
    :state        "open-company-auth"})
 
 (defn- slack-auth-url [scope]
@@ -29,10 +35,41 @@
        "&scope="
        scope))
 
-(def auth-settings (merge {:basic-scopes-url    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
-                           :extended-scopes-url (slack-auth-url "bot,users:read")
-                           :refresh-url (s/join "/" [config/auth-server-url "slack" "refresh-token"])}
-                          slack))
+(defn user-url [org-id user-id] (s/join "/" ["/org" org-id "users" user-id]))
+
+(def auth-link (hateoas/link-map "authenticate"
+                                 hateoas/GET
+                                 (slack-auth-url "bot,users:read")
+                                 "text/plain"))
+
+(def auth-retry-link (hateoas/link-map "authenticate-retry"
+                                 hateoas/GET
+                                 (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
+                                 "text/plain"))
+
+(def refresh-link (hateoas/link-map "refresh" 
+                                     hateoas/GET
+                                     "/slack/refresh-token"
+                                     "text/plain"))
+
+(defn invite-link [org-id] (hateoas/link-map "invite" 
+                                             hateoas/POST
+                                             (s/join "/" ["/org" org-id "users" "invite"])
+                                             invite-type))
+
+(defn self-link [org-id user-id] (hateoas/self-link (user-url org-id user-id) user-type))
+
+(defn enumerate-link [org-id] (hateoas/link-map "users" 
+                                               hateoas/GET
+                                               (s/join "/" ["/org" org-id "users"])
+                                               "application/vnd.collection+vnd.open-company.user+json;version=1"))
+
+(def auth-settings {:links [auth-link auth-retry-link]})
+
+(defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
+                                                refresh-link
+                                                (invite-link org-id)
+                                                (enumerate-link org-id)]})
 
 (defn- prefixed? [s]
   (and (string? s) (.startsWith s prefix)))
@@ -55,10 +92,13 @@
      :name (or (:name user-data) "")
      :real-name (or (:real_name_normalized user-data)
                     (:real_name user-data)
-                    (:first_name user-data)
-                    (:last_name user-data)
-                    (:name user-data)
-                    "")
+                    (if (and (:first_name user-data) (:last_name user-data))
+                      (s/join " " [(:first_name user-data) (:last_name user-data)]) 
+                      (or
+                        (:first_name user-data)
+                        (:last_name user-data)
+                        (:name user-data)
+                        "")))
      :first-name (:first_name user-data)
      :last-name (:last_name user-data)
      :avatar (or (:image_192 user-data)
@@ -107,7 +147,7 @@
                               :token (-> response :bot :bot_access_token)}})
         org          {:org-id   (str prefix (or (:team_id response)
                                                 (-> response :team :id))) ; identity.basic returns different data
-                      :org-name (:team_name response)}
+                      :org-name (or (:team_name response) (-> response :team :name) "")}
         auth-source  {:auth-source "slack"}
         access-token (:access_token response)
         scope        (:scope response)]
@@ -135,3 +175,12 @@
     (get params "error") [false "denied"]
     (get params "code")  (swap-code-for-token (get params "code"))
     :else                [false "no-code"]))
+
+;; ----- Schema -----
+
+(def SlackUser 
+  (merge user/User {
+   :status (schema/pred #(= "active" %))
+   :auth-source (schema/pred #(= "slack" %))
+   :owner schema/Bool
+   :admin schema/Bool}))

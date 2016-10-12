@@ -9,4 +9,6 @@
   (println (m/create-table conn c/db-name u/table-name u/primary-key))
   (println (m/create-index conn u/table-name "org-id"))
   (println (m/create-index conn u/table-name "email"))
+  (println (m/create-index conn u/table-name "one-time-token"))
+  (println (m/create-index conn u/table-name "auth-source"))
   true) ; return true on success

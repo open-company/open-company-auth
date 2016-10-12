@@ -1,4 +1,4 @@
-(ns oc.auth.jwt
+(ns oc.auth.lib.jwt
   (:require [clj-jwt.core :as jwt]
             [clj-time.core :as t]
             [clojure.string :as string]

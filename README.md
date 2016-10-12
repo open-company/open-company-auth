@@ -247,7 +247,7 @@ OpenCompany `org-id` is assigned to the Slack organization ID of the creator of 
 Subsequently anyone with that same Slack organization ID in their JWToken can access the company.
 
 Using email for authentication complicates authorization a bit. In some cases for email, the email domain
-(e.g. @opencompany.com) acts as the same sort of "in-group". This is not always sufficient however:
+(e.g. `@opencompany.com`) acts as the same sort of "in-group". This is not always sufficient however:
 
 * Sometimes this group will be too narrow (e.g. someone who is in the group, but does not have an email address from
 the group domain)
@@ -262,114 +262,496 @@ already authorized users.
 ### Authentication Flow
 
 Based on local settings in the OpenCompany Web application, a GET request is made to this authentication service at
-`/auth-settings` to retrieve authentication settings. An unauthenticated response looks like:
+`/` to retrieve authentication settings. An unauthenticated response looks like:
 
 ```json
 {
   "slack" : {
-    "basic-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
-    "extended-scopes-url" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack-oauth&state=open-company-auth&scope=bot,users:read",
-    "redirectURI" : "/slack-oauth",
-    "state" : "open-company-auth",
-    "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
+    "links" : [
+      {
+        "rel" : "authenticate",
+        "method" : "GET",
+        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack/auth&state=open-company-auth&scope=bot,users:read",
+        "type" : "text/plain"
+      },
+      {
+        "rel" : "authenticate-retry",
+        "method" : "GET",
+        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack/auth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
+        "type" : "text/plain"
+      }
+    ]
   }, 
   "email" : {
-    "auth-url" : "https://auth.opencompany.com/email-auth",
-    "refresh-url": "https://auth.opencompany.com/email/refresh-token"
+    "links" : [
+      {
+        "rel" : "authenticate",
+        "method" : "GET",
+        "href" : "/email/auth",
+        "type" : "text/plain"
+      },
+      {
+        "rel" : "create",
+        "method" : "POST",
+        "href": "/email/users",
+        "type" : "application/vnd.open-company.user.v1+json"
+      }
+    ]
   }
 }
 ```
 
-A response with an authenticated user is limited to just the refresh URL appropriate for that user:
+A response with an authenticated user is limited to just the URLs appropriate for that user. For a Slack user:
 
 ```json
 {
-  "refresh-url": "https://auth.opencompany.com/slack/refresh-token"
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/slack-a1b2-c3d4/users/slack-1234-5678",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/slack/refresh-token",
+      "type" : "text/plain"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href": "/org/slack-a1b2-c3d4/users/invite",
+      "type" : "application/vnd.open-company.invitation.v1+json"
+    },
+    {
+      "rel" : "users",
+      "method" : "GET",
+      "href" : "/org/slack-a1b2-c3d4/users",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+    }
+  ]
 }
 ```
 
-or:
+or for an email user:
 
-```
+```json
 {
-  "refresh-url": "https://auth.opencompany.com/email/refresh-token"
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "partial-update",
+      "method" : "PATCH",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/email/refresh-token",
+      "type" : "text/plain"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href": "/org/email-1234-5678/users/invite",
+      "type" : "application/vnd.open-company.invitation.v1+json"
+    },
+    {
+      "rel" : "users",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users",
+      "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+    }
+  ]
 }
 ```
 
 #### Slack Authentication Flow
 
-Upon clicking the "Sign in with Slack" button, the user is redirected to the `extended-scopes-url` to authenticate with
-Slack. The Slack app is configured to call back to this authentication service at `/slack-oauth` with an authentication
-success or failure.
+Upon clicking the "Sign in with Slack" button, the user is redirected to the `rel` `authenticate` URL to authenticate with
+Slack. Slack then calls back to this authentication service with an authentication success or failure.
 
 If the authentication was successful, the authentication service creates a JWToken and redirects the user back to the
 web application at: `/login?jwt=<JWToken>`
 
 If the authentication wasn't successful, the authentication service redirects the user back to the web application at 
-`/login?access=denied`. From there, subsequent attempts to authenticate using the `basic-scopes-url` that does not
-authorize the bot can occur.
+`/login?access=denied`. From there, subsequent attempts to authenticate using the `rel` `authenticate-retry` URL that
+does not authorize the bot can occur.
 
 The main implication of a successful Slack authentication is the creation of a trusted JWToken that is then used to
 authorize all subsequent access to the API.
 
-![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/slack-auth-success.svg)
+![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/email/docs/slack-auth-success.svg)
 
 #### Email Authentication Flow
 
-Upon clicking the "Sign in with Email" link, a `GET` request is made to the `auth-url` with HTTP Basic authentication
-(always over HTTPS) to authenticate with an email address and password. If the email/pass authentication succeeds,
-there is a 200 response with a JWToken returned in the body of the response. If the email/pass authentication fails,
-there is a 401 response.
+Upon clicking the "Sign in with Email" link, a `GET` request is made to the `rel` `authenticate` URL with HTTP
+Basic authentication (always over HTTPS) to authenticate with an email address and password. If the email/password
+authentication succeeds, there is a `200` status with a JWToken returned in the body of the response. If the
+email/password authentication fails, there is a `401` status for the response.
+
+Headers:
+
+```
+Authorization: Basic <Email/Password Hash>
+Accept: text/plain
+```
 
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
 
-![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-web/mainline/docs/email-auth-success.svg)
+![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/email/docs/email-auth-success.svg)
 
 #### JWToken Expiration / Refresh
 
 The JWToken contains an expiration field (24 hours for Slack users w/ an auth'd bot, and 2 hours for everyone else).
 An expired JWToken does not authorize access to services. Before each use the JWToken is checked for expiration and if
-it's expired, the user is...
+it's expired, a request is made to `rel` `refresh` from the `/` response. If the JWToken is successfully refreshed,
+a `200` status is returned with a new JWToken in the response body.
 
-TBD.
+If the token can't be refreshed (a non-`20x` response), this typically means the user is not longer valid for the org,
+and the client forgets the expired JWToken, makes a unauth'd request to `/` and presents the login UI to the user to
+start the authentication process again.
 
 #### Email Onboarding
 
 Unlike Slack, which doesn't need to differentiate between initial onboarding and subsequent authorizations, the
-onboarding of a new email user takes a different path. To onboard a new email user
+onboarding of a new email user takes a different path. 
+
+To onboard a new email user, POST the following to `rel` `create` from the `/` response:
+
+Headers:
+
+```
+Content-Type: application/vnd.open-company.user.v1+json
+Accept: text/plain
+```
+
+Body:
 
 ```json
 {
   "email": "camus@combat.org",
   "password": "Ssshhh!#&@!",
   "first-name": "Albert",
-  "last-name": "Camus",
+  "last-name": "Camus"
 }
 ```
 
+If successful, the `20x` response will contain a `Location` header with the location of the newly created user,
+as well as potentially a JWToken for the user in the body depending on the user sate.
+
 A new user request can be one of 4 cases:
 
-* already existing user (return code status of `409 Conflict`)
-* user known by email domain (e.g. @opencompany.com)
-* user known by one or more open invitations
-* unknown user and unknown email domain (brand new)
+1) Unknown user and unknown email domain (brand new)
 
-TBD.
+  * Return: `201` Created, JWToken
+  * Email: Email validation sent via email
+  * Next step: Authenticated user accesses web application with JWToken
+
+2) User known by their email domain (e.g. `@opencompany.com`)
+
+  * Return status: `204` No content
+  * Email: Email validation sent via email
+  * Next step: User must validate their email address from the validation email sent
+
+3) User known by an open invitation
+
+  * Return status: `204` No content
+  * Email: Pending invite resent
+  * Next step: User must validate their email address from the invite email sent
+
+4) Already existing user
+
+  * Return status: `409` Conflict
+  * Email: No
+  * Next step: UI error displayed to user
+
 
 #### Email Validation
 
 TBD.
 
+#### User Management
+
+##### User Enumeration
+
+Authenticated users can enumerate the users within the same `org-id` with a GET request to `rel` `users`:
+
+```json
+{
+  "collection" : {
+    "version" : "1.0",
+    "href" : "/org/email-1234-5678/users",
+    "links" : [
+      {
+        "rel" : "self",
+        "method" : "GET",
+        "href" : "/org/email-1234-5678/users",
+        "type" : "application/vnd.collection+vnd.open-company.user+json;version=1"
+      }],
+    "users" : [
+      {
+        "real-name": "Simone de Beauvoir",
+        "avatar": "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg",
+        "email": "simone@lyceela.org",
+        "status": "active",
+        "links" : [
+          {
+            "rel" : "self",
+            "method" : "GET",
+            "href" : "/org/email-1234-5678/users/email-6789-0123",
+            "type" : "application/vnd.open-company.user+json;version=1"
+          },
+          {
+            "rel" : "delete",
+            "method" : "DELETE",
+            "href" : "/org/email-1234-5678/users/email-6789-0123"
+          }
+        ]
+      },
+      {
+        "real-name": "Albert Camus",
+        "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg",
+        "email": "albert@combat.org",
+        "status": "pending",
+        "links" : [
+          {
+            "rel" : "self",
+            "method" : "GET",
+            "href" : "/org/email-1234-5678/users/email-abcd-efgh",
+            "type" : "application/vnd.open-company.user+json;version=1"
+          },
+          {
+            "rel" : "invite",
+            "method" : "POST",
+            "href" : "/org/email-1234-5678/users/email-abcd-efgh/invite",
+            "type" : "application/vnd.open-company.invitation+json;version=1"
+          },
+          {
+            "rel" : "delete",
+            "method" : "DELETE",
+            "href" : "/org/email-1234-5678/users/email-abcd-efgh"
+          }
+        ]
+      }      
+    ]
+  }
+}
+```
+
+##### User Retrieval
+
+Authenticated users can retrieve users within the same `org-id` with a GET request to `rel` `self`. 
+
+For their own email user:
+
+```json
+{
+  "email": "simone@lyceela.org",
+  "avatar": "https://en.wikipedia.org/wiki/File:Simone_de_Beauvoir.jpg",
+  "name": "Simone",
+  "first-name": "Simone",
+  "last-name": "de Beauvoir",
+  "real-name": "Simone de Beauvoir",
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "partial-update",
+      "method" : "PATCH",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/email/refresh-token",
+      "type" : "text/plain"
+    },
+    {
+      "rel" : "delete",
+      "method" : "DELETE",
+      "href" : "/org/email-1234-5678/users/email-a1b2-c3d4",
+    }
+  ]
+}
+```
+
+For their own Slack user:
+
+```json
+{
+  "email": "sartre@lyceela.org",
+  "avatar": "http://existentialismtoday.com/wp-content/uploads/2015/11/sartre_22.jpg",
+  "name": "Jean-Paul",
+  "first-name": "Jean-Paul",
+  "last-name": "Sartre",
+  "real-name": "Jean-Paul Sartre",
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-b2c3-d4e5",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/slack/refresh-token",
+      "type" : "text/plain"
+    }
+  ]
+}
+```
+
+And for other email users in the org:
+
+```json
+{
+  "email": "Albert Camus",
+  "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg",
+  "name": "Albert",
+  "first-name": "Albert",
+  "last-name": "Camus",
+  "real-name": "Albert Camus",
+  "status": "pending",
+  "links" :[
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-c3d4-e5f6",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "refresh",
+      "method" : "GET",
+      "href" : "/email/refresh-token",
+      "type" : "text/plain"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href" : "/org/email-1234-5678/users/email-c3d4-e5f6/invite",
+      "type" : "application/vnd.open-company.invitation+json;version=1"
+    },
+    {
+      "rel" : "delete",
+      "method" : "DELETE",
+      "href" : "/org/email-1234-5678/users/email-c3d4-e5f6",
+    }
+  ]
+}
+```
+
+##### User Updates
+
+Email users can update their own user properties, `PATCH` the following to `rel` `partial-update` of the user
+or user enumeration response:
+
+Headers:
+
+```
+Authorization: Bearer <JWToken>
+Content-Type: application/vnd.open-company.user.v1+json
+Accept: text/plain
+```
+
+Body:
+
+```json
+{
+  "first-name": "Albert",
+  "avatar": "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
+}
+```
+
+Valid properties to update are: `email`, `name`, `first-name`, `last-name`, `real-name`, `avatar` and `password`.
+
+If successful, the `200` response will contain an updated JWToken with the new user properties.
+
 #### Email Invitations
 
-TBD.
+To invite a new email user, `POST` the following to `rel` `invite` from the `/` or a user response:
+
+Headers:
+
+```
+Authorization: Bearer <JWToken>
+Content-Type: application/vnd.open-company.invitation.v1+json
+Accept: application/vnd.open-company.user.v1+json
+```
+
+Body:
+
+```json
+{
+  "email": "camus@combat.org",
+  "company-name": "Combat",
+  "logo": "https://open-company-assets.s3.amazonaws.com/combat.png"
+}
+```
+
+If successful, the `201` response will contain a `Location` header with the location of the newly created user,
+as well as a JSON body with user properties and links.
+
+```json
+{
+  "user-id": "email-abcd-efgh",
+  "real-name": "",
+  "avatar": "",
+  "email": "albert@combat.org",
+  "status": "pending",
+  "links" : [
+    {
+      "rel" : "self",
+      "method" : "GET",
+      "href" : "/org/email-1234-5678/users/email-abcd-efgh",
+      "type" : "application/vnd.open-company.user+json;version=1"
+    },
+    {
+      "rel" : "invite",
+      "method" : "POST",
+      "href" : "/org/email-1234-5678/users/email-abcd-efgh/invite",
+      "type" : "application/vnd.open-company.invitation+json;version=1"
+    },
+    {
+      "rel" : "delete",
+      "method" : "DELETE",
+      "href" : "/org/email-1234-5678/users/email-abcd-efgh"
+    }
+  ]
+}
+```
+
+Upon receipt, an email invitation sends the user to the OC Web application at `/invite?token=<one-time-use-token>`.
+The web application GETs the `rel` `authenticate` link of `email` from the unauth'd request to `/`, passing the
+token as the authorization:
+
+Headers:
+
+```
+Authorization: Bearer <one-time-use-token>
+```
+
+If the token is accepted, the `200` response will contain a `Location` header with the `Location` of the newly
+created user.
+
+At this point, if additional information about the invited user is collected, it can be provided with a `PATCH`
+of the `rel` `partial-update` link from the user response at the provided `Location`.
 
 #### Password Reset
-
-TBD.
-
-#### Email User Management
 
 TBD.
 
@@ -391,11 +773,12 @@ Slack organization. An example stored Slack user:
   "avatar": "http://...",
   "email": "albert@combat.org",
   "owner": "false",
-  "admin": "true"
+  "admin": "true",
+  "auth-source": "slack"
 }
 ```
 
-In the case of as email user, there are no `owner` and `admin` properties.
+In the case of as email user, there are no `owner` and `admin` properties, but there is a `status` property.
 
 ```json
 {
@@ -407,6 +790,8 @@ In the case of as email user, there are no `owner` and `admin` properties.
   "last-name": "Camus",
   "avatar": "http://...",
   "email": "albert@combat.org",
+  "status": "active",
+  "auth-source": "email"
 }
 ```
 
@@ -415,7 +800,7 @@ In the case of as email user, there are no `owner` and `admin` properties.
 JSON Web Tokens are created as authorization tokens for authorized users. They consist of the user storage data
 (see above) as well as an expiration timestamp (in milliseconds since the epoch) for the token.
 
-An example JWToken payload:
+An example JWToken payload for a Slack user:
 
 ```json
 {
@@ -434,7 +819,7 @@ An example JWToken payload:
 }
 ```
 
-and:
+and for an email user:
 
 ```json
 {
