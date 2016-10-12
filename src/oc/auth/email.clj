@@ -27,7 +27,7 @@
 
 (def updateable-props #{:email :password :name :first-name :last-name :real-name :avatar})
 (def public-props [:email :avatar :name :first-name :last-name :real-name])
-(def jwt-props [:user-id :org-id :name :first-name :last-name :avatar :email :auth-source])
+(def jwt-props [:user-id :org-id :name :first-name :last-name :real-name :avatar :email :auth-source])
 (def private-props [:password-hash :created-at :updated-at])
 
 ;; ----- HATEOAS -----
