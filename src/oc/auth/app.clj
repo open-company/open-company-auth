@@ -105,7 +105,7 @@
                   :version "1.0"
                   :href url
                   :links [(hateoas/self-link url "application/vnd.collection+vnd.open-company.user+json;version=1")]
-                  :users (map #(dissoc % :user-id) users)}}]
+                  :users (sort-by :email (map #(dissoc % :user-id) users))}}]
   (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
 
 (defn- invite-response
