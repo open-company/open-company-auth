@@ -13,14 +13,14 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha13"] ; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/core.async "0.2.391"] ; Async programming and communication https://github.com/clojure/core.async
+    [org.clojure/core.async "0.2.395"] ; Async programming and communication https://github.com/clojure/core.async
     [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
     [defun "0.3.0-alapha"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
-    [http-kit "2.2.0"] ; Web server http://http-kit.org/
+    [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
     [com.stuartsierra/component "0.3.1"] ; Component Lifecycle
     [prismatic/schema "1.1.3"] ; Data validation https://github.com/Prismatic/schema
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
