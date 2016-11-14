@@ -5,8 +5,6 @@
             [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (if-let*)]
             [cheshire.core :as json]
-            [raven-clj.core :as sentry]
-            [raven-clj.interfaces :as sentry-interfaces]
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
@@ -18,6 +16,7 @@
             [buddy.auth.backends :as backends]
             [ring.util.response :refer (redirect)]
             [com.stuartsierra.component :as component]
+            [oc.lib.sentry-appender :as sentry]
             [oc.lib.hateoas :as hateoas]
             [oc.lib.rethinkdb.pool :as pool]
             [oc.auth.components :as components]
@@ -29,17 +28,6 @@
             [oc.auth.slack :as slack]
             [oc.auth.email :as email]
             [oc.auth.user :as user]))
-
-;; Send unhandled exceptions to Sentry
-;; See https://stuartsierra.com/2015/05/27/clojure-uncaught-exceptions
-(Thread/setDefaultUncaughtExceptionHandler
- (reify Thread$UncaughtExceptionHandler
-   (uncaughtException [_ thread ex]
-     (timbre/error ex "Uncaught exception on" (.getName thread) (.getMessage ex))
-     (when c/dsn
-       (sentry/capture c/dsn (-> {:message (.getMessage ex)}
-                                 (assoc-in [:extra :exception-data] (ex-data ex))
-                                 (sentry-interfaces/stacktrace ex)))))))
 
 ;; ----- Utility Functions -----
 
@@ -527,37 +515,34 @@
     c/hot-reload  wrap-reload
     c/dsn         (sentry-mw/wrap-sentry c/dsn)))
 
-;; Start components in production (nginx-clojure)
-(when c/prod?
-  (timbre/merge-config!
-   {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
-  (timbre/info "Starting production system without HTTP server")
-  (def handler
-    (-> (components/auth-system {:handler-fn app})
-        (dissoc :server)
-        component/start
-        (get-in [:handler :handler])))
-  (timbre/info "Started"))
+(defn -main []
 
-(defn start
-  "Start a development server"
-  [port]
+  ;; Log errors to Sentry
+  (if c/dsn
+    (timbre/merge-config!
+      {:level (keyword c/log-level)
+       :appenders {:sentry (sentry/sentry-appender c/dsn)}})
+    (timbre/merge-config! {:level (keyword c/log-level)}))
 
-  (-> {:handler-fn app :port port}
+  ;; Uncaught exceptions go to Sentry
+  (Thread/setDefaultUncaughtExceptionHandler
+   (reify Thread$UncaughtExceptionHandler
+     (uncaughtException [_ thread ex]
+       (timbre/error ex "Uncaught exception on" (.getName thread) (.getMessage ex)))))
+
+  ;; Echo config information
+  (println (str "\n"
+    (when c/intro? (str (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"))
+    "OpenCompany Auth Service\n\n"
+    "Running on port: " c/auth-server-port "\n"
+    "Database: " c/db-name "\n"
+    "Database pool: " c/db-pool-size "\n"
+    "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
+    "Hot-reload: " c/hot-reload "\n"
+    "Sentry: " c/dsn "\n\n"
+    (when c/intro? "Ready to serve...\n")))
+
+  ;; Start the system
+  (-> {:handler-fn app :port c/auth-server-port}
     components/auth-system
-    component/start)
-
-  (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
-                "OpenCompany Auth Server\n\n"
-                "Running on port: " port "\n"
-                "Database: " c/db-name "\n"
-                "Database pool: " c/db-pool-size "\n"
-                "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
-                "Hot-reload: " c/hot-reload "\n"
-                "Sentry: " c/dsn "\n\n"
-                "Ready to serve...\n")))
-
-(defn -main
-  "Main"
-  []
-  (start c/auth-server-port))
+    component/start))

@@ -1,5 +1,5 @@
 (ns oc.auth.lib.ring
-  (:require [defun :refer (defun)]
+  (:require [defun.core :refer (defun)]
             [cheshire.core :as json]))
 
 (def json-mime-type "application/json")

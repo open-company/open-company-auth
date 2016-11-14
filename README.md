@@ -225,7 +225,7 @@ lein build
 ### Sample JWToken
 
 To create a sample [JSON Web Token](https://jwt.io/) for use in development without going through a full auth cycle, create an identity EDN file
-formated like the ones in ```/opt/identities``` or use one of the identity EDN files provided, and run the utility:
+formatted like the ones in ```/opt/identities``` or use one of the identity EDN files provided, and run the utility:
 
 ```console
 lein run -m oc.auth.util.jwtoken -- ./opt/identities/camus.edn
@@ -759,7 +759,7 @@ TBD.
 
 Users are stored as documents in the `users` table of the `open_company_auth` RethinkDB database.
 
-In the case of a Slack user, `owner` and `admin` properties have to do with their privelages in the
+In the case of a Slack user, `owner` and `admin` properties have to do with their privilages in the
 Slack organization. An example stored Slack user:
 
 ```json
@@ -814,7 +814,7 @@ An example JWToken payload for a Slack user:
   "email": "albert@combat.org",
   "owner": "false",
   "admin": "true",
-  "exprire": 1474975206974,
+  "expire": 1474975206974,
   "auth-source": "slack"
 }
 ```
@@ -831,7 +831,7 @@ and for an email user:
   "last-name": "Camus",
   "avatar": "http://...",
   "email": "albert@combat.org",
-  "exprire": 1474975206974,
+  "expire": 1474975206974,
   "auth-source": "email"
 }
 ```
