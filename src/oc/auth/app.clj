@@ -3,7 +3,8 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
-            [if-let.core :refer (if-let*)]
+            [if-let.core :refer (if-let* when-let*)]
+            [defun.core :refer (defun-)]
             [cheshire.core :as json]
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
@@ -35,6 +36,10 @@
   (s/join "/" [c/ui-server-url (str "invite?token=" token)]))
 
 ;; ----- Response Functions -----
+
+(defn- bad-token-response []
+  (timbre/warn "Bad token for request")
+  (ring/error-response "Could note confirm token." 401))
 
 (defn- jwt-debug-response
   "Helper to format a JWT debug response"
@@ -103,6 +108,26 @@
 
 ;; ----- Request Handling Functions -----
 
+(defn- bad-token? [req]
+  (not
+    (when-let* [token   (jwt/read-token (:headers req))
+                decoded (jwt/decode token)]
+      (and (-> decoded :claims :user-id)
+           (-> decoded :claims :org-id)))))
+
+(defn- identity-from-token [req]
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)]
+    [org-id user-id] ; return an identity tuple
+    false))
+
+(defn- bot-token-from-token [req]
+  (if-let* [token   (jwt/read-token (:headers req))
+            decoded (jwt/decode token)]
+    (-> decoded :claims :bot :token)
+    false))
 
 (defn- auth-settings
   "Return a set of HATEOAS links appropriate to the user's auth status: none, Slack, email"
@@ -121,25 +146,56 @@
       {:slack slack/auth-settings
        :email email/auth-settings} 200)))
 
+(defun- channel-list
+  "Return the public channels in a Slack org."
+
+  ;; Bad JWToken
+  ([_req :guard bad-token?] (bad-token-response))
+
+  ;; Read the :org-id from the JWToken
+  ([req] (channel-list req (first (identity-from-token req))))
+
+  ;; Missing :org-id
+  ([_req :guard #(nil? (-> % :params :org-id)) _id] (ring/error-response "No org for user request" 400))
+
+  ;; Mismatched org-ids
+  ([_req [org-id req-org-id] :guard #(not= (first %) (last %))]
+  (println org-id)
+  (ring/error-response nil 401))
+
+  ;; Enumerate public channels
+  ([req [org-id _user-id]]
+  (if-let [bot-token (bot-token-from-token req)]
+    (if-let [channels (slack/channel-list bot-token)]
+      (ring/json-response channels 200)
+      (do ; problems getting channels from Slack
+        (timbre/error "Error retrieving public channels for org " org-id " with bot token " bot-token)
+        (ring/error-response "Unable to retrieve public channels from Slack." 503)))
+    (ring/error-response "Bot token required for requesting user" 401)))
+
+  ;; Read :org-id from the request URL
+  ([req org-id] (channel-list req [org-id (-> req :params :org-id)])))
+
+
 ;; Suggested refactor
 ; (defun- user-enumerate
 ;   "Return the users in an org."
 
 ;   ;; Bad JWToken
-;   ([_sys _req :guard? bad-token?] (ring/bad-token-response))
+;   ([_sys _req :guard? bad-token?] (bad-token-response))
 
 ;   ;; Read the JWToken
 ;   ([sys req] (user-enumerate sys req (identity-from-token req))
 
 ;   ;; Missing :org-id
-;   ([_sys _req :guard #(missing-param? :org-id %) _id] (ring/error-response "No org for user request" nil 400))
+;   ([_sys _req :guard #(nil? (-> % :params :org-id)) _id] (ring/error-response "No org for user request" 400))
 
 ;   ;; Read :org-id
 ;   ([sys req [org-id user-id]] (user-enumerate sys req [org-id user-id (-> req :params :org-id)]))
 
 ;   ;; Mismatched org-ids
-;   ([_sys _req [org_id _user_id req-org-id] :guard #(not= (first %) (last %))]
-;   (ring/error-response (str "Wrong org " org-id " for org requested " req-org-id) nil 401))
+;   ([_sys _req [org-id _user_id req-org-id] :guard #(not= (first %) (last %))]
+;   (ring/error-response (str "Wrong org " org-id " for org requested " req-org-id) 401))
 
 ;   ;; Enumerate users
 ;   ([sys _req [_org_id _user_id req-org-id]]
@@ -150,7 +206,7 @@
 ;       ;; Remove the requesting user from the list and respond
 ;       (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
 ;                                                (:href (email/enumerate-link org-id)))
-;       (ring/error-response (str "No org for" org-id) nil 404))))
+;       (ring/error-response (str "No org for" org-id) 404))))
 
 (defn- user-enumerate
   "Return the users in an org."
@@ -483,11 +539,14 @@
     ;; Slack
     (GET "/slack/auth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
     (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
+    ;; Slack for Org
+    (GET "/org/:org-id/channels" req (channel-list req)) ; list public channels for Slack org
     
     ;; Email
     (GET "/email/auth" req (email-auth sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; new user creation
+    ;; Email for Org
     (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     (PATCH "/org/:org-id/users/:user-id" req (email-update-user sys req)) ; user update

@@ -176,6 +176,18 @@
     (get params "code")  (swap-code-for-token (get params "code"))
     :else                [false "no-code"]))
 
+(defn channel-list
+  [bot-token]
+  "Given a Slack bot token, list the public channels for the Slack org."
+  (let [conn      (merge slack-connection {:token bot-token})
+        channels  (slack/slack-request conn "channels.list")]
+    (if (:ok channels)
+      ;; Channel name and ID of unarchived channels, sorted lexigraphically by name
+      (sort-by :name (map #(select-keys % [:name :id]) (filter #(not (:is_archived %)) (:channels channels))))
+      (do (timbre/warn "Channel list could not be retrieved."
+                       {:response channels :bot-token bot-token})
+          false))))
+
 ;; ----- Schema -----
 
 (def SlackUser 
