@@ -91,6 +91,16 @@
         response (assoc user-status-map :links invite-links)]
     (ring/json-response response 200 "application/vnd.open-company.user.v1+json")))
 
+(defn- channel-enumeration-response
+  "Return a JSON collection of channels for the org."
+  [channels url]
+  (let [response {:collection {
+                  :version "1.0"
+                  :href url
+                  :links [(hateoas/self-link url "application/vnd.collection+vnd.open-company.slack-channels+json;version=1")]
+                  :channels (sort-by :name (map #(select-keys % [:name :id]) channels))}}]
+  (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
+
 (defn- user-enumeration-response
   "Return a JSON collection of users for the org."
   [users url]
@@ -166,8 +176,8 @@
   ;; Enumerate public channels
   ([req [org-id _user-id]]
   (if-let [bot-token (bot-token-from-token req)]
-    (if-let [channels (slack/channel-list bot-token)]
-      (ring/json-response channels 200)
+    (if-let [channels (slack/channel-list bot-token)] ; Get public channels from Slack
+      (channel-enumeration-response channels (s/join "/" ["/org" org-id "channels"])) ; JSON response of public channels
       (do ; problems getting channels from Slack
         (timbre/error "Error retrieving public channels for org " org-id " with bot token " bot-token)
         (ring/error-response "Unable to retrieve public channels from Slack." 503)))
