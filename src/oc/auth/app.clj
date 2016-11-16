@@ -8,7 +8,6 @@
             [cheshire.core :as json]
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
-            [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :as compojure :refer (GET POST PATCH DELETE)]
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]

@@ -183,8 +183,8 @@
     :else                [false "no-code"]))
 
 (defn channel-list
-  [bot-token]
   "Given a Slack bot token, list the public channels for the Slack org."
+  [bot-token]
   (let [conn      (merge slack-connection {:token bot-token})
         channels  (slack/slack-request conn "channels.list")]
     (if (:ok channels)
