@@ -12,7 +12,12 @@
 (defonce processors (.availableProcessors (Runtime/getRuntime)))
 (defonce core-async-limit (+ 42 (* 2 processors)))
 
+(defonce intro? (bool (or (env :intro) false)))
 (defonce prod? (= "production" (env :env)))
+
+;; ----- Logging -----
+
+(defonce log-level (or (env :log-level) :info))
 
 ;; ----- Sentry -----
 

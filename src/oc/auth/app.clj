@@ -3,13 +3,11 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
-            [if-let.core :refer (if-let*)]
+            [if-let.core :refer (if-let* when-let*)]
+            [defun.core :refer (defun-)]
             [cheshire.core :as json]
-            [raven-clj.core :as sentry]
-            [raven-clj.interfaces :as sentry-interfaces]
             [raven-clj.ring :as sentry-mw]
             [taoensso.timbre :as timbre]
-            [taoensso.timbre.appenders.core :as appenders]
             [compojure.core :as compojure :refer (GET POST PATCH DELETE)]
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]
@@ -18,6 +16,7 @@
             [buddy.auth.backends :as backends]
             [ring.util.response :refer (redirect)]
             [com.stuartsierra.component :as component]
+            [oc.lib.sentry-appender :as sentry]
             [oc.lib.hateoas :as hateoas]
             [oc.lib.rethinkdb.pool :as pool]
             [oc.auth.components :as components]
@@ -30,23 +29,16 @@
             [oc.auth.email :as email]
             [oc.auth.user :as user]))
 
-;; Send unhandled exceptions to Sentry
-;; See https://stuartsierra.com/2015/05/27/clojure-uncaught-exceptions
-(Thread/setDefaultUncaughtExceptionHandler
- (reify Thread$UncaughtExceptionHandler
-   (uncaughtException [_ thread ex]
-     (timbre/error ex "Uncaught exception on" (.getName thread) (.getMessage ex))
-     (when c/dsn
-       (sentry/capture c/dsn (-> {:message (.getMessage ex)}
-                                 (assoc-in [:extra :exception-data] (ex-data ex))
-                                 (sentry-interfaces/stacktrace ex)))))))
-
 ;; ----- Utility Functions -----
 
 (defn- token-link [token]
   (s/join "/" [c/ui-server-url (str "invite?token=" token)]))
 
 ;; ----- Response Functions -----
+
+(defn- bad-token-response []
+  (timbre/warn "Bad token for request")
+  (ring/error-response "Could note confirm token." 401))
 
 (defn- jwt-debug-response
   "Helper to format a JWT debug response"
@@ -98,6 +90,16 @@
         response (assoc user-status-map :links invite-links)]
     (ring/json-response response 200 "application/vnd.open-company.user.v1+json")))
 
+(defn- channel-enumeration-response
+  "Return a JSON collection of channels for the org."
+  [channels url]
+  (let [response {:collection {
+                  :version "1.0"
+                  :href url
+                  :links [(hateoas/self-link url "application/vnd.collection+vnd.open-company.slack-channels+json;version=1")]
+                  :channels (sort-by :name (map #(select-keys % [:name :id]) channels))}}]
+  (ring/json-response response 200 "application/vnd.collection+vnd.open-company.user+json;version=1")))
+
 (defn- user-enumeration-response
   "Return a JSON collection of users for the org."
   [users url]
@@ -115,6 +117,26 @@
 
 ;; ----- Request Handling Functions -----
 
+(defn- bad-token? [req]
+  (not
+    (when-let* [token   (jwt/read-token (:headers req))
+                decoded (jwt/decode token)]
+      (and (-> decoded :claims :user-id)
+           (-> decoded :claims :org-id)))))
+
+(defn- identity-from-token [req]
+  (if-let* [token    (jwt/read-token (:headers req))
+            decoded  (jwt/decode token)
+            user-id  (-> decoded :claims :user-id)
+            org-id   (-> decoded :claims :org-id)]
+    [org-id user-id] ; return an identity tuple
+    false))
+
+(defn- bot-token-from-token [req]
+  (if-let* [token   (jwt/read-token (:headers req))
+            decoded (jwt/decode token)]
+    (-> decoded :claims :bot :token)
+    false))
 
 (defn- auth-settings
   "Return a set of HATEOAS links appropriate to the user's auth status: none, Slack, email"
@@ -133,25 +155,56 @@
       {:slack slack/auth-settings
        :email email/auth-settings} 200)))
 
+(defun- channel-list
+  "Return the public channels in a Slack org."
+
+  ;; Bad JWToken
+  ([_req :guard bad-token?] (bad-token-response))
+
+  ;; Read the :org-id from the JWToken
+  ([req] (channel-list req (first (identity-from-token req))))
+
+  ;; Missing :org-id
+  ([_req :guard #(nil? (-> % :params :org-id)) _id] (ring/error-response "No org for user request" 400))
+
+  ;; Mismatched org-ids
+  ([_req [org-id req-org-id] :guard #(not= (first %) (last %))]
+  (println org-id)
+  (ring/error-response nil 401))
+
+  ;; Enumerate public channels
+  ([req [org-id _user-id]]
+  (if-let [bot-token (bot-token-from-token req)]
+    (if-let [channels (slack/channel-list bot-token)] ; Get public channels from Slack
+      (channel-enumeration-response channels (s/join "/" ["/org" org-id "channels"])) ; JSON response of public channels
+      (do ; problems getting channels from Slack
+        (timbre/error "Error retrieving public channels for org " org-id " with bot token " bot-token)
+        (ring/error-response "Unable to retrieve public channels from Slack." 503)))
+    (ring/error-response "Bot token required for requesting user" 401)))
+
+  ;; Read :org-id from the request URL
+  ([req org-id] (channel-list req [org-id (-> req :params :org-id)])))
+
+
 ;; Suggested refactor
 ; (defun- user-enumerate
 ;   "Return the users in an org."
 
 ;   ;; Bad JWToken
-;   ([_sys _req :guard? bad-token?] (ring/bad-token-response))
+;   ([_sys _req :guard? bad-token?] (bad-token-response))
 
 ;   ;; Read the JWToken
 ;   ([sys req] (user-enumerate sys req (identity-from-token req))
 
 ;   ;; Missing :org-id
-;   ([_sys _req :guard #(missing-param? :org-id %) _id] (ring/error-response "No org for user request" nil 400))
+;   ([_sys _req :guard #(nil? (-> % :params :org-id)) _id] (ring/error-response "No org for user request" 400))
 
 ;   ;; Read :org-id
 ;   ([sys req [org-id user-id]] (user-enumerate sys req [org-id user-id (-> req :params :org-id)]))
 
 ;   ;; Mismatched org-ids
-;   ([_sys _req [org_id _user_id req-org-id] :guard #(not= (first %) (last %))]
-;   (ring/error-response (str "Wrong org " org-id " for org requested " req-org-id) nil 401))
+;   ([_sys _req [org-id _user_id req-org-id] :guard #(not= (first %) (last %))]
+;   (ring/error-response (str "Wrong org " org-id " for org requested " req-org-id) 401))
 
 ;   ;; Enumerate users
 ;   ([sys _req [_org_id _user_id req-org-id]]
@@ -162,7 +215,7 @@
 ;       ;; Remove the requesting user from the list and respond
 ;       (user-enumeration-response (filter #(not= (:user-id %) user-id) users)
 ;                                                (:href (email/enumerate-link org-id)))
-;       (ring/error-response (str "No org for" org-id) nil 404))))
+;       (ring/error-response (str "No org for" org-id) 404))))
 
 (defn- user-enumerate
   "Return the users in an org."
@@ -495,11 +548,14 @@
     ;; Slack
     (GET "/slack/auth" {params :params} (oauth-callback slack/oauth-callback params)) ; Slack authentication callback
     (GET "/slack/refresh-token" req (refresh-slack-token req)) ; refresh JWToken
+    ;; Slack for Org
+    (GET "/org/:org-id/channels" req (channel-list req)) ; list public channels for Slack org
     
     ;; Email
     (GET "/email/auth" req (email-auth sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; new user creation
+    ;; Email for Org
     (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite
     (PATCH "/org/:org-id/users/:user-id" req (email-update-user sys req)) ; user update
@@ -527,37 +583,34 @@
     c/hot-reload  wrap-reload
     c/dsn         (sentry-mw/wrap-sentry c/dsn)))
 
-;; Start components in production (nginx-clojure)
-(when c/prod?
-  (timbre/merge-config!
-   {:appenders {:spit (appenders/spit-appender {:fname "/tmp/oc-auth.log"})}})
-  (timbre/info "Starting production system without HTTP server")
-  (def handler
-    (-> (components/auth-system {:handler-fn app})
-        (dissoc :server)
-        component/start
-        (get-in [:handler :handler])))
-  (timbre/info "Started"))
+(defn -main []
 
-(defn start
-  "Start a development server"
-  [port]
+  ;; Log errors to Sentry
+  (if c/dsn
+    (timbre/merge-config!
+      {:level (keyword c/log-level)
+       :appenders {:sentry (sentry/sentry-appender c/dsn)}})
+    (timbre/merge-config! {:level (keyword c/log-level)}))
 
-  (-> {:handler-fn app :port port}
+  ;; Uncaught exceptions go to Sentry
+  (Thread/setDefaultUncaughtExceptionHandler
+   (reify Thread$UncaughtExceptionHandler
+     (uncaughtException [_ thread ex]
+       (timbre/error ex "Uncaught exception on" (.getName thread) (.getMessage ex)))))
+
+  ;; Echo config information
+  (println (str "\n"
+    (when c/intro? (str (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"))
+    "OpenCompany Auth Service\n\n"
+    "Running on port: " c/auth-server-port "\n"
+    "Database: " c/db-name "\n"
+    "Database pool: " c/db-pool-size "\n"
+    "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
+    "Hot-reload: " c/hot-reload "\n"
+    "Sentry: " c/dsn "\n\n"
+    (when c/intro? "Ready to serve...\n")))
+
+  ;; Start the system
+  (-> {:handler-fn app :port c/auth-server-port}
     components/auth-system
-    component/start)
-
-  (println (str "\n" (slurp (io/resource "ascii_art.txt")) "\n"
-                "OpenCompany Auth Server\n\n"
-                "Running on port: " port "\n"
-                "Database: " c/db-name "\n"
-                "Database pool: " c/db-pool-size "\n"
-                "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
-                "Hot-reload: " c/hot-reload "\n"
-                "Sentry: " c/dsn "\n\n"
-                "Ready to serve...\n")))
-
-(defn -main
-  "Main"
-  []
-  (start c/auth-server-port))
+    component/start))

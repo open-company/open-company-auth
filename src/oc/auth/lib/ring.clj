@@ -1,5 +1,5 @@
 (ns oc.auth.lib.ring
-  (:require [defun :refer (defun)]
+  (:require [defun.core :refer (defun)]
             [cheshire.core :as json]))
 
 (def json-mime-type "application/json")
@@ -21,7 +21,7 @@
 
   ([body status mime-type :guard string?] (json-response body status mime-type {}))
 
-  ([body :guard map? status :guard integer? mime-type :guard string? headers :guard map?]
+  ([body :guard #(or (map? %) (sequential? %)) status :guard integer? mime-type :guard string? headers :guard map?]
   (ring-response (json/generate-string body {:pretty true}) status (merge {"Content-Type" mime-type} headers))))
 
 (defn html-response
