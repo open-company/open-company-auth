@@ -31,8 +31,8 @@
 
 ;; ----- Utility Functions -----
 
-(defn- token-link [token]
-  (s/join "/" [c/ui-server-url (str "invite?token=" token)]))
+(defn- token-link [type token]
+  (s/join "/" [c/ui-server-url (str (name type) "?token=" token)]))
 
 ;; ----- Response Functions -----
 
@@ -433,6 +433,47 @@
     (do (timbre/warn "Bad token for request")      
         (ring/error-response "Could note confirm token." 401))))
 
+(defun- reset-email-password
+  "If a user with the specified email address exists, send a reset request via SQS."
+
+  ;; Check if the request is well formed JSON
+  ([sys req] 
+    (if-let* [post-body (:body req)
+              json-body (slurp post-body)
+              map-body (try (json/parse-string json-body) (catch Exception e false))
+              body (keywordize-keys map-body)]
+      ;; All is well, recurse!
+      (reset-email-password sys req body)
+      ;; Not the POST body we were looking for
+      (do (timbre/warn "Invalid request body")
+           (ring/error-response "Invalid request body." 400)))) ; request not valid
+
+  ;; Missing :email property
+  ([_sys _req body :guard #(nil? (:email %))] (ring/error-response "No email for reset request" 400))
+
+  ;; Lookup user by email, and send a reset SQS message with a reset token if they exist
+  ([sys req body]
+  (let [email (:email body)]
+    (timbre/info "Reset request for" email)
+    (pool/with-pool [conn (-> sys :db-pool :pool)]
+      (if-let* [user (user/get-user-by-email conn email)
+                user-id (:user-id user)]
+        
+        ;; User was found, provide a new token and make a reset SQS request
+        (if-let* [token (str (java.util.UUID/randomUUID))
+                  _updated_user (user/update-user conn user-id {:one-time-token token})]
+        
+          (do
+            ;; Request a password reset email
+            (sqs/send! sqs/PasswordReset (sqs/->reset {:email email
+                                                       :token-link (token-link :invite token)}))
+            (ring/text-response "OK" 200))
+          (do
+            (timbre/error "Unable to reset token")
+            (ring/error-response "Unable to reset token" 500)))
+        
+        ;; No user by that email
+        (ring/error-response "Invalid email" 422))))))
 
 (defn- email-user-invite
   "Invite or re-invite a user by their email address."
@@ -459,9 +500,11 @@
               (if (or (nil? (-> req :params :user-id)) (= (-> req :params :user-id) user-id))
                 (if (= status "pending")
                   (do (timbre/info "Re-inviting user" email) 
-                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link (:one-time-token user))})
-                                                      (-> decoded :claims :real-name)
-                                                      (-> decoded :claims :email)))
+                      (sqs/send! sqs/EmailInvite
+                        (sqs/->invite 
+                          (merge body {:token-link (token-link :invite (:one-time-token user))})
+                          (-> decoded :claims :real-name)
+                          (-> decoded :claims :email)))
                       (invite-response user))
                   (do (timbre/warn "Can't re-invite user" email "in status" (:status user))
                       (ring/error-response "User not eligible for reinvite" 409)))
@@ -476,9 +519,9 @@
                                                 "pending"
                                                 (str (java.util.UUID/randomUUID))))] ; random passwd
                   (do (timbre/info "Inviting user" email)
-                      (sqs/send-invite! (sqs/->invite (merge body {:token-link (token-link token)})
-                                                      (-> decoded :claims :real-name)
-                                                      (-> decoded :claims :email)))
+                      (sqs/send! sqs/EmailInvite (sqs/->invite (merge body {:token-link (token-link token)})
+                                                               (-> decoded :claims :real-name)
+                                                               (-> decoded :claims :email)))
                       (invite-response user))
                   (do (timbre/error "Failed to create user" email)
                       (ring/error-response "" 500)))))))
@@ -555,6 +598,7 @@
     (GET "/email/auth" req (email-auth sys req)) ; authentication request
     (GET "/email/refresh-token" req (refresh-email-token sys req)) ; refresh JWToken
     (POST "/email/users" req (email-user-create sys req)) ; new user creation
+    (POST "/email/reset" req (reset-email-password sys req)) ; reset password
     ;; Email for Org
     (POST "/org/:org-id/users/invite" req (email-user-invite sys req)) ; new user invite
     (POST "/org/:org-id/users/:user-id/invite" req (email-user-invite sys req)) ; Re-invite

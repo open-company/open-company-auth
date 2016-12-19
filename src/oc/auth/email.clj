@@ -54,6 +54,11 @@
                                  "/email/users"
                                  user-type))
 
+(def reset-link (hateoas/link-map "reset-password"
+                                  hateoas/POST
+                                  "/email/reset"
+                                  "application/json"))
+
 (defn invite-link [org-id] (hateoas/link-map "invite" 
                                              hateoas/POST
                                              (s/join "/" ["/org" org-id "users" "invite"])
@@ -75,7 +80,7 @@
                                                  (s/join "/" ["/org" org-id "users"])
                                                  user-collection-type))
 
-(def auth-settings {:links [auth-link create-link]})
+(def auth-settings {:links [auth-link create-link reset-link]})
 
 (defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
                                                 (partial-update-link org-id user-id)

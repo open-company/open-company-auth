@@ -4,6 +4,8 @@
             [taoensso.timbre :as timbre]
             [oc.auth.config :as c]))
 
+;; ----- SQS Message Schemas -----
+
 (def EmailInvite
   {:type (schema/pred #(= "invite" %))
    :from schema/Str
@@ -12,6 +14,13 @@
    :company-name schema/Str
    :logo schema/Str
    :token-link schema/Str})
+
+(def PasswordReset
+  {:type (schema/pred #(= "reset" %))
+   :to schema/Str
+   :token-link schema/Str})
+
+;; ----- SQS Message Creation -----
 
 (defn ->invite [payload from reply-to]
   {:pre [(map? payload)
@@ -29,14 +38,26 @@
     :token-link (:token-link payload)
   })
 
-(defn send-invite!
-  [invite]
-  (timbre/info "Request to send invite to" (:to invite))
-  (schema/validate EmailInvite invite)
+(defn ->reset [payload]
+  {:pre [(map? payload)
+         (string? (:email payload))
+         (string? (:token-link payload))]}
+  {
+    :type "reset"
+    :to (:email payload)
+    :token-link (:token-link payload)
+  })
+
+;; ----- SQS Message Functions -----
+
+(defn send!
+  [type msg]
+  (timbre/info "Request to send" (:type msg) "to" (:to msg))
+  (schema/validate type msg)
   (timbre/info "Sending...")
   (sqs/send-message
     {:access-key c/aws-access-key-id
      :secret-key c/aws-secret-access-key}
     c/aws-sqs-email-queue
-    invite)
+    msg)
   (timbre/info "Sent"))

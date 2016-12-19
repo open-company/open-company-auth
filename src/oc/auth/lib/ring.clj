@@ -25,7 +25,7 @@
   (ring-response (json/generate-string body {:pretty true}) status (merge {"Content-Type" mime-type} headers))))
 
 (defn html-response
-  "Helper to format a generic JSON body ring response"
+  "Helper to format an HTML ring response"
   ([body status] (html-response body status {}))
   
   ([body status headers]
@@ -35,7 +35,7 @@
   (ring-response body status (merge {"Content-Type" html-mime-type} headers))))
 
 (defn text-response
-  "Helper to format a generic JSON body ring response"
+  "Helper to format a text ring response"
   ([body status] (text-response body status {}))
   
   ([body status headers]
