@@ -388,7 +388,7 @@ does not authorize the bot can occur.
 The main implication of a successful Slack authentication is the creation of a trusted JWToken that is then used to
 authorize all subsequent access to the API.
 
-![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/email/docs/slack-auth-success.svg)
+![Slack Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/mainline/docs/slack-auth-success.svg)
 
 #### Email Authentication Flow
 
@@ -407,7 +407,7 @@ Accept: text/plain
 The main implication of a successful email/pass authentication is the creation of a trusted JWToken that is then used
 to authorize all subsequent access to the API.
 
-![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/email/docs/email-auth-success.svg)
+![Email Auth Diagram](https://cdn.rawgit.com/open-company/open-company-auth/mainline/docs/email-auth-success.svg)
 
 #### JWToken Expiration / Refresh
 
