@@ -35,7 +35,7 @@
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [clj-time "0.12.2"] ; JodaTime wrapper https://github.com/clj-time/clj-time
+    [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [open-company/lib "0.0.6-04c024d"] ; Library for OC projects https://github.com/open-company/open-company-lib
     [amazonica "0.3.80"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
