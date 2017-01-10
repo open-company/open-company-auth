@@ -189,7 +189,7 @@
   (let [conn      (merge slack-connection {:token bot-token})
         channels  (slack/slack-request conn "channels.list")]
     (if (:ok channels)
-      (filter #(not (:is_archived %)) (:channels channels)) ; unarchived channels
+      (remove :is_archived (:channels channels)) ; unarchived channels
       (do (timbre/warn "Channel list could not be retrieved."
                        {:response channels :bot-token bot-token})
           false))))
