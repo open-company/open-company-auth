@@ -18,10 +18,10 @@
     [defun "0.3.0-RC1"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
-    [compojure "1.6.0-beta1"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [compojure "1.6.0-beta2"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
-    [com.stuartsierra/component "0.3.1"] ; Component Lifecycle
+    [com.stuartsierra/component "0.3.2"] ; Component Lifecycle
     [prismatic/schema "1.1.3"] ; Data validation https://github.com/Prismatic/schema
     [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
@@ -33,12 +33,12 @@
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.8.0-alpha1"] ; logging https://github.com/ptaoussanis/timbre
+    [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [clj-time "0.12.2"] ; JodaTime wrapper https://github.com/clj-time/clj-time
+    [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [open-company/lib "0.0.6-04c024d"] ; Library for OC projects https://github.com/open-company/open-company-lib
-    [amazonica "0.3.77"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
+    [amazonica "0.3.81"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
   ]
 
   :plugins [
@@ -61,7 +61,7 @@
       :plugins [
         [lein-midje "3.2.1"] ; Example-based testing https://github.com/marick/lein-midje
         [jonase/eastwood "0.2.3"] ; Clojure linter https://github.com/jonase/eastwood
-        [lein-kibit "0.1.2"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
+        [lein-kibit "0.1.3"] ; Static code search for non-idiomatic code https://github.com/jonase/kibit
       ]
     }
 

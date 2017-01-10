@@ -37,12 +37,12 @@
 
 (defn user-url [org-id user-id] (s/join "/" ["/org" org-id "users" user-id]))
 
-(def auth-link (hateoas/link-map "authenticate"
+(def bot-auth-link (hateoas/link-map "bot"
                                  hateoas/GET
                                  (slack-auth-url "bot,users:read")
                                  "text/plain"))
 
-(def auth-retry-link (hateoas/link-map "authenticate-retry"
+(def auth-link (hateoas/link-map "authenticate"
                                  hateoas/GET
                                  (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
                                  "text/plain"))
@@ -69,10 +69,11 @@
                                                (s/join "/" ["/org" org-id "channels"])
                                                "application/vnd.collection+vnd.open-company.slack-channels+json;version=1"))
 
-(def auth-settings {:links [auth-link auth-retry-link]})
+(def auth-settings {:links [auth-link]})
 
 (defn authed-settings [org-id user-id] {:links [(self-link org-id user-id)
                                                 refresh-link
+                                                bot-auth-link
                                                 (invite-link org-id)
                                                 (user-enumerate-link org-id)
                                                 (channel-enumerate-link org-id)]})
@@ -188,7 +189,7 @@
   (let [conn      (merge slack-connection {:token bot-token})
         channels  (slack/slack-request conn "channels.list")]
     (if (:ok channels)
-      (filter #(not (:is_archived %)) (:channels channels)) ; unarchived channels
+      (remove :is_archived (:channels channels)) ; unarchived channels
       (do (timbre/warn "Channel list could not be retrieved."
                        {:response channels :bot-token bot-token})
           false))))
