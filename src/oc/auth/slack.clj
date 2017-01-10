@@ -82,13 +82,12 @@
   (and (string? s) (.startsWith s prefix)))
 
 (defn- have-user
-  [{:keys [name real-name email avatar user-id owner admin] :as m}]
+  [{:keys [name first-name last-name email avatar-url user-id] :as m}]
   (t/with-dynamic-assertion-data {:user m} ; (Optional) setup some extra debug data
     (t/have map? m)
-    (t/have [:ks= #{:name :real-name :first-name :last-name :email :avatar :user-id :owner :admin}] m)
-    (t/have string? name real-name email avatar)
-    (t/have prefixed? user-id)
-    (t/have boolean? owner admin))
+    (t/have [:ks= #{:name :first-name :last-name :email :avatar-url :user-id}] m)
+    (t/have string? name first-name last-name email)
+    (t/have prefixed? user-id))
   m)
 
 (defn- coerce-to-user
@@ -97,27 +96,20 @@
   (when (and id name email)
     {:user-id (str prefix id)
      :name (or (:name user-data) "")
-     :real-name (or (:real_name_normalized user-data)
-                    (:real_name user-data)
-                    (if (and (:first_name user-data) (:last_name user-data))
-                      (s/join " " [(:first_name user-data) (:last_name user-data)]) 
-                      (or
-                        (:first_name user-data)
-                        (:last_name user-data)
-                        (:name user-data)
-                        "")))
-     :first-name (:first_name user-data)
-     :last-name (:last_name user-data)
-     :avatar (or (:image_192 user-data)
-                 (:image_72 user-data)
-                 (:image_48 user-data)
-                 (:image_512 user-data)
-                 (:image_32 user-data)
-                 (:image_24 user-data))
-     :email email
-     ;; if not provided we assume they're not
-     :owner (boolean (:is_owner user-data))
-     :admin (boolean (:is_admin user-data))}))
+     :first-name (if-let [names (s/split (:name user-data) #" " )]
+                    (if (= 2 (count names)) (first names) "")
+                    "")
+     :last-name (if-let [names (s/split (:name user-data) #" " )]
+                    (if (= 2 (count names)) (last names) "")
+                    "")
+     ; avatar by biggest first
+     :avatar-url (or (:image_192 user-data)
+                     (:image_72 user-data)
+                     (:image_48 user-data)
+                     (:image_512 user-data)
+                     (:image_32 user-data)
+                     (:image_24 user-data))
+     :email email}))
 
 (defn- get-user-info
   [access-token scope user-id]
