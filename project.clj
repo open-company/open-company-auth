@@ -16,9 +16,9 @@
     [org.clojure/core.async "0.2.395"] ; Async programming and communication https://github.com/clojure/core.async
     [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
     [defun "0.3.0-RC1"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
-    [ring/ring-devel "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.6.0-beta6"] ; Web application library https://github.com/ring-clojure/ring
-    [compojure "1.6.0-beta2"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [ring/ring-devel "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
+    [compojure "1.6.0-beta3"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
     [com.stuartsierra/component "0.3.2"] ; Component Lifecycle
@@ -37,8 +37,8 @@
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
-    [open-company/lib "0.0.6-04c024d"] ; Library for OC projects https://github.com/open-company/open-company-lib
-    [amazonica "0.3.81"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
+    [open-company/lib "0.0.11-deee910"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [amazonica "0.3.83"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
   ]
 
   :plugins [
