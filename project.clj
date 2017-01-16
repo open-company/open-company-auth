@@ -23,7 +23,7 @@
     [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
     [com.stuartsierra/component "0.3.2"] ; Component Lifecycle
     [prismatic/schema "1.1.3"] ; Data validation https://github.com/Prismatic/schema
-    [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
+    [cheshire "5.7.0"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.5.0"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
@@ -38,7 +38,7 @@
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [open-company/lib "0.0.11-deee910"] ; Library for OC projects https://github.com/open-company/open-company-lib
-    [amazonica "0.3.83"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
+    [amazonica "0.3.84"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
   ]
 
   :plugins [
