@@ -5,7 +5,7 @@
             [schema.core :as schema]
             [buddy.hashers :as hashers]
             [oc.lib.hateoas :as hateoas]
-            [oc.auth.user :as user]))
+            [oc.auth.resources.user :as user]))
 
 (def prefix "email-")
 
@@ -200,7 +200,7 @@
 (comment 
 
   (require '[oc.auth.email :as email] :reload)
-  (require '[oc.auth.user :as user] :reload)
+  (require '[oc.auth.resources.user :as user] :reload)
 
   (def u (read-string (slurp "./opt/identities/simone.edn")))
   (email/create-user! conn (email/->user u "active" "S$cr$ts"))

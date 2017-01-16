@@ -11,7 +11,7 @@
             [oc.auth.config :as config]
             [oc.auth.lib.store :as store]
             [oc.auth.lib.jwt :as jwt]
-            [oc.auth.user :as user]))
+            [oc.auth.resources.user :as user]))
 
 (def prefix "slack-")
 

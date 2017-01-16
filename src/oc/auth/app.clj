@@ -27,7 +27,7 @@
             [oc.auth.lib.ring :as ring]
             [oc.auth.slack :as slack]
             [oc.auth.email :as email]
-            [oc.auth.user :as user]))
+            [oc.auth.resources.user :as user]))
 
 ;; ----- Utility Functions -----
 
