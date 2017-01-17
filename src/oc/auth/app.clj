@@ -25,9 +25,9 @@
             [oc.auth.lib.store :as store]
             [oc.auth.lib.jwt :as jwt]
             [oc.auth.lib.ring :as ring]
-            [oc.auth.slack :as slack]
-            [oc.auth.email :as email]
-            [oc.auth.resources.user :as user]))
+            [oc.auth.slack-auth :as slack]
+            [oc.auth.email-auth :as email]
+            [oc.auth.resources.user :as u]))
 
 ;; ----- Utility Functions -----
 
@@ -64,7 +64,7 @@
   ([sys req location]
   (if-let [email (:identity req)] ; email/pass sucessfully auth'd
     (pool/with-pool [conn (-> sys :db-pool :pool)]
-      (if-let* [user (user/get-user-by-email conn email) ; user from DB for JWToken
+      (if-let* [user (u/get-user-by-email conn email) ; user from DB for JWToken
                 jwt-user (zipmap email/jwt-props (map user email/jwt-props))]
         ; respond with JWToken
         (let [headers (if location {"Location" (email/user-url (:org-id user) (:user-id user))} {})
@@ -255,7 +255,7 @@
       (do (timbre/info "Request for user" req-user-id "of org" req-org-id)
           (if (= org-id req-org-id)
             (pool/with-pool [conn (-> sys :db-pool :pool)]
-              (if-let* [user (user/get-user conn req-user-id)
+              (if-let* [user (u/get-user conn req-user-id)
                         _valid (= req-org-id (:org-id user))]
                 (user-response user (= user-id req-user-id))
                 (do (timbre/warn "No user for user request")
@@ -276,11 +276,11 @@
     (pool/with-pool [conn (-> sys :db-pool :pool)]
       (if-let* [del-user-id (-> req :params :user-id)
                 _valid-prefix (s/starts-with? del-user-id prefix)
-                del-user (user/get-user conn del-user-id)] ; user to delete
+                del-user (u/get-user conn del-user-id)] ; user to delete
         (do (timbre/info "Delete request for" del-user-id)
           (if (= (:org-id del-user) org-id) ; member of the same org
             (do (timbre/info "Deleting" del-user-id)
-                (user/delete-user! conn del-user-id)
+                (u/delete-user! conn del-user-id)
                 (ring/text-response "" 204)) ; All good
             (do (timbre/warn "Unauth'd delete request of" del-user-id)
                 (ring/error-response nil 401))))
@@ -331,7 +331,7 @@
             org-id   (-> decoded :claims :org-id)]
     (do (timbre/info "Refresh token request for user" user-id " of org" org-id)
       (pool/with-pool [conn (-> sys :db-pool :pool)]
-        (let [user (user/get-user conn user-id)]
+        (let [user (u/get-user conn user-id)]
           (if (and user (= org-id (:org-id user))) ; user still present in the DB and still member of the org
             (do 
               (timbre/info "Refreshing token" user-id)
@@ -358,7 +358,7 @@
       ;; request is valid, check if the user already exists
       (do (timbre/info "User create request for" email)
           (pool/with-pool [conn (-> sys :db-pool :pool)]
-            (if (user/get-user-by-email conn email) ; prior user?
+            (if (u/get-user-by-email conn email) ; prior user?
               (do (timbre/warn "User already exists with email" email)
                   (ring/error-response "User with email already exists." 409)) ; already exists
               (if (email/create-user! conn (email/->user body password)) ; doesn't exist, so create the user
@@ -399,7 +399,7 @@
           (if (= user-id req-user-id)
 
             (pool/with-pool [conn (-> sys :db-pool :pool)]
-              (if-let* [user (user/get-user conn req-user-id)]
+              (if-let* [user (u/get-user conn req-user-id)]
 
                 (if (= (:auth-source user) "email") ; email user?
                   
@@ -456,12 +456,12 @@
   (let [email (:email body)]
     (timbre/info "Reset request for" email)
     (pool/with-pool [conn (-> sys :db-pool :pool)]
-      (if-let* [user (user/get-user-by-email conn email)
+      (if-let* [user (u/get-user-by-email conn email)
                 user-id (:user-id user)]
         
         ;; User was found, provide a new token and make a reset SQS request
         (if-let* [token (str (java.util.UUID/randomUUID))
-                  _updated_user (user/update-user conn user-id {:one-time-token token})]
+                  _updated_user (u/update-user! conn user-id {:one-time-token token})]
         
           (do
             ;; Request a password reset email
@@ -493,7 +493,7 @@
                 _logo (:logo body)]
         (do (timbre/info "Invite request for" email)
           (pool/with-pool [conn (-> sys :db-pool :pool)]
-            (if-let* [user (user/get-user-by-email conn email)
+            (if-let* [user (u/get-user-by-email conn email)
                       user-id (:user-id user)
                       status (:status user)]
               ;; TODO user exists, but in a different org, need a 2nd org invite...
@@ -536,33 +536,37 @@
 (defn- email-auth
   "An attempt to auth, could be email/pass or one time use token (invite or reset password)."
   [sys req]
-  (let [request (keywordize-keys req)
-        headers (:headers request)
-        authorization (or (:authorization headers) (:Authorization headers))]
+  )
+  ; (let [request (keywordize-keys req)
+  ;       headers (:headers request)
+  ;       authorization (or (:authorization headers) (:Authorization headers))]
     
-    (if (s/starts-with? authorization "Basic ")
+  ;   (if (s/starts-with? authorization "Basic ")
     
-      (email-auth-response sys request) ; HTTP Basic Auth
+  ;     (email-auth-response sys request) ; HTTP Basic Auth
 
-      ; One time use token Auth
-      (if-let* [valid (s/starts-with? authorization "Bearer ")
-                token (last (s/split authorization #" "))]
+  ;     ; One time use token Auth
+  ;     (if-let* [valid (s/starts-with? authorization "Bearer ")
+  ;               token (last (s/split authorization #" "))]
         
-        ; Provided a token
-        (pool/with-pool [conn (-> sys :db-pool :pool)]
-          (timbre/info "Token auth request for" token)
-          (if-let* [user (user/get-user-by-token conn token)
-                    email (:email user)]
-            (do
-              (timbre/info "Authed" email "with token" token)
-              (user/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
-              (email-auth-response sys (assoc request :identity email)))
-            (do (timbre/warn "No email user for token" token)
-                (ring/error-response "" 401)))) ; token not found        
+  ;       ; Provided a token
+  ;       (pool/with-pool [conn (-> sys :db-pool :pool)]
+  ;         (timbre/info "Token auth request for" token)
+  ;         (if-let* [user (u/get-user-by-token conn token)
+  ;                   email (:email user)]
+  ;           (do
+  ;             (timbre/info "Authed" email "with token" token)
+  ;             ;; TODO no more replace-user!
+  ;             ;; Let's use `add-token`, `remove-token` instead.
+  ;             ;(u/replace-user! conn (:user-id user) (-> user (dissoc :one-time-token) (assoc :status "active")))
+  ;             )
+  ;             (email-auth-response sys (assoc request :identity email)))
+  ;           (do (timbre/warn "No email user for token" token)
+  ;               (ring/error-response "" 401)))) ; token not found        
         
-        ; No token
-        (do (timbre/warn "Invalid token auth request body")
-            (ring/error-response "Invalid request body." 400)))))) ; request not valid
+  ;       ; No token
+  ;       (do (timbre/warn "Invalid token auth request body")
+  ;           (ring/error-response "Invalid request body." 400)))))) ; request not valid
 
 (defn- email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."

@@ -38,7 +38,7 @@
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [amazonica "0.3.84"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
-    [open-company/lib "0.0.13-53e8c7d"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.1.0-f666a9d"] ; Library for OC projects https://github.com/open-company/open-company-lib
   ]
 
   :plugins [
@@ -103,9 +103,9 @@
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
                  '[oc.auth.config :as config]
-                 '[oc.auth.email :as email]
-                 '[oc.auth.slack :as slack]
-                 '[oc.auth.resources.user :as user]
+                 '[oc.auth.email-auth :as email]
+                 '[oc.auth.slack-auth :as slack]
+                 '[oc.auth.resources.user :as u]
                  '[oc.auth.resources.team :as team])
       ]
     }]

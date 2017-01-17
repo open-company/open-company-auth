@@ -1,0 +1,13 @@
+(ns oc.auth.db.migrations.create-users
+  (:require [rethinkdb.query :as r]
+            [oc.lib.rethinkdb.migrations :as m]
+            [oc.auth.config :as c]
+            [oc.auth.resources.user :as u]))
+
+(defn up [conn]
+  (println "Creating table: " u/table-name)
+  (println (m/create-table conn c/db-name u/table-name u/primary-key))
+  (println (m/create-index conn u/table-name "teams" {:multi true}))
+  (println (m/create-index conn u/table-name "one-time-tokens" {:multi true}))
+  (println (m/create-index conn u/table-name "email"))
+  true) ; return true on success

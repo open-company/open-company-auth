@@ -1,6 +1,7 @@
 (ns oc.auth.resources.team
   "Team stored in RethinkDB."
-  (:require [oc.lib.rethinkdb.common :as common]
+  (:require [clojure.walk :refer (keywordize-keys)]
+            [oc.lib.rethinkdb.common :as db-common]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]))
 
@@ -19,3 +20,77 @@
   :slack-orgs [lib-schema/NonBlankString]
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
+
+;; ----- Metadata -----
+
+(def reserved-properties
+  "Properties of a resource that can't be specified during a create and are ignored during an update."
+  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at})
+
+;; ----- Utility functions -----
+
+(defn- clean
+  "Remove any reserved properties from the user."
+  [team]
+  (apply dissoc team reserved-properties))
+
+;; ----- Team CRUD -----
+
+(schema/defn ^:always-validate ->team :- Team
+  "
+  Take a minimal map describing a team, the user-id of the initial admin, and an optional Slack org id
+  and 'fill the blanks' with any missing properties.
+  "
+  ([team-props initial-admin] (->team team-props initial-admin nil))
+
+  ([team-props initial-admin :- lib-schema/UniqueID slack-org :- (schema/maybe lib-schema/NonBlankString)] 
+  {:pre [(map? team-props)]}
+  (let [ts (db-common/current-timestamp)]
+    (-> team-props
+        keywordize-keys
+        clean
+        (assoc :team-id (db-common/unique-id))
+        (update :name #(or % ""))
+        (assoc :admins [initial-admin])
+        (assoc :email-domains [])
+        (update :slack-orgs #(or % []))
+        (assoc :created-at ts)
+        (assoc :updated-at ts)))))
+
+(schema/defn ^:always-validate create-team!
+  "Create a team in the system. Throws a runtime exception if user doesn't conform to the Team schema."
+  [conn team :- Team]
+  {:pre [(db-common/conn? conn)]}
+  (db-common/create-resource conn table-name team (db-common/current-timestamp)))
+
+(schema/defn ^:always-validate get-team :- (schema/maybe Team)
+  "Given the team-id of the team, retrieve it from the database, or return nil if it don't exist."
+  [conn team-id :- lib-schema/UniqueID]
+  {:pre [(db-common/conn? conn)]}
+  (db-common/read-resource conn table-name team-id))
+
+(defn delete-team!
+  "Given the team-id of the team, delete it and return `true` on success."
+  [conn team-id]
+  {:pre [(db-common/conn? conn)
+         (schema/validate lib-schema/UniqueID team-id)]}
+  ;; TODO remove team from users
+  (try
+    (db-common/delete-resource conn table-name team-id)
+    (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+
+;; ----- Collection of teams -----
+
+(defn list-teams
+  "List all teams."
+  [conn]
+  {:pre [(db-common/conn? conn)]}
+  (db-common/read-resources conn table-name [:team-id :name]))
+
+;; ----- Armageddon -----
+
+(defn delete-all-teams!
+  "Use with caution! Failure can result in partial deletes. Returns `true` if successful."
+  [conn]
+  {:pre [(db-common/conn? conn)]}
+  (db-common/delete-all-resources! conn table-name))

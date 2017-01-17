@@ -1,4 +1,4 @@
-(ns oc.auth.slack
+(ns oc.auth.slack-auth
   (:require [clojure.string :as s]
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
@@ -11,7 +11,7 @@
             [oc.auth.config :as config]
             [oc.auth.lib.store :as store]
             [oc.auth.lib.jwt :as jwt]
-            [oc.auth.resources.user :as user]))
+            [oc.auth.resources.user :as u]))
 
 (def prefix "slack-")
 
@@ -189,7 +189,7 @@
 ;; ----- Schema -----
 
 (def SlackUser 
-  (merge user/User {
+  (merge u/User {
    :status (schema/pred #(= "active" %))
    :auth-source (schema/pred #(= "slack" %))
    :owner schema/Bool

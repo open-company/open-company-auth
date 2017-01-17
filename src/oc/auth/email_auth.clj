@@ -1,29 +1,17 @@
-(ns oc.auth.email
+(ns oc.auth.email-auth
   (:require [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
             [buddy.hashers :as hashers]
             [oc.lib.hateoas :as hateoas]
-            [oc.auth.resources.user :as user]))
+            [oc.auth.resources.user :as u]))
 
 (def prefix "email-")
 
 (def ^:private crypto-algo "bcrypt+sha512$")
 
 ;; ----- Schema -----
-
-; active - verified email
-; pending - awaiting invite response
-; unverified - awaiting email verification
-(def statuses #{"pending" "unverified" "active"})
-
-(def EmailUser 
-  (merge user/User {
-   :email schema/Str
-   :password-hash schema/Str
-   :status (schema/pred #(statuses %))
-   :auth-source (schema/pred #(= "email" %))}))
 
 (def updateable-props #{:email :password :name :first-name :last-name :real-name :avatar})
 (def public-props [:email :avatar :name :first-name :last-name :real-name])
@@ -113,7 +101,7 @@
 (defn users-links
   ([conn org-id] (user-links org-id nil))
   ([conn org-id user-id]
-  (if-let [users (user/list-users conn org-id)]
+  (if-let [users (u/list-users conn org-id)]
     (map (partial user-links user-id) users)
     [])))
 
@@ -126,7 +114,7 @@
   (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512}))
 
 (defn authenticate? [conn email password]
-  (if-let [user (user/get-user-by-email conn email)]
+  (if-let [user (u/get-user-by-email conn email)]
     (password-match? password (:password-hash user))
     false))
 
@@ -135,7 +123,7 @@
 (defn- short-uuid []
   (str prefix (subs (str (java.util.UUID/randomUUID)) 9 18)))
 
-(schema/defn ->user :- EmailUser
+(schema/defn ->user :- u/User
   "Take a minimal map describing a user, and a password and 'fill the blanks'"
   
   ([user-map password] (->user user-map "unverified" password)) ; default status is email unverified
@@ -144,7 +132,7 @@
   {:pre [(map? user-map)
          (string? password)
          (not (s/blank? password))
-         (statuses status)]}
+         (u/statuses status)]}
   (let [props (-> user-map
                   keywordize-keys
                   (update :user-id #(or % (short-uuid)))
@@ -163,13 +151,13 @@
 
 (schema/defn ^:always-validate create-user!
   "Given a map of user properties, persist it to the database."
-  [conn user :- EmailUser]
-  (user/create-user! conn user))
+  [conn user :- u/User]
+  (u/create-user! conn user))
 
 ;; ----- Existing user functions -----
 
 (defn reset-password! [conn user-id password]
-  (user/update-user conn user-id {:password-hash (password-hash password)}))
+  (u/update-user! conn user-id {:password-hash (password-hash password)}))
 
 (defn update-user
   "Given a map of user and a map of partial updates, update the user."
@@ -194,8 +182,8 @@
                                     (dissoc :password))
                                   name-map)]
         
-    (schema/validate EmailUser (merge user password-map))
-    (user/update-user conn (:user-id user) password-map)))
+    (schema/validate u/User (merge user password-map))
+    (u/update-user! conn (:user-id user) password-map)))
 
 (comment 
 
@@ -211,17 +199,17 @@
   (def u (read-string (slurp "./opt/identities/cioran.edn")))
   (email/create-user! conn (email/->user u "unverified" "S$cr$ts"))
 
-  (user/get-user-by-email conn (:email u))
+  (u/get-user-by-email conn (:email u))
   (email/authenticate? conn (:email u) "S$cr$ts")
   (email/reset-password! (:user-id u) "$ecret$")
   (email/authenticate? conn (:email u) "S$cr$ts")
   (email/authenticate? conn (:email u) "$ecret$")
-  (user/delete-user! conn (:user-id u))
+  (u/delete-user! conn (:user-id u))
 
-  (user/list-users conn (:org-id u))
+  (u/list-users conn (:org-id u))
   (email/user-links u)
   (email/users-links conn (:org-id u))  
 
-  (user/delete-all-users! conn)
+  (u/delete-all-users! conn)
 
 )
