@@ -1,6 +1,7 @@
 (ns oc.auth.resources.team
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
+            [if-let.core :refer (if-let*)]
             [oc.lib.rethinkdb.common :as db-common]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]))
@@ -78,6 +79,68 @@
   (try
     (db-common/delete-resource conn table-name team-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+
+;; ----- Team's set operations -----
+
+(schema/defn ^:always-validate add-admin :- (schema/maybe Team)
+  "
+  Given the team-id of the team, and the user-id of the user, add the user as an admin of the team if it exists.
+  Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn team-id :- lib-schema/UniqueID user-id :- lib-schema/UniqueID]
+  {:pre [(db-common/conn? conn)]}
+  (if-let* [team (get-team conn team-id)]
+    (db-common/add-to-set conn table-name team-id "admins" user-id)))
+
+(schema/defn ^:always-validate remove-admin :- (schema/maybe Team)
+  "
+  Given the team-id of the team, and the user-id of the user, remove the user as an admin of the team if it exists.
+  Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn team-id :- lib-schema/UniqueID user-id :- lib-schema/UniqueID]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [team (get-team conn team-id)]
+    (db-common/remove-from-set conn table-name team-id "admins" user-id)))
+
+(schema/defn ^:always-validate add-email-domain :- (schema/maybe Team)
+  "
+  Given the team-id of the team, and an email domain, add the email domain to the team if it exists.
+  Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankString]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [team (get-team conn team-id)]
+    (db-common/add-to-set conn table-name team-id "email-domains" email-domain)))
+
+(schema/defn ^:always-validate remove-email-domain :- (schema/maybe Team)
+  "
+  Given the team-id of the team, and an email domain, remove the email domain from the team if it exists.
+  Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankString]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [team (get-team conn team-id)]
+    (db-common/remove-from-set conn table-name team-id "email-domains" email-domain)))
+
+(schema/defn ^:always-validate add-slack-org :- (schema/maybe Team)
+  "
+  Given the team-id of the team, and a slack org, add the slack org to the team if it exists.
+  Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankString]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [team (get-team conn team-id)]
+    (db-common/add-to-set conn table-name team-id "slack-orgs" slack-org)))
+
+(schema/defn ^:always-validate remove-slack-org :- (schema/maybe Team)
+  "
+  Given the team-id of the team, and a slack org, remove the slack org from the team if it exists.
+  Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankString]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [team (get-team conn team-id)]
+    (db-common/remove-from-set conn table-name team-id "slack-orgs" slack-org)))
 
 ;; ----- Collection of teams -----
 
