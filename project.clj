@@ -19,6 +19,7 @@
     [ring/ring-devel "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
     [compojure "1.6.0-beta3"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
+    [liberator "0.14.1"] ; WebMachine (REST API server) port to Clojure https://github.com/clojure-liberator/liberator
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
     [com.stuartsierra/component "0.3.2"] ; Component Lifecycle
