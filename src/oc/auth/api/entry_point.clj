@@ -7,24 +7,26 @@
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
+            [oc.auth.representations.user :as user-rep]
             [oc.auth.representations.email-auth :as email-auth]
             [oc.auth.representations.slack-auth :as slack-auth]))
 
 ;; ----- Representations -----
 
 (defn- render-entry-point [conn {:keys [user] :as _ctx}]
+
   (if user
-    ;; auth'd, give settings specific to their authentication source
-    (json/generate-string {})
-    ;; not auth'd, give them both settings
+    
+    ;; auth'd settings
+    (json/generate-string
+      (user-rep/authed-settings (:user-id user))
+      {:pretty true})
+    
+    ;; not auth'd, give them both email and Slack settings
     (json/generate-string
       {:links (concat email-auth/auth-settings
                       slack-auth/auth-settings)}
       {:pretty true})))
-
-;     (let [authed-settings (if (= (-> decoded :claims :auth-source) "email")
-;                             (email-auth/authed-settings org-id user-id)
-;                             (slack-auth/authed-settings org-id user-id))]
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
