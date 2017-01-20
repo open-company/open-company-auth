@@ -15,7 +15,7 @@
 
 (def Team {
   :team-id lib-schema/UniqueID
-  (schema/optional-key :name) schema/Str
+  :name schema/Str
   :admins [lib-schema/UniqueID]
   :email-domains [lib-schema/NonBlankString]
   :slack-orgs [lib-schema/NonBlankString]

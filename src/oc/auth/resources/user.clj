@@ -1,8 +1,10 @@
 (ns oc.auth.resources.user
   "User stored in RethinkDB."
-  (:require [clojure.walk :refer (keywordize-keys)]
+  (:require [clojure.string :as s]
+            [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
+            [buddy.hashers :as hashers]
             [oc.lib.rethinkdb.common :as db-common]
             [oc.lib.schema :as lib-schema]
             [oc.auth.resources.team :as team]))
@@ -14,9 +16,9 @@
 
 ;; ----- Schema -----
 
-; active - Slack auth or verified email
-; pending - awaiting invite response
-; unverified - awaiting email verification
+; pending - awaiting invite response or email verification, can't login
+; unverified - awaiting email verification, but can login
+; active - Slack auth'd or verified email or invite
 (def statuses #{"pending" "unverified" "active"})
 
 (def User {
@@ -40,16 +42,45 @@
 
 ;; ----- Utility functions -----
 
+(defn valid-email? [email-address]
+  "Return true if this is a valid HTML 5 email address according to the W3C HTML 5 regex, otherwise false."
+  (if (re-matches #"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$" email-address)
+    true
+    false))
+
+(defn valid-password? [password]
+  "Return true if the password is valid, false if not."
+  (and (string? password)
+       (>= (count password) 5)))
+
 (defn- clean
   "Remove any reserved properties from the user."
   [user]
   (apply dissoc user reserved-properties))
 
+
+;; ----- Password based authentication -----
+
+(def ^:private crypto-algo "bcrypt+sha512$")
+
+(defn- password-hash [password]
+  (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
+
+(defn- password-match? [password password-hash]
+  (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512}))
+
+(declare get-user-by-email)
+(defn authenticate? [conn email password]
+  (if-let [user (get-user-by-email conn email)]
+    (password-match? password (:password-hash user))
+    false))
+
 ;; ----- User CRUD -----
 
 (schema/defn ^:always-validate ->user :- User
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
-  [user-props]
+  ([user-props password :- lib-schema/NonBlankString] (assoc (->user user-props) :password-hash (password-hash password)))
+  ([user-props]
   {:pre [(map? user-props)]}
   (let [ts (db-common/current-timestamp)]
     (-> user-props
@@ -63,13 +94,15 @@
         (update :avatar-url #(or % ""))
         (assoc :status "pending")
         (assoc :created-at ts)
-        (assoc :updated-at ts))))
+        (assoc :updated-at ts)))))
 
 (schema/defn ^:always-validate create-user!
   "Create a user in the system. Throws a runtime exception if user doesn't conform to the User schema."
   [conn user :- User]
   {:pre [(db-common/conn? conn)]}
-  (db-common/create-resource conn table-name user (db-common/current-timestamp)))
+  (if-let* [team (team/create-team! conn (team/->team {} (:user-id user)))
+           teams [(:team-id team)]]
+    (db-common/create-resource conn table-name (assoc user :teams teams) (db-common/current-timestamp))))
 
 (schema/defn ^:always-validate get-user :- (schema/maybe User)
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."

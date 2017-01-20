@@ -18,6 +18,7 @@
     [defun "0.3.0-RC1"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     [ring/ring-devel "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
+    [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [compojure "1.6.0-beta3"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [liberator "0.14.1"] ; WebMachine (REST API server) port to Clojure https://github.com/clojure-liberator/liberator
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
@@ -31,15 +32,16 @@
     [buddy "1.2.0"] ; Security library https://github.com/funcool/buddy
     [buddy/buddy-auth "1.3.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
-    [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
-    [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [amazonica "0.3.84"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
     [open-company/lib "0.1.1-dc1d942"] ; Library for OC projects https://github.com/open-company/open-company-lib
+
+
+    [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
   ]
 
   :plugins [
@@ -70,6 +72,7 @@
     :dev [:qa {
       :env ^:replace {
         :db-name "open_company_auth_dev"
+        :liberator-trace "true" ; liberator debug data in HTTP response headers
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
         :open-company-slack-client-id "CHANGE-ME"
@@ -104,8 +107,6 @@
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
                  '[oc.auth.config :as config]
-                 '[oc.auth.email-auth :as email]
-                 '[oc.auth.slack-auth :as slack]
                  '[oc.auth.resources.user :as u]
                  '[oc.auth.resources.team :as team])
       ]

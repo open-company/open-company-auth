@@ -1,5 +1,5 @@
 ;; productive set of development namespaces
-(require '[oc.auth.lib.jwt :as jwt] :reload)
+(require '[oc.lib.jwt :as jwt] :reload)
 (require '[oc.auth.app :as app] :reload)
 (require '[oc.auth.slack-auth :as slack] :reload)
 (require '[oc.auth.email-auth :as email] :reload)

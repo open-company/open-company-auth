@@ -17,7 +17,9 @@
     [oc.lib.sentry-appender :as sa]
     [oc.auth.lib.ring :as ring]
     [oc.auth.components :as components]
-    [oc.auth.config :as c]))
+    [oc.auth.config :as c]
+    [oc.auth.api.entry-point :as entry-point-api]
+    [oc.auth.api.users :as users-api]))
 
 ;; ----- Unhandled Exceptions -----
 
@@ -39,8 +41,8 @@
     (GET "/ping" [] (ring/text-response  "OpenCompany auth server: OK" 200)) ; Up-time monitor
     (GET "/---error-test---" req (/ 1 0))
     (GET "/---500-test---" req {:status 500 :body "Testing bad things."})
-    ;(entry-api/entry-routes sys)
-    ))
+    (entry-point-api/routes sys)
+    (users-api/routes sys)))
 
 ;; ----- System Startup -----
 
@@ -48,6 +50,7 @@
 (defn app [sys]
   (cond-> (routes sys)
     true          wrap-params
+    c/liberator-trace (wrap-trace :header :ui)
     true          (wrap-cors #".*")
     ;true          (wrap-authentication (backends/basic {:realm "oc-auth"
     ;                                                    :authfn (partial email-basic-auth sys)}))
@@ -78,6 +81,7 @@
     "Database: " c/db-name "\n"
     "Database pool: " c/db-pool-size "\n"
     "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
+    "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
     "Sentry: " c/dsn "\n\n"
     (when c/intro? "Ready to serve...\n"))))
