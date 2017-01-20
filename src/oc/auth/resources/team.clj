@@ -1,7 +1,7 @@
 (ns oc.auth.resources.team
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
-            [if-let.core :refer (if-let*)]
+            [if-let.core :refer (when-let*)]
             [oc.lib.rethinkdb.common :as db-common]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]))
@@ -89,7 +89,7 @@
   "
   [conn team-id :- lib-schema/UniqueID user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (if-let* [team (get-team conn team-id)]
+  (when-let* [team (get-team conn team-id)]
     (db-common/add-to-set conn table-name team-id "admins" user-id)))
 
 (schema/defn ^:always-validate remove-admin :- (schema/maybe Team)

@@ -1,6 +1,7 @@
 (ns oc.auth.api.users
   "Liberator API for users resource."
-  (:require [taoensso.timbre :as timbre]
+  (:require [if-let.core :refer (when-let*)]
+            [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET POST)]
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
@@ -21,15 +22,31 @@
     (do (timbre/error "Failed creating user" email)
       false)))
 
+(defn email-basic-auth
+  "HTTP Basic Auth function (email/pass) for ring middleware."
+  [sys req auth-data]
+  (when-let* [email (:username auth-data)
+              password (:password auth-data)]
+    (pool/with-pool [conn (-> sys :db-pool :pool)] 
+      (if (user-res/authenticate? conn email password)
+        (do 
+          (timbre/info "Authed:" email)
+          email)
+        (do
+          (timbre/info "Failed to auth:" email) 
+          false)))))
+
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 (defresource user-auth [conn]
-  (api-common/open-company-anonymous-resource config/passphrase)
 
   :available-media-types [jwt/media-type]
   :allowed-methods [:options :get]
 
-)
+  :authorized? (fn [ctx] (-> ctx :request :identity))
+
+  :handle-ok (fn [ctx] (user-rep/auth-response (user-res/get-user-by-email conn (-> ctx :request :identity))
+                          :email true))) ; respond w/ JWToken and location
 
 (defresource user-create [conn]
   (api-common/open-company-anonymous-resource config/passphrase)
