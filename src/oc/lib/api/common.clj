@@ -113,6 +113,11 @@
 
 ;; ----- Authentication and Authorization -----
 
+(defn authenticated?
+  "Return true if the request contains a valid JWToken"
+  [ctx]
+  (and (:jwtoken ctx) (:user ctx)))
+
 (defn- read-token
   "Read supplied jwtoken from headers.
 
@@ -132,6 +137,11 @@
   [ctx]
   (boolean (or (nil? (:jwtoken ctx)) (:jwtoken ctx))))
 
+(defn allow-authenticated
+  "Allow only if a valid JWToken is provided."
+  [ctx]
+  (authenticated? ctx))
+
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 ;; verify validity of JWToken if it's provided, but it's not required
@@ -140,6 +150,14 @@
   :authorized? allow-anonymous
   :handle-unauthorized (fn [_] (unauthorized-response))
   :handle-forbidden  (fn [ctx] (if (:jwtoken ctx) (forbidden-response) (unauthorized-response)))})
+
+;; verify validity and presence of required JWToken
+(defn authenticated-resource [passphrase] {
+  :initialize-context (fn [ctx] (read-token (get-in ctx [:request :headers]) passphrase))
+  :authorized? (fn [ctx] (authenticated? ctx))
+  :handle-not-found (fn [_] (missing-response))
+  :handle-unauthorized (fn [_] (unauthorized-response))
+  :handle-forbidden (fn [_] (forbidden-response))})
 
 (def open-company-resource {
   :available-charsets [UTF8]
@@ -164,3 +182,6 @@
 
 (defn open-company-anonymous-resource [passphrase]
   (merge open-company-resource (anonymous-resource passphrase)))
+
+(defn open-company-authenticated-resource [passphrase]
+  (merge open-company-resource (authenticated-resource passphrase)))

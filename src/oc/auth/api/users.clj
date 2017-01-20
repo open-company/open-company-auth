@@ -1,5 +1,5 @@
 (ns oc.auth.api.users
-  "Liberator API for users resource."
+  "Liberator API for users actions (create, email auth, password reset)."
   (:require [if-let.core :refer (when-let*)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET POST)]
