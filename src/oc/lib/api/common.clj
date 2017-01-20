@@ -119,10 +119,10 @@
    If a valid token is supplied return a map containing :jwtoken and associated :user.
    If invalid token is supplied return {:jwtoken false}.
    If no Authorization headers are supplied return nil."
-  [headers]
+  [headers passphrase]
   (if-let [authorization (or (get headers "Authorization") (get headers "authorization"))]
     (let [jwtoken (last (s/split authorization #" "))]
-      (if (jwt/check-token jwtoken)
+      (if (jwt/check-token jwtoken passphrase)
         {:jwtoken jwtoken
          :user (:claims (jwt/decode jwtoken))}
         {:jwtoken false}))))
@@ -135,8 +135,8 @@
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 ;; verify validity of JWToken if it's provided, but it's not required
-(def anonymous-resource {
-  :initialize-context (fn [ctx] (read-token (get-in ctx [:request :headers])))
+(defn anonymous-resource [passphrase] {
+  :initialize-context (fn [ctx] (read-token (get-in ctx [:request :headers]) passphrase))
   :authorized? allow-anonymous
   :handle-unauthorized (fn [_] (unauthorized-response))
   :handle-forbidden  (fn [ctx] (if (:jwtoken ctx) (forbidden-response) (unauthorized-response)))})
@@ -162,4 +162,5 @@
   :can-put-to-missing? (fn [_] false)
   :conflict? (fn [_] false)})
 
-(def open-company-anonymous-resource (merge open-company-resource anonymous-resource))
+(defn open-company-anonymous-resource [passphrase]
+  (merge open-company-resource (anonymous-resource passphrase)))

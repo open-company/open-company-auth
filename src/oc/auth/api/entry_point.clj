@@ -6,6 +6,7 @@
             [oc.lib.rethinkdb.pool :as pool]
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
+            [oc.auth.config :as config]
             [oc.auth.representations.email-auth :as email-auth]
             [oc.auth.representations.slack-auth :as slack-auth]))
 
@@ -28,7 +29,7 @@
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 (defresource entry-point [conn]
-  api-common/anonymous-resource
+  (api-common/anonymous-resource config/passphrase)
 
   :allowed-methods [:options :get]
   :allowed? (fn [ctx] (api-common/allow-anonymous ctx))

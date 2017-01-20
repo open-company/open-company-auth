@@ -1,5 +1,6 @@
 (ns oc.auth.representations.email-auth
   (:require [oc.lib.hateoas :as hateoas]
+            [oc.lib.jwt :as jwt]
             [oc.auth.representations.user :as user-rep]))
             
 ; (def prefix "email-")
@@ -21,8 +22,8 @@
 (def auth-link (hateoas/link-map "authenticate" 
                                  hateoas/GET
                                  "/users/auth"
-                                 "application/jwt"
-                                 :source "email"))
+                                 jwt/media-type
+                                 :auth-source "email"))
 
 ; (def refresh-link (hateoas/link-map "refresh" 
 ;                                     hateoas/GET
@@ -33,13 +34,13 @@
                                  hateoas/POST
                                  "/users/"
                                  user-rep/media-type
-                                 :source "email"))
+                                 :auth-source "email"))
 
 (def reset-link (hateoas/link-map "reset-password"
                                   hateoas/POST
                                   "/users/reset"
                                   "text/x-email"
-                                  :source "email"))
+                                  :auth-source "email"))
 
 ; (defn invite-link [org-id] (hateoas/link-map "invite" 
 ;                                              hateoas/POST

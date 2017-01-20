@@ -41,7 +41,7 @@
     hateoas/GET
     (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
     "application/jwt"
-    :source "slack"))
+    :auth-source "slack"))
 
 ; (def refresh-link (hateoas/link-map "refresh" 
 ;                                      hateoas/GET

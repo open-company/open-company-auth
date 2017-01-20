@@ -5,7 +5,9 @@
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
             [oc.lib.rethinkdb.pool :as pool]
+            [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
+            [oc.auth.config :as config]
             [oc.auth.representations.user :as user-rep]
             [oc.auth.resources.user :as user-res]))
 
@@ -21,10 +23,18 @@
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
-(defresource user-create [conn]
-  api-common/open-company-anonymous-resource
+(defresource user-auth [conn]
+  (api-common/open-company-anonymous-resource config/passphrase)
 
-    :available-media-types [user-rep/media-type]
+  :available-media-types [jwt/media-type]
+  :allowed-methods [:options :get]
+
+)
+
+(defresource user-create [conn]
+  (api-common/open-company-anonymous-resource config/passphrase)
+
+    :available-media-types [jwt/media-type]
     :known-content-type? (fn [ctx] (api-common/known-content-type? ctx user-rep/media-type))
     :allowed-methods [:options :post]
 
@@ -54,6 +64,11 @@
       (OPTIONS "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
       (POST "/users" [] (pool/with-pool [conn db-pool] (user-create conn)))
       (POST "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
+      ;; email user authentication
+      (OPTIONS "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
+      (OPTIONS "/users/auth/" [] (pool/with-pool [conn db-pool] (user-auth conn)))
+      (GET "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
+      (GET "/users/auth/" [] (pool/with-pool [conn db-pool] (user-auth conn)))
       ;; password reset request
       ; (OPTIONS "/users/reset" [] (pool/with-pool [conn db-pool] (password-reset conn)))
       ; (OPTIONS "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn)))

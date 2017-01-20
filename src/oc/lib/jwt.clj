@@ -6,6 +6,8 @@
             [clojure.string :as string]
             [if-let.core :refer (when-let*)]))
 
+(def media-type "application/jwt")
+
 (defn expired?
   "true/false if the JWToken is expired"
   [jwt-claims]
