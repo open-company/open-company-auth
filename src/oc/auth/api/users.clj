@@ -43,7 +43,8 @@
   :available-media-types [jwt/media-type]
   :allowed-methods [:options :get]
 
-  :authorized? (fn [ctx] (-> ctx :request :identity))
+  :authorized? (by-method {:options true
+                           :get (fn [ctx] (-> ctx :request :identity))})
 
   :handle-ok (fn [ctx] (user-rep/auth-response (user-res/get-user-by-email conn (-> ctx :request :identity))
                           :email true))) ; respond w/ JWToken and location
