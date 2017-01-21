@@ -40,8 +40,9 @@
 
 (defresource user-auth [conn]
 
-  :available-media-types [jwt/media-type]
   :allowed-methods [:options :get]
+
+  :available-media-types [jwt/media-type]
 
   :authorized? (by-method {:options true
                            :get (fn [ctx] (-> ctx :request :identity))})
@@ -52,9 +53,12 @@
 (defresource user-create [conn]
   (api-common/open-company-anonymous-resource config/passphrase)
 
+    :allowed-methods [:options :post]
+
     :available-media-types [jwt/media-type]
     :known-content-type? (fn [ctx] (api-common/known-content-type? ctx user-rep/media-type))
-    :allowed-methods [:options :post]
+
+    :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
 
     :processable? (by-method {
       :options true
@@ -65,7 +69,6 @@
 
     :post-to-existing? false
     :put-to-existing? true ; needed for a 409 conflict
-    :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
     :conflict? (fn [ctx] (:existing-user ctx))
     :handle-conflict (ring-response {:status 409})
     

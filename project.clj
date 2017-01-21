@@ -38,7 +38,7 @@
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [amazonica "0.3.84"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
-    [open-company/lib "0.1.2-896ef73"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.1.3-920689d"] ; Library for OC projects https://github.com/open-company/open-company-lib
 
 
     [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro

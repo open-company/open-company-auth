@@ -138,7 +138,7 @@
          (map? user)]}
   (if-let [original-user (get-user conn user-id)]
     (let [updated-user (merge original-user (clean user))]
-      (schema/validate updated-user User)
+      (schema/validate User updated-user)
       (db-common/update-resource conn table-name primary-key original-user updated-user))))
 
 (defn delete-user!
