@@ -11,8 +11,8 @@
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
-            [oc.auth.representations.user :as user-rep]
-            [oc.auth.resources.user :as user-res]))
+            [oc.auth.resources.user :as user-res]
+            [oc.auth.representations.user :as user-rep]))
 
 ;; ----- Actions -----
 
@@ -67,6 +67,7 @@
   :allowed-methods [:options :get]
 
   :available-media-types [jwt/media-type]
+  :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
   :authorized? (by-method {:options true
                            :get (fn [ctx] (-> ctx :request :identity))})
@@ -76,11 +77,12 @@
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
-  (api-common/open-company-anonymous-resource config/passphrase)
+  (api-common/open-company-anonymous-resource config/passphrase) ; verify validity and presence of required JWToken
 
     :allowed-methods [:options :post]
 
     :available-media-types [jwt/media-type]
+    :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
     :known-content-type? (by-method {
       :options true
@@ -103,13 +105,14 @@
     :put! (fn [ctx] (create-user conn (:data ctx))) ; POST ends up handled here so we can have a 409 conflict
     :handle-created (fn [ctx] (user-rep/auth-response (:user ctx) :email true))) ; respond w/ JWToken and location
 
-;; A resource for RUD operations on a particular user
+;; A resource for operations on a particular user
 (defresource user [conn user-id]
-  (api-common/open-company-authenticated-resource config/passphrase)
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :get :patch :delete]
 
   :available-media-types [user-rep/media-type]
+  :handle-not-acceptable (api-common/only-accept 406 user-rep/media-type)
   
   :known-content-type? (by-method {
                           :options true
@@ -156,7 +159,7 @@
       ; (OPTIONS "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn)))
       ; (POST "/users/reset" [] (pool/with-pool [conn db-pool] (password-reset conn)))
       ; (POST "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn))))
-      ;; user RUD
+      ;; user operations
       (OPTIONS "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (GET "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (PATCH "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))

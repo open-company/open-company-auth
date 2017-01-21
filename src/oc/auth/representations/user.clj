@@ -20,9 +20,9 @@
   ([user-id :guard string?] (str "/users/" user-id))
   ([user :guard map?] (url (:user-id user))))
 
-(defn self-link [user-id] (hateoas/self-link (url user-id) media-type))
+(defn- self-link [user-id] (hateoas/self-link (url user-id) media-type))
 
-(defn user-link [user-id] (hateoas/link-map "user" hateoas/GET (url user-id) media-type))
+(defn- user-link [user-id] (hateoas/link-map "user" hateoas/GET (url user-id) media-type))
 
 (defn- partial-update-link [user-id] (hateoas/partial-update-link (url user-id) media-type))
 
