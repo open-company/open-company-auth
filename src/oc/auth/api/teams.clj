@@ -1,19 +1,33 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
-  (:require [compojure.core :as compojure :refer (defroutes OPTIONS GET PATCH POST DELETE)]
+  (:require [if-let.core :refer (when-let*)]
+            [compojure.core :as compojure :refer (defroutes OPTIONS GET PATCH POST DELETE)]
             [liberator.core :refer (defresource by-method)]
             [oc.lib.schema :as lib-schema]
             [oc.lib.rethinkdb.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
+            [oc.auth.resources.user :as user-res]
             [oc.auth.representations.team :as team-rep]))
+
+;; ----- Actions -----
+
+(defn teams-for-user
+  "Return a sequence of teams that the user, specified by their user-id, is a member of."
+  [conn user-id]
+  (when-let* [user (user-res/get-user conn user-id)
+            teams (:teams user)]
+    (team-res/get-teams conn teams [:admins :created-at :updated-at])))
 
 ;; ----- Validations -----
 
-(defn allow-team-admins [conn {user :user} team-id]
-  true
-  )
+(defn allow-team-admins
+  "Return true if the JWToken user is an admin of the specified team."
+  [conn {user-id :user-id} team-id]
+  (if-let [team (team-res/get-team conn team-id)]
+    ((set (:admins team)) user-id)
+    false))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
@@ -26,7 +40,8 @@
   :available-media-types [team-rep/collection-media-type]
   :handle-not-acceptable (api-common/only-accept 406 team-rep/collection-media-type)
 
-  )
+  :handle-ok (fn [ctx] (let [user-id (-> ctx :user :user-id)]
+                        (team-rep/render-team-list (teams-for-user conn user-id) user-id))))
 
 ;; A resource for operations on a particular team
 (defresource team [conn team-id]
@@ -37,7 +52,7 @@
   :available-media-types [team-rep/media-type]
   :handle-not-acceptable (api-common/only-accept 406 team-rep/media-type)
   
-  :allowed? (fn [ctx] (allow-team-admins conn ctx team-id))
+  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         {:existing-team team}
@@ -45,9 +60,7 @@
 
   :delete! (fn [_] (team-res/delete-team! conn team-id))
 
-  :handle-ok (fn [ctx] (team-rep/render-team (:existing-team ctx)))
-
-  )
+  :handle-ok (fn [ctx] (team-rep/render-team (:existing-team ctx))))
 
 ;; ----- Routes -----
 

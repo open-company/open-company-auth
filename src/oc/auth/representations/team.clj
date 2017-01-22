@@ -7,7 +7,7 @@
 (def media-type "application/vnd.open-company.team.v1+json")
 (def collection-media-type "application/vnd.collection+vnd.open-company.team+json;version=1")
 
-(def representation-props [:team-id :name :admins :email-domains :slack-orgs :created-at :updated-at])
+(def representation-props [:team-id :name :created-at :updated-at])
 
 (defun url
   ([team-id :guard string?] (str "/teams/" team-id))
@@ -17,14 +17,18 @@
 
 (defn- delete-link [team-id] (hateoas/delete-link (url team-id)))
 
-(defn- team-links [team]
+(defn- team-links
+  ""
+  [team & self-name]
   (let [team-id (:team-id team)]
     (assoc team :links [
-      (self-link team-id)
+      (if self-name 
+        (hateoas/link-map self-name hateoas/GET (url team-id) media-type)
+        (self-link team-id))
       (delete-link team-id)])))
 
 (defn render-team
-  "Create a JSON representation of the team for the REST API"
+  "Given a team map, create a JSON representation of the team for the REST API."
   [team]
   (let [team-id (:team-id team)]
     (json/generate-string
@@ -32,3 +36,19 @@
         (select-keys representation-props)
         (team-links))
       {:pretty true})))
+
+(defn render-team-list
+  "
+  Given a user and a sequence of team maps, create a JSON representation of a list of teams for the REST API.
+
+  If the user is an admin for the team, the team representation contains links.
+  "
+  [teams user-id]
+  (json/generate-string
+    {:collection {:version hateoas/json-collection-version
+                  :href "/teams"
+                  :links [(hateoas/self-link "/teams" collection-media-type)]
+                  :teams (->> teams
+                          (map #(if ((set (:admins %)) user-id) (team-links % :item) %))
+                          (map #(dissoc % :admins)))}}
+    {:pretty true}))

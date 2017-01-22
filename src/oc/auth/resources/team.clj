@@ -145,10 +145,33 @@
 ;; ----- Collection of teams -----
 
 (defn list-teams
-  "List all teams."
-  [conn]
+  "List all teams, returning `team-id` and `name`. Additional fields can be optionally specified."
+  ([conn]
   {:pre [(db-common/conn? conn)]}
   (db-common/read-resources conn table-name [:team-id :name]))
+
+  ([conn additional-fields]
+  {:pre [(db-common/conn? conn)
+        (sequential? additional-fields)
+        (every? #(or (string? %) (keyword? %)) additional-fields)]}
+  (db-common/read-resources conn table-name (concat [:team-id :name] additional-fields))))
+
+(defn get-teams
+  "
+  Get teams by a sequence of team-id's, returning `team-id` and `name`. 
+  Additional fields can be optionally specified.
+  "
+  ([conn team-ids]
+  {:pre [(db-common/conn? conn)
+         (schema/validate [lib-schema/UniqueID] team-ids)]}
+  (db-common/read-resources-by-primary-keys conn table-name team-ids [:team-id :name]))
+
+  ([conn team-ids additional-fields]
+  {:pre [(db-common/conn? conn)
+         (schema/validate [lib-schema/UniqueID] team-ids)
+         (sequential? additional-fields)
+        (every? #(or (string? %) (keyword? %)) additional-fields)]}
+  (db-common/read-resources-by-primary-keys conn table-name team-ids (concat [:team-id :name] additional-fields))))
 
 ;; ----- Armageddon -----
 

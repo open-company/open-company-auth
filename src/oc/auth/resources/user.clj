@@ -199,13 +199,13 @@
   "Given an optional team-id, return a list of users."
   ([conn]
   {:pre [(db-common/conn? conn)]}
-  (db-common/read-resources conn table-name [:user-id :email :status :first-name :last-name :avatar-url]))
+  (db-common/read-resources conn table-name [:user-id :email :status :first-name :last-name :avatar-url :teams]))
 
   ([conn team-id]
   {:pre [(db-common/conn? conn)
          (schema/validate lib-schema/UniqueID team-id)]}  
   (db-common/read-resources-in-order conn table-name :teams team-id
-    [:user-id :email :status :first-name :last-name :avatar-url])))
+    [:user-id :email :status :first-name :last-name :avatar-url :teams])))
 
 ;; ----- Armageddon -----
 
