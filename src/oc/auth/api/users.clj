@@ -1,6 +1,6 @@
 (ns oc.auth.api.users
   "Liberator API for user resources."
-  (:require [if-let.core :refer (when-let*)]
+  (:require [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET PATCH POST DELETE)]
             [liberator.core :refer (defresource by-method)]
@@ -11,6 +11,7 @@
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
+            [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.user :as user-rep]))
 
@@ -45,9 +46,16 @@
 
 ;; ----- Validations -----
 
-(defn- allow-user-and-team-admins [conn {user :user} user-id]
-  (or (= user-id (:user-id user)) ; JWToken user-id matches URL user-id, user accessing themself
-    false)) ; TODO admin of a team the user is on
+(defn- allow-user-and-team-admins [conn {accessing-user-id :user-id} accessed-user-id]
+  (or
+    ;; JWToken user-id matches URL user-id, user accessing themself
+    (= accessing-user-id accessed-user-id)
+
+    ;; check if the accessing user is an admin of any of the accessed user's teams
+    (if-let* [accessed-user (user-res/get-user conn accessed-user-id)
+              teams (team-res/get-teams conn (:teams accessed-user) [:admins])]
+      (some #((set (:admins %)) accessing-user-id) teams)
+      false)))
 
 (defn- processable-patch-req? [conn {data :data} user-id]
   (if-let [user (user-res/get-user conn user-id)]
@@ -120,7 +128,7 @@
                           :patch (fn [ctx] (api-common/known-content-type? ctx user-rep/media-type))
                           :delete true})
 
-  :allowed? (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
+  :allowed? (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
 
   :processable? (by-method {
     :get true
