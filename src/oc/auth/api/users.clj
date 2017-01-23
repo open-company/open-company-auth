@@ -147,6 +147,26 @@
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))}))
 
+;; A resource for refreshing JWTokens
+(defresource token [conn user-id]
+  (api-common/open-company-authenticated-resource config/passphrase)
+  
+  :allowed-methods [:options :get]
+
+  :available-media-types [jwt/media-type]
+  :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
+
+  :allowed? (by-method {
+      :options true
+      :get (fn [ctx] (= user-id (-> ctx :user :user-id)))})
+
+  :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))]
+                        {:existing-user user}
+                        false))
+
+  :handle-ok (fn [ctx] (user-rep/auth-response (:existing-user ctx)
+                          :email true))) ; respond w/ JWToken and location
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -173,8 +193,7 @@
       (PATCH "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (DELETE "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       ;; token refresh request
-      ; (OPTIONS "/users/:user-id/refresh-token" [] (pool/with-pool [conn db-pool] (token conn)))
-      ; (OPTIONS "/users/:user-id/refresh-token/" [] (pool/with-pool [conn db-pool] (token conn)))
-      ; (GET "/users/:user-id/refresh-token" [] (pool/with-pool [conn db-pool] (token conn)))
-      ; (GET "/users/:user-id/refresh-token/" [] (pool/with-pool [conn db-pool] (token conn)))
-      )))
+      (OPTIONS "/users/:user-id/refresh-token" [user-id] (pool/with-pool [conn db-pool] (token conn user-id)))
+      (OPTIONS "/users/:user-id/refresh-token/" [user-id] (pool/with-pool [conn db-pool] (token conn user-id)))
+      (GET "/users/:user-id/refresh-token" [user-id] (pool/with-pool [conn db-pool] (token conn user-id)))
+      (GET "/users/:user-id/refresh-token/" [user-id] (pool/with-pool [conn db-pool] (token conn user-id))))))
