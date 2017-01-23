@@ -111,6 +111,6 @@
     (json/generate-string
       (-> user
         (select-keys representation-props)
-        (assoc :passsword "")
+        (assoc :password "")
         (user-links))
       {:pretty true})))
