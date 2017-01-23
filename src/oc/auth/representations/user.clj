@@ -33,6 +33,8 @@
 
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id)))
 
+(defn- remove-link [user-id] (hateoas/delete-link (url user-id)))
+
 (defn refresh-link [user-id] (hateoas/link-map "refresh" 
                                 hateoas/GET
                                 (str (url user-id) "/refresh-token")
@@ -48,8 +50,8 @@
   "If a user is an admin, a link to remove them, if not, a link to add them"
   [team-id user-id admin?]
   (if admin?
-    (hateoas/link-map "remove" hateoas/DELETE (admin-url team-id user-id) team-rep/admin-media-type)
-    (hateoas/link-map "add" hateoas/PUT (admin-url team-id user-id) team-rep/admin-media-type)))
+    (hateoas/remove-link (admin-url team-id user-id) team-rep/admin-media-type)
+    (hateoas/add-link hateoas/PUT (admin-url team-id user-id) team-rep/admin-media-type)))
 
 (defn- user-collection-links
   "HATEOAS links for a user resource in a collection of users"
@@ -60,7 +62,7 @@
         (item-link user-id)
         (partial-update-link user-id)
         (admin-action-link team-id user-id (:admin user))
-        (delete-link user-id)])
+        (remove-link user-id)])
       (dissoc :admin))))
 
 (defn- user-links
