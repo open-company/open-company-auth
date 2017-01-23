@@ -7,7 +7,7 @@
 (def media-type "application/vnd.open-company.team.v1+json")
 (def collection-media-type "application/vnd.collection+vnd.open-company.team+json;version=1")
 
-(def representation-props [:team-id :name :created-at :updated-at])
+(def representation-props [:team-id :name :users :created-at :updated-at])
 
 (defun url
   ([team-id :guard string?] (str "/teams/" team-id))
@@ -18,7 +18,7 @@
 (defn- delete-link [team-id] (hateoas/delete-link (url team-id)))
 
 (defn- team-links
-  ""
+  "HATEOAS links for a team resource"
   [team & self-name]
   (let [team-id (:team-id team)]
     (assoc team :links [

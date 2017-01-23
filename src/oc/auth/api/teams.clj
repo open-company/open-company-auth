@@ -9,7 +9,8 @@
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
-            [oc.auth.representations.team :as team-rep]))
+            [oc.auth.representations.team :as team-rep]
+            [oc.auth.representations.user :as user-rep]))
 
 ;; ----- Actions -----
 
@@ -60,7 +61,10 @@
 
   :delete! (fn [_] (team-res/delete-team! conn team-id))
 
-  :handle-ok (fn [ctx] (team-rep/render-team (:existing-team ctx))))
+  :handle-ok (fn [ctx] (let [users (user-res/list-users conn team-id) ; users in the team
+                             user-reps (map user-rep/render-user-for-collection users)
+                             team (assoc (:existing-team ctx) :users user-reps)]
+                          (team-rep/render-team team))))
 
 ;; ----- Routes -----
 

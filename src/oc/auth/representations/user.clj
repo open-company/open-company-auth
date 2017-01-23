@@ -22,6 +22,8 @@
 
 (defn- self-link [user-id] (hateoas/self-link (url user-id) media-type))
 
+(defn- item-link [user-id] (hateoas/item-link (url user-id) media-type))
+
 (defn- user-link [user-id] (hateoas/link-map "user" hateoas/GET (url user-id) media-type))
 
 (defn- partial-update-link [user-id] (hateoas/partial-update-link (url user-id) media-type))
@@ -39,7 +41,18 @@
                                          (refresh-link user-id)
                                          teams-link]})
 
-(defn- user-links [user]
+(defn- user-collection-links
+  "HATEOAS links for a user resource in a collection of users"
+  [user]
+  (let [user-id (:user-id user)]
+    (assoc user :links [
+      (item-link user-id)
+      (partial-update-link user-id)
+      (delete-link user-id)])))
+
+(defn- user-links
+  "HATEOAS links for a user resource"
+  [user]
   (let [user-id (:user-id user)]
     (assoc user :links [
       (self-link user-id)
@@ -67,6 +80,14 @@
         headers (if location? {"Location" (url (:user-id user))} {})
         status (if location? 201 200)]
     (api-common/text-response (jwt/generate jwt-user config/passphrase) status headers)))
+
+(defn render-user-for-collection
+  "Create a JSON representation of the user for use in a collection in the REST API"
+  [user]
+  (let [user-id (:user-id user)]
+    (-> user
+      (select-keys representation-props)
+      (user-collection-links))))
 
 (defn render-user
   "Create a JSON representation of the user for the REST API"
