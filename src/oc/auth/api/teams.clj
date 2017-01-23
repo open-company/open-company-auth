@@ -92,9 +92,9 @@
   :delete! (fn [ctx] (when (:admin? ctx)
                       {:updated-team (team-res/remove-admin conn team-id user-id)}))
 
+  :respond-with-entity? false
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
-  :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
-  :respond-with-entity? false)
+  :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
 
 ;; ----- Routes -----
 

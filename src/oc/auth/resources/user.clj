@@ -53,7 +53,7 @@
   (and (string? password)
        (>= (count password) 5)))
 
-(defn- clean
+(defn clean
   "Remove any reserved properties from the user."
   [user]
   (apply dissoc user reserved-properties))
@@ -137,9 +137,12 @@
   {:pre [(db-common/conn? conn)
          (map? user)]}
   (if-let [original-user (get-user conn user-id)]
-    (let [updated-user (merge original-user (clean user))]
-      (schema/validate User updated-user)
-      (db-common/update-resource conn table-name primary-key original-user updated-user))))
+    (let [updated-password (:password user)
+          hashed-password (when (not (s/blank? updated-password)) (password-hash updated-password))
+          updated-user (merge original-user (clean user))
+          final-user (if hashed-password (assoc updated-user :password-hash hashed-password) updated-user)]
+      (schema/validate User final-user)
+      (db-common/update-resource conn table-name primary-key original-user final-user))))
 
 (defn delete-user!
   "Given the user-id of the user, delete it and return `true` on success."

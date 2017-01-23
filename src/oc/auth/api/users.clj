@@ -60,7 +60,7 @@
 (defn- processable-patch-req? [conn {data :data} user-id]
   (if-let [user (user-res/get-user conn user-id)]
     (try
-      (schema/validate user-res/User (merge user data))
+      (schema/validate user-res/User (merge user (user-res/clean data)))
       true
       (catch clojure.lang.ExceptionInfo e
         (timbre/error e "Validation failure of user PATCH request.")
