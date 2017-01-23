@@ -7,6 +7,8 @@
 (def media-type "application/vnd.open-company.team.v1+json")
 (def collection-media-type "application/vnd.collection+vnd.open-company.team+json;version=1")
 
+(def admin-media-type "application/vnd.open-company.team.admin.v1")
+
 (def representation-props [:team-id :name :users :created-at :updated-at])
 
 (defun url

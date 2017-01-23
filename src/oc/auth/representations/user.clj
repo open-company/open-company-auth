@@ -20,6 +20,9 @@
   ([user-id :guard string?] (str "/users/" user-id))
   ([user :guard map?] (url (:user-id user))))
 
+(defn- admin-url [team-id user-id]
+  (s/join "/" ["/teams" team-id "admins" user-id]))
+
 (defn- self-link [user-id] (hateoas/self-link (url user-id) media-type))
 
 (defn- item-link [user-id] (hateoas/item-link (url user-id) media-type))
@@ -41,14 +44,24 @@
                                          (refresh-link user-id)
                                          teams-link]})
 
+(defn- admin-action-link
+  "If a user is an admin, a link to remove them, if not, a link to add them"
+  [team-id user-id admin?]
+  (if admin?
+    (hateoas/link-map "delete" hateoas/DELETE (admin-url team-id user-id) team-rep/admin-media-type)
+    (hateoas/link-map "create" hateoas/PUT (admin-url team-id user-id) team-rep/admin-media-type)))
+
 (defn- user-collection-links
   "HATEOAS links for a user resource in a collection of users"
-  [user]
+  [user team-id]
   (let [user-id (:user-id user)]
-    (assoc user :links [
-      (item-link user-id)
-      (partial-update-link user-id)
-      (delete-link user-id)])))
+    (-> user
+      (assoc :links [
+        (item-link user-id)
+        (partial-update-link user-id)
+        (admin-action-link team-id user-id (:admin user))
+        (delete-link user-id)])
+      (dissoc :admin))))
 
 (defn- user-links
   "HATEOAS links for a user resource"
@@ -83,11 +96,11 @@
 
 (defn render-user-for-collection
   "Create a JSON representation of the user for use in a collection in the REST API"
-  [user]
+  [team-id user]
   (let [user-id (:user-id user)]
     (-> user
-      (select-keys representation-props)
-      (user-collection-links))))
+      (select-keys (conj representation-props :admin))
+      (user-collection-links team-id))))
 
 (defn render-user
   "Create a JSON representation of the user for the REST API"

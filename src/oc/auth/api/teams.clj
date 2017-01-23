@@ -61,8 +61,10 @@
 
   :delete! (fn [_] (team-res/delete-team! conn team-id))
 
-  :handle-ok (fn [ctx] (let [users (user-res/list-users conn team-id) ; users in the team
-                             user-reps (map user-rep/render-user-for-collection users)
+  :handle-ok (fn [ctx] (let [admins (set (-> ctx :existing-team :admins))
+                             users (user-res/list-users conn team-id) ; users in the team
+                             user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
+                             user-reps (map user-rep/render-user-for-collection team-id user-admins)
                              team (assoc (:existing-team ctx) :users user-reps)]
                           (team-rep/render-team team))))
 
