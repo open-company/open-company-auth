@@ -38,7 +38,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create and are ignored during an update."
-  #{:user-id :teams :one-time-tokens :password :password-hash :status :created-at :udpated-at})
+  #{:user-id :teams :one-time-tokens :password :password-hash :status :created-at :udpated-at :links})
 
 ;; ----- Utility functions -----
 

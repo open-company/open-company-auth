@@ -26,7 +26,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create and are ignored during an update."
-  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at})
+  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links})
 
 ;; ----- Utility functions -----
 

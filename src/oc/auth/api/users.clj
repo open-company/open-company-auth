@@ -171,4 +171,10 @@
       (OPTIONS "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (GET "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (PATCH "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (DELETE "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
+      (DELETE "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      ;; token refresh request
+      ; (OPTIONS "/users/:user-id/refresh-token" [] (pool/with-pool [conn db-pool] (token conn)))
+      ; (OPTIONS "/users/:user-id/refresh-token/" [] (pool/with-pool [conn db-pool] (token conn)))
+      ; (GET "/users/:user-id/refresh-token" [] (pool/with-pool [conn db-pool] (token conn)))
+      ; (GET "/users/:user-id/refresh-token/" [] (pool/with-pool [conn db-pool] (token conn)))
+      )))
