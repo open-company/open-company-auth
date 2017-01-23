@@ -48,8 +48,8 @@
   "If a user is an admin, a link to remove them, if not, a link to add them"
   [team-id user-id admin?]
   (if admin?
-    (hateoas/link-map "delete" hateoas/DELETE (admin-url team-id user-id) team-rep/admin-media-type)
-    (hateoas/link-map "create" hateoas/PUT (admin-url team-id user-id) team-rep/admin-media-type)))
+    (hateoas/link-map "remove" hateoas/DELETE (admin-url team-id user-id) team-rep/admin-media-type)
+    (hateoas/link-map "add" hateoas/PUT (admin-url team-id user-id) team-rep/admin-media-type)))
 
 (defn- user-collection-links
   "HATEOAS links for a user resource in a collection of users"
