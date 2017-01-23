@@ -1,7 +1,7 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
-  (:require [if-let.core :refer (when-let*)]
-            [compojure.core :as compojure :refer (defroutes OPTIONS GET PATCH POST DELETE)]
+  (:require [if-let.core :refer (if-let* when-let*)]
+            [compojure.core :as compojure :refer (defroutes OPTIONS GET POST PUT PATCH DELETE)]
             [liberator.core :refer (defresource by-method)]
             [oc.lib.schema :as lib-schema]
             [oc.lib.rethinkdb.pool :as pool]
@@ -64,9 +64,37 @@
   :handle-ok (fn [ctx] (let [admins (set (-> ctx :existing-team :admins))
                              users (user-res/list-users conn team-id) ; users in the team
                              user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
-                             user-reps (map user-rep/render-user-for-collection team-id user-admins)
+                             user-reps (map #(user-rep/render-user-for-collection team-id %) user-admins)
                              team (assoc (:existing-team ctx) :users user-reps)]
                           (team-rep/render-team team))))
+
+;; A resource for the admins of a particular team
+(defresource admin [conn team-id user-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :put :delete]
+  :malformed? false
+
+  :available-media-types [team-rep/admin-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 team-rep/admin-media-type)
+  
+  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+
+  :put-to-existing? true
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                               user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))
+                               member? ((set (:teams user)) (:team-id team))]
+                        {:existing-user user :admin? ((set (:admins team)) (:user-id user))}
+                        false))
+
+  :put! (fn [ctx] (when (:existing-user ctx)
+                    {:updated-team (team-res/add-admin conn team-id user-id)}))
+  :delete! (fn [ctx] (when (:admin? ctx)
+                      {:updated-team (team-res/remove-admin conn team-id user-id)}))
+
+  :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
+  :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
+  :respond-with-entity? false)
 
 ;; ----- Routes -----
 
@@ -81,4 +109,11 @@
       ;; team operations
       (OPTIONS "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
       (GET "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
-      (DELETE "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id))))))
+      (DELETE "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
+      ;; team admin operations
+      (OPTIONS "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
+                                                                    (admin conn team-id user-id)))
+      (PUT "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
+                                                                    (admin conn team-id user-id)))
+      (DELETE "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
+                                                                    (admin conn team-id user-id))))))
