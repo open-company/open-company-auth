@@ -111,7 +111,7 @@
          (if secrets
            (do (store/store! (:org-id org) secrets)
                (jwt/generate (merge user secrets org auth-source {:user-token access-token})))
-           (jwt/generate (merge user (store/retrieve (:org-id org)) org auth-source {:user-token access-token})))])
+           (jwt/generate (merge user (store/retrieve (:org-id org)) org auth-source {:user-token access-token}) config/passphrase))])
       (do
         (timbre/warn "Could not swap code for token" {:oauth-response response})
         [false "Could not swap code for token"]))))

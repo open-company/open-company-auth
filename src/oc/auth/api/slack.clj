@@ -1,15 +1,25 @@
 (ns oc.auth.api.slack
   "Liberator API for Slack callback to auth service."
   (:require [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
+            [ring.util.response :refer (redirect)]
             [oc.lib.rethinkdb.pool :as pool]
             [oc.lib.api.common :as api-common]
-            [oc.auth.lib.slack :as slack]))
+            [oc.auth.lib.slack :as slack]
+            [oc.auth.config :as config]))
 
 ;; ----- Slack Request Handling Functions -----
 
+(defn- redirect-to-web-ui
+  "Send them back to the UI login page with a JWT token or a reason they don't have one."
+  [[success? jwt-or-reason]]
+  (if success?
+    (redirect (str config/ui-server-url "/login?jwt=" jwt-or-reason))
+    (redirect (str config/ui-server-url "/login?access=" jwt-or-reason))))
+
 (defn- slack-callback
   "Redirect browser to web UI after callback from Slack."
-  [params]
+  [conn params]
+  (println params) ; code and state
   (if (get params "test")
     (api-common/json-response {:test true :ok true} 200)
     (redirect-to-web-ui (slack/oauth-callback params))))

@@ -12,6 +12,7 @@
 (def malformed true)
 (def good-json false)
 
+(def json-mime-type "application/json")
 (def text-mime-type "text/plain")
 
 ;; ----- Responses -----
