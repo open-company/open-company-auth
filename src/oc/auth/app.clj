@@ -19,6 +19,7 @@
     [oc.auth.components :as components]
     [oc.auth.config :as c]
     [oc.auth.api.entry-point :as entry-point-api]
+    [oc.auth.api.slack :as slack-api]
     [oc.auth.api.users :as users-api]
     [oc.auth.api.teams :as teams-api]))
 
@@ -43,6 +44,7 @@
     (GET "/---error-test---" req (/ 1 0))
     (GET "/---500-test---" req {:status 500 :body "Testing bad things."})
     (entry-point-api/routes sys)
+    (slack-api/routes sys)
     (users-api/routes sys)
     (teams-api/routes sys)))
 

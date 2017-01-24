@@ -1,5 +1,6 @@
 (ns oc.lib.api.common
   (:require [clojure.string :as s]
+            [defun.core :refer (defun)]
             [taoensso.timbre :refer (debug info warn error fatal spy)]
             [cheshire.core :as json]
             [liberator.representation :refer (ring-response)]
@@ -27,6 +28,19 @@
     :body body 
     :status status 
     :headers (merge {"Content-Type" text-mime-type} headers)})))
+
+(defun json-response
+  "Helper to format a generic JSON body ring response"
+  ([body status] (json-response body status json-mime-type {}))
+  
+  ([body status headers :guard map?] (json-response body status json-mime-type headers))
+
+  ([body status mime-type :guard string?] (json-response body status mime-type {}))
+
+  ([body :guard #(or (map? %) (sequential? %)) status :guard integer? mime-type :guard string? headers :guard map?]
+  (ring-response {:body (json/generate-string body {:pretty true})
+                  :status status 
+                  :headers (merge {"Content-Type" mime-type} headers)})))
 
 (defn error-response
   "Helper to format a JSON ring response with an error and :ok false"
