@@ -1,11 +1,10 @@
 {
-  :user-id "email-8765-4321"
-  :org-id "email-r2d2-c3p0"
+  :user-id "0e32-4d9c-95f5"
+  :teams ["d0a6-4d51-bf42"]
   :name "Nietzsche"
   :first-name "Friedrich"
   :last-name "Nietzsche"
-  :real-name "Friedrich Nietzsche"
-  :avatar "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Nietzsche187a.jpg/220px-Nietzsche187a.jpg"
+  :avatar-url "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Nietzsche187a.jpg/220px-Nietzsche187a.jpg"
   :email "superman@unibas.ch"
   :auth-source "email"
 }
