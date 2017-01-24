@@ -68,6 +68,28 @@
                              team (assoc (:existing-team ctx) :users user-reps)]
                           (team-rep/render-team team))))
 
+;; A resource for user invitations to a particular team
+(defresource invite [conn team-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post]
+
+  :available-media-types [user-rep/media-type]
+
+  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+
+  ; :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+  ;                              user (and (lib-schema/unique-id? user-id) (user-res/get-user-by-email conn user-id))
+  ;                              member? ((set (:teams user)) (:team-id team))]
+  ;                       {:existing-user user :admin? ((set (:admins team)) (:user-id user))}
+  ;                       false))
+
+  :post (fn [ctx] (println "post!"))
+
+  :respond-with-entity? false
+  :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
+)
+
 ;; A resource for the admins of a particular team
 (defresource admin [conn team-id user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
@@ -110,6 +132,11 @@
       (OPTIONS "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
       (GET "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
       (DELETE "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
+      ;; invite user to team
+      (OPTIONS "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      (OPTIONS "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      (POST "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      (POST "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       ;; team admin operations
       (OPTIONS "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
                                                                     (admin conn team-id user-id)))
