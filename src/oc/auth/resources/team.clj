@@ -147,8 +147,7 @@
 (defn list-teams
   "List all teams, returning `team-id` and `name`. Additional fields can be optionally specified."
   ([conn]
-  {:pre [(db-common/conn? conn)]}
-  (db-common/read-resources conn table-name [:team-id :name]))
+  (list-teams conn []))
 
   ([conn additional-fields]
   {:pre [(db-common/conn? conn)
@@ -159,12 +158,11 @@
 (defn get-teams
   "
   Get teams by a sequence of team-id's, returning `team-id` and `name`. 
+  
   Additional fields can be optionally specified.
   "
   ([conn team-ids]
-  {:pre [(db-common/conn? conn)
-         (schema/validate [lib-schema/UniqueID] team-ids)]}
-  (db-common/read-resources-by-primary-keys conn table-name team-ids [:team-id :name]))
+  (get-teams conn team-ids []))
 
   ([conn team-ids additional-fields]
   {:pre [(db-common/conn? conn)
@@ -172,6 +170,22 @@
          (sequential? additional-fields)
         (every? #(or (string? %) (keyword? %)) additional-fields)]}
   (db-common/read-resources-by-primary-keys conn table-name team-ids (concat [:team-id :name] additional-fields))))
+
+(defn get-teams-by-slack-org
+  "
+  Get teams by a Slack org, returning `team-id` and `name`. 
+  
+  Additional fields can be optionally specified.
+  "
+  ([conn slack-org]
+  (get-teams-by-slack-org conn slack-org []))
+
+  ([conn slack-org additional-fields]
+  {:pre [(db-common/conn? conn)
+         (schema/validate lib-schema/NonBlankString slack-org)
+         (sequential? additional-fields)
+        (every? #(or (string? %) (keyword? %)) additional-fields)]}
+  (db-common/read-resources conn table-name :slack-orgs slack-org (concat [:team-id :name] additional-fields))))
 
 ;; ----- Armageddon -----
 

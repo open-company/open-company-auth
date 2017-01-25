@@ -19,7 +19,7 @@
 ; pending - awaiting invite response or email verification, can't login
 ; unverified - awaiting email verification, but can login
 ; active - Slack auth'd or verified email or invite
-(def statuses #{"pending" "unverified" "active"})
+(def statuses #{:pending :unverified :active})
 
 (def User {
   :user-id lib-schema/UniqueID
@@ -27,7 +27,7 @@
   (schema/optional-key :one-time-tokens) [lib-schema/NonBlankString]
   :email (schema/maybe schema/Str)
   (schema/optional-key :password-hash) schema/Str
-  :status (schema/pred #(statuses %))
+  :status (schema/pred #(statuses (keyword %)))
   :first-name schema/Str
   :last-name schema/Str
   :avatar-url (schema/maybe schema/Str)
@@ -37,8 +37,12 @@
 ;; ----- Metadata -----
 
 (def reserved-properties
-  "Properties of a resource that can't be specified during a create and are ignored during an update."
-  #{:user-id :teams :one-time-tokens :password :password-hash :status :created-at :udpated-at :links})
+  "Properties of a resource that can't be specified during a create or update."
+  #{:user-id :password :password-hash :created-at :udpated-at :links})
+
+(def ignored-properties
+  "Properties of a resource that are ignored during an update."
+  (merge reserved-properties #{:teams :one-time-tokens :status}))
 
 ;; ----- Utility functions -----
 
@@ -53,11 +57,15 @@
   (and (string? password)
        (>= (count password) 5)))
 
-(defn clean
+(defn clean-props
   "Remove any reserved properties from the user."
   [user]
   (apply dissoc user reserved-properties))
 
+(defn ignore-props
+  "Remove any reserved properties from the user."
+  [user]
+  (apply dissoc user ignored-properties))
 
 ;; ----- Password based authentication -----
 
@@ -85,7 +93,7 @@
   (let [ts (db-common/current-timestamp)]
     (-> user-props
         keywordize-keys
-        clean
+        clean-props
         (assoc :user-id (db-common/unique-id))
         (assoc :teams [])
         (update :email #(or % ""))
@@ -100,8 +108,8 @@
   "Create a user in the system. Throws a runtime exception if user doesn't conform to the User schema."
   [conn user :- User]
   {:pre [(db-common/conn? conn)]}
-  (if-let* [team (team/create-team! conn (team/->team {} (:user-id user)))
-           teams [(:team-id team)]]
+  (let [new-team (when (empty? (:teams user)) (team/create-team! conn (team/->team {} (:user-id user))))
+        teams (if (empty? (:teams user)) [(:team-id new-team)] (:teams user))]
     (db-common/create-resource conn table-name (assoc user :teams teams) (db-common/current-timestamp))))
 
 (schema/defn ^:always-validate get-user :- (schema/maybe User)
@@ -132,6 +140,7 @@
   NOTE: doesn't update teams, see: `add-team`, `remove-team`
   NOTE: doesn't update one-time tokens, see: `add-token`, `remove-token`
   NOTE: doesn't handle case of user-id change.
+  NOTE: doesn't handle case of status change, see: `activate!`, `unverify!`
   "
   [conn user-id :- lib-schema/UniqueID user]
   {:pre [(db-common/conn? conn)
@@ -139,7 +148,7 @@
   (if-let [original-user (get-user conn user-id)]
     (let [updated-password (:password user)
           hashed-password (when (not (s/blank? updated-password)) (password-hash updated-password))
-          updated-user (merge original-user (clean user))
+          updated-user (merge original-user (ignore-props user))
           final-user (if hashed-password (assoc updated-user :password-hash hashed-password) updated-user)]
       (schema/validate User final-user)
       (db-common/update-resource conn table-name primary-key original-user final-user))))

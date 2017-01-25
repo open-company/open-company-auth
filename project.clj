@@ -36,7 +36,6 @@
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
-    [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
     [amazonica "0.3.84"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
     [open-company/lib "0.1.6-40c3814"] ; Library for OC projects https://github.com/open-company/open-company-lib
 
@@ -106,6 +105,7 @@
                  '[clj-time.format :as format]
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
+                 '[oc.lib.jwt :as jwt]
                  '[oc.auth.config :as config]
                  '[oc.auth.resources.user :as u]
                  '[oc.auth.resources.team :as team])

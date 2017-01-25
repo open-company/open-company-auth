@@ -25,6 +25,13 @@
     (do (timbre/error "Failed creating user" email)
       false)))
 
+(defn- update-user [conn {data :data} user-id]
+  (if-let [updated-user (user-res/update-user! conn user-id data)]
+    {:updated-user updated-user}
+    false))
+
+;; ----- Validations -----
+
 (defn email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
   [sys req auth-data]
@@ -38,13 +45,6 @@
         (do
           (timbre/info "Failed to auth:" email) 
           false)))))
-
-(defn- update-user [conn {data :data} user-id]
-  (if-let [updated-user (user-res/update-user! conn user-id data)]
-    {:updated-user updated-user}
-    false))
-
-;; ----- Validations -----
 
 (defn- allow-user-and-team-admins [conn {accessing-user-id :user-id} accessed-user-id]
   (or
@@ -60,7 +60,7 @@
 (defn- processable-patch-req? [conn {data :data} user-id]
   (if-let [user (user-res/get-user conn user-id)]
     (try
-      (schema/validate user-res/User (merge user (user-res/clean data)))
+      (schema/validate user-res/User (merge user (user-res/ignore-props data)))
       true
       (catch clojure.lang.ExceptionInfo e
         (timbre/error e "Validation failure of user PATCH request.")
