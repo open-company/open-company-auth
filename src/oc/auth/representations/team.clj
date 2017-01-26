@@ -3,7 +3,8 @@
   (:require [clojure.string :as s]
             [defun.core :refer (defun)]
             [cheshire.core :as json]
-            [oc.lib.hateoas :as hateoas]))
+            [oc.lib.hateoas :as hateoas]
+            [oc.auth.representations.slack-auth :as slack]))
 
 (def media-type "application/vnd.open-company.team.v1+json")
 (def collection-media-type "application/vnd.collection+vnd.open-company.team+json;version=1")
@@ -27,6 +28,9 @@
 (defn- add-email-domain-link [team-id]
   (hateoas/add-link hateoas/POST (str (url team-id) "/email-domains/") email-domain-media-type))
 
+(defn add-slack-org-link [team-id]
+  (slack/auth-link "authenticate" team-id))
+
 (defn- team-links
   "HATEOAS links for a team resource"
   [team & self-name]
@@ -36,6 +40,7 @@
         (hateoas/link-map self-name hateoas/GET (url team-id) media-type)
         (self-link team-id))
       (add-email-domain-link team-id)
+      (add-slack-org-link team-id)
       (delete-link team-id)])))
 
 (defn- email-domain
