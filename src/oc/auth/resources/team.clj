@@ -35,6 +35,13 @@
   [team]
   (apply dissoc team reserved-properties))
 
+(defn valid-email-domain? [email-domain]
+  "Return true if this is a valid email domain according to the regex, otherwise false."
+  (if (and (string? email-domain)
+      (re-matches #"^[^@\\.]+[\\.].+" email-domain))
+    true
+    false))
+
 ;; ----- Team CRUD -----
 
 (schema/defn ^:always-validate ->team :- Team

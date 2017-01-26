@@ -55,6 +55,8 @@
     :status status
     :headers headers})))
 
+(defn blank-response [] (ring-response {:status 204}))
+
 (defn options-response [methods]
   (ring-response {
     :status 204

@@ -1,6 +1,7 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
   (:require [if-let.core :refer (if-let* when-let*)]
+            [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET POST PUT PATCH DELETE)]
             [liberator.core :refer (defresource by-method)]
             [oc.lib.schema :as lib-schema]
@@ -22,6 +23,19 @@
     (team-res/get-teams conn teams [:admins :created-at :updated-at])))
 
 ;; ----- Validations -----
+
+(defn malformed-email-domain?
+  "Read in the body param from the request and make sure it's a non-blank string
+  that corresponds to an email domain. Otherwise just indicate it's malformed."
+  [ctx]
+  (try
+    (if-let* [domain (-> (get-in ctx [:request :body]) slurp)
+              valid? (team-res/valid-email-domain? domain)]
+      [false {:data domain}]
+      true)
+    (catch Exception e
+      (do (timbre/warn "Request body not processable as an email domain: " e)
+        true))))
 
 (defn allow-team-admins
   "Return true if the JWToken user is an admin of the specified team."
@@ -84,7 +98,7 @@
   ;                       {:existing-user user :admin? ((set (:admins team)) (:user-id user))}
   ;                       false))
 
-  :post (fn [ctx] (println "post!"))
+  :post! (fn [ctx] (println "post!"))
 
   :respond-with-entity? false
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
@@ -117,6 +131,41 @@
   :respond-with-entity? false
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
+
+;; A resource for the email domains of a particular team
+(defresource email-domain [conn team-id domain]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post :delete]
+
+  :available-media-types [team-rep/email-domain-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 team-rep/email-domain-media-type)
+
+  :malformed? (fn [ctx] (malformed-email-domain? ctx))  
+  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+
+  :exists? (by-method {
+    :post (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+                        {:existing-team true :existing-domain ((set (:email-domains team)) (:data ctx))}
+                        false))
+    :delete (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                                exists? ((set (:email-domains team)) (:data ctx))]
+                        {:existing-team true :existing-domain true}
+                        false))})
+
+  :post! (fn [ctx] (when (and (:existing-team ctx) (not (:existing-domain ctx)))
+                    {:updated-team (team-res/add-email-domain conn team-id (:data ctx))}))
+  :delete! (fn [ctx] (when (:existing-domain ctx)
+                    {:updated-team (team-res/remove-email-domain conn team-id (:data ctx))}))
+  
+  :respond-with-entity? false
+  :handle-created (fn [ctx] (if (or (:updated-team ctx) (:existing-domain ctx))
+                              (api-common/blank-response)
+                              (api-common/missing-response)))
+  :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
+  :handle-options (if domain
+                    (api-common/options-response [:options :delete])
+                    (api-common/options-response [:options :post])))
 
 ;; A resource for the Slack orgs of a particular team
 (defresource slack-org [conn team-id slack-org-id]
@@ -162,6 +211,19 @@
                                                                     (admin conn team-id user-id)))
       (DELETE "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
                                                                     (admin conn team-id user-id)))
+      ;; Email domain operations
+      (OPTIONS "/teams/:team-id/email-domains/" [team-id] (pool/with-pool [conn db-pool]
+                                                                    (email-domain conn team-id nil)))
+      (OPTIONS "/teams/:team-id/email-domains" [team-id] (pool/with-pool [conn db-pool]
+                                                                    (email-domain conn team-id nil)))
+      (POST "/teams/:team-id/email-domains/" [team-id] (pool/with-pool [conn db-pool]
+                                                                    (email-domain conn team-id nil)))
+      (POST "/teams/:team-id/email-domains" [team-id] (pool/with-pool [conn db-pool]
+                                                                    (email-domain conn team-id nil)))
+      (OPTIONS "/teams/:team-id/email-domains/:domain" [team-id domain] (pool/with-pool [conn db-pool]
+                                                                    (email-domain conn team-id domain)))
+      (DELETE "/teams/:team-id/email-domains/:domain" [team-id domain] (pool/with-pool [conn db-pool]
+                                                                    (email-domain conn team-id domain)))
       ;; Slack org operations
       (OPTIONS "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id] (pool/with-pool [conn db-pool]
                                                                     (slack-org conn team-id slack-org-id)))

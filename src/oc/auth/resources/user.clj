@@ -47,8 +47,9 @@
 ;; ----- Utility functions -----
 
 (defn valid-email? [email-address]
-  "Return true if this is a valid HTML 5 email address according to the W3C HTML 5 regex, otherwise false."
-  (if (re-matches #"^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$" email-address)
+  "Return true if this is a valid email address according to the regex, otherwise false."
+  (if (and (string? email-address)
+           (re-matches #"^[^@]+@[^@\\.]+[\\.].+" email-address))
     true
     false))
 
