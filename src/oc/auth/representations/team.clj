@@ -1,6 +1,7 @@
 (ns oc.auth.representations.team
   "Resource representations for OpenCompany teams."
-  (:require [defun.core :refer (defun)]
+  (:require [clojure.string :as s]
+            [defun.core :refer (defun)]
             [cheshire.core :as json]
             [oc.lib.hateoas :as hateoas]))
 
@@ -8,6 +9,7 @@
 (def collection-media-type "application/vnd.collection+vnd.open-company.team+json;version=1")
 
 (def admin-media-type "application/vnd.open-company.team.admin.v1")
+(def email-domain-media-type "application/vnd.open-company.team.email-domain.v1")
 
 (def representation-props [:team-id :name :users :created-at :updated-at])
 
@@ -19,6 +21,12 @@
 
 (defn- delete-link [team-id] (hateoas/delete-link (url team-id)))
 
+(defn- remove-email-domain-link [team-id domain]
+  (hateoas/remove-link (s/join "/" [(url team-id) "email-domains" domain]) email-domain-media-type))
+
+(defn- add-email-domain-link [team-id]
+  (hateoas/add-link hateoas/POST (str (url team-id) "/email-domains/") email-domain-media-type))
+
 (defn- team-links
   "HATEOAS links for a team resource"
   [team & self-name]
@@ -27,7 +35,14 @@
       (if self-name 
         (hateoas/link-map self-name hateoas/GET (url team-id) media-type)
         (self-link team-id))
+      (add-email-domain-link team-id)
       (delete-link team-id)])))
+
+(defn- email-domain
+  "Item entry for an email domain for the team."
+  [team-id domain]
+  {:domain domain
+   :links [(remove-email-domain-link team-id domain)]})
 
 (defn render-team
   "Given a team map, create a JSON representation of the team for the REST API."
@@ -36,6 +51,7 @@
     (json/generate-string
       (-> team
         (select-keys representation-props)
+        (assoc :email-domains (map #(email-domain team-id %) (:email-domains team)))
         (team-links))
       {:pretty true})))
 
