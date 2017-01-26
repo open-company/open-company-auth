@@ -31,6 +31,9 @@
 (defn add-slack-org-link [team-id]
   (slack/auth-link "authenticate" team-id))
 
+(defn add-slack-bot-link [team-id]
+  (slack/bot-link team-id))
+
 (defn- team-links
   "HATEOAS links for a team resource"
   [team & self-name]
@@ -41,6 +44,7 @@
         (self-link team-id))
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
+      (add-slack-bot-link team-id)
       (delete-link team-id)])))
 
 (defn- email-domain

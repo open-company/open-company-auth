@@ -24,13 +24,20 @@
        "&scope="
        scope))))
 
-(defn auth-link 
-  ([rel] (auth-link rel nil))
-  ([rel state]
+(defn- slack-link
+  [rel scope state]
   (hateoas/link-map rel
     hateoas/GET
-    (slack-auth-url config/slack-scope state)
+    (slack-auth-url scope state)
     "application/jwt"
-    :auth-source "slack")))
+    :auth-source "slack"))
 
-(def auth-settings [(auth-link "authenticate") (auth-link "create")])
+(defn bot-link 
+  ([] (bot-link nil))
+  ([state] (slack-link "bot" config/slack-bot-scope state)))
+
+(defn auth-link 
+  ([rel] (auth-link rel nil))
+  ([rel state] (slack-link rel config/slack-user-scope state)))
+
+(def auth-settings [(auth-link "authenticate") (auth-link "create") (bot-link)])

@@ -80,15 +80,15 @@
                         {:id (-> response :bot :bot_user_id)
                          :token (-> response :bot :bot_access_token)})
         access-token  (:access_token response)
-        scope         (:scope response)]
-    
+        scope         (:scope response)
+        user-profile  (:user response)]
     (if (and (:ok response) (valid-access-token? access-token))
-  
       ;; valid response and access token
       ;; w/ identity.basic this response contains all user information we can get
       ;; so munge that into the right shape, or get user info if that doesn't work
-      (let [user (or (coerce-to-user (:user response))
-                     (get-user-info access-token scope slack-id))]
+      (let [user (if user-profile
+                    (coerce-to-user user-profile)
+                    (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
         (merge user slack-org {:bot slack-bot} {:slack-token access-token}))
 

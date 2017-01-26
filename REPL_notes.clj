@@ -7,6 +7,7 @@
 (require '[oc.auth.email-auth :as email] :reload)
 (require '[oc.auth.resources.user :as u] :reload)
 (require '[oc.auth.resources.team :as team] :reload)
+(require '[oc.auth.resources.slack-org :as slack-org] :reload)
 (require '[oc.auth.representations.user :as user-rep] :reload)
 (require '[oc.auth.representations.team :as team-rep] :reload)
 (require '[oc.auth.api.teams :as team-api] :reload)

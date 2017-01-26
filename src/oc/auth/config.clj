@@ -45,7 +45,8 @@
 
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
-(defonce slack-scope "identity.basic,identity.email,identity.avatar,identity.team")
+(defonce slack-user-scope "identity.basic,identity.email,identity.avatar,identity.team")
+(defonce slack-bot-scope "bot,users:read")
 
 ;; ----- HTTP server -----
 

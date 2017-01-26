@@ -1,12 +1,12 @@
 (ns oc.auth.db.migrations.create-teams
   (:require [rethinkdb.query :as r]
             [oc.lib.rethinkdb.migrations :as m]
-            [oc.auth.config :as c]
+            [oc.auth.config :as config]
             [oc.auth.resources.team :as team]))
 
 (defn up [conn]
   (println "Creating table: " team/table-name)
-  (println (m/create-table conn c/db-name team/table-name team/primary-key))
+  (println (m/create-table conn config/db-name team/table-name team/primary-key))
   (println (m/create-index conn team/table-name "admins" {:multi true}))
   (println (m/create-index conn team/table-name "email-domains" {:multi true}))
   (println (m/create-index conn team/table-name "slack-orgs" {:multi true}))

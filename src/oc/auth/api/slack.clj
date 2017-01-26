@@ -95,7 +95,7 @@
     (do
       (timbre/info "Refreshing Slack user" slack-id)
       (try
-        (let [slack-user (slack/get-user-info slack-token config/slack-scope slack-id)
+        (let [slack-user (slack/get-user-info slack-token config/slack-user-scope slack-id)
               updated-user (update-user conn slack-user user)]
           ;; Respond w/ JWToken and location
           (user-rep/auth-response (-> updated-user
