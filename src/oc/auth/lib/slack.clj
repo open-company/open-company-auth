@@ -27,6 +27,7 @@
         name-size (count split-name)
         splittable-name? (= name-size 2)]
     {:user-id (db-common/unique-id)
+     :slack-id (:id user-data)
      :name user-name
      :first-name (cond
                     (= name-size 1) user-name
@@ -41,16 +42,16 @@
                      (:image_24 user-data))
      :email (:email user-data)}))
 
-(defn- get-user-info
-  [access-token scope user-id]
-  {:pre [(string? access-token) (string? user-id)]}
-  (let [resp      (slack-users/info (merge slack-connection {:token access-token}) user-id)]
+(defn get-user-info
+  [access-token scope slack-id]
+  {:pre [(string? access-token) (string? slack-id)]}
+  (let [resp (slack-users/info (merge slack-connection {:token access-token}) slack-id)]
     (if (:ok resp)
       (coerce-to-user (merge (:user resp) (-> resp :user :profile)))
       (throw (ex-info "Error response from Slack API while retrieving user data"
-                      {:response resp :user-id user-id :scope scope})))))
+                      {:response resp :slack-id slack-id :scope scope})))))
 
-(defn- valid-access-token?
+(defn valid-access-token?
   "Given a Slack access token, see if it's valid by making a test call to Slack."
   [access-token]
   (let [conn      (merge slack-connection {:token access-token})
@@ -89,7 +90,7 @@
       (let [user (or (coerce-to-user (:user response))
                      (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
-        (merge user slack-org {:bot slack-bot} {:user-token access-token}))
+        (merge user slack-org {:bot slack-bot} {:slack-token access-token}))
 
       ;; invalid response or access token
       (do

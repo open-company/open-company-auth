@@ -1,6 +1,7 @@
 (ns oc.auth.api.slack
   "Liberator API for Slack callback to auth service."
-  (:require [taoensso.timbre :as timbre]
+  (:require [if-let.core :refer (if-let*)]
+            [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :refer (redirect)]
             [oc.lib.rethinkdb.pool :as pool]
@@ -9,30 +10,46 @@
             [oc.auth.lib.slack :as slack]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
-            [oc.auth.resources.user :as user-res]))
+            [oc.auth.resources.user :as user-res]
+            [oc.auth.representations.user :as user-rep]))
 
 ;; ----- Utility Functions -----
 
-(defn- clean-slack-user [slack-user]
-  (dissoc slack-user :bot :name :slack-org-id :user-token :slack-org-name))
+(defn- clean-slack-user
+  "Remove properties from a Slack user that are not needed for a persisted user."
+  [slack-user]
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name))
+
+(defn- clean-user
+  "Remove properties from a user that are not needed for a JWToken."
+  [user]
+  (dissoc user :created-at :updated-at :status))
 
 ;; ----- Actions -----
 
-(defn- create-team-for [conn {slack-org-id :slack-org-id team-name :slack-org-name} admin-id]
+(defn- create-team-for
+  "Create a new team for the specified Slack user."
+  [conn {slack-org-id :slack-org-id team-name :slack-org-name} admin-id]
   (timbre/info "Creating new team for Slack org:" slack-org-id team-name)
   ;; TODO capture bot
   (if-let [team (team-res/create-team! conn (team-res/->team {:name team-name} admin-id))]
     (team-res/add-slack-org conn (:team-id team) slack-org-id)))
 
-(defn- create-user-for [conn new-user teams]
+(defn- create-user-for
+  "Create a new user for the specified Slack user."
+  [conn new-user teams]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
   (user-res/create-user! conn (-> new-user
                                 (assoc :status :active)
                                 (assoc :teams (map :team-id teams)))))
 
-(defn- update-user [conn slack-user existing-user teams]
+(defn- update-user
+  "Update the existing user from their Slack user profile."
+  ([conn slack-user existing-user] (update-user conn slack-user existing-user (:teams existing-user)))
+
+  ([conn slack-user existing-user teams]
   (timbre/info "TODO: Refreshing user from Slack:" (:email slack-user) (:name slack-user))
-  existing-user)
+  existing-user))
 
 ;; ----- Slack Request Handling Functions -----
 
@@ -50,7 +67,6 @@
     (api-common/json-response {:test true :ok true} 200)
     ;; This is NOT a test
     (if-let [slack-user (slack/oauth-callback params)]
-      
       ;; got an auth'd user back from Slack
       (let [user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
             new-user (when-not user (user-res/->user (clean-slack-user slack-user)))
@@ -60,33 +76,40 @@
             updated-user (if user
                             (update-user conn slack-user user user-teams)
                             (create-user-for conn new-user user-teams))
-            jwtoken (jwt/generate updated-user config/passphrase)]
+            jwtoken   (jwt/generate (-> updated-user
+                                      (clean-user)
+                                      (assoc :auth-source :slack)
+                                      (assoc :slack-id (:slack-id slack-user))
+                                      (assoc :slack-token (:slack-token slack-user)))
+                        config/passphrase)]
         (redirect-to-web-ui true jwtoken))
 
       ;; no user came back from Slack
       (redirect-to-web-ui false "failed"))))
 
-; (defn- refresh-slack-token
-;   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
-;   [req]
-;   (if-let* [token    (jwt/read-token (:headers req))
-;             decoded  (jwt/decode token)
-;             user-id  (-> decoded :claims :user-id)
-;             user-tkn (-> decoded :claims :user-token)
-;             org-id   (-> decoded :claims :org-id)]
-;     (do (timbre/info "Refresh token request for user" user-id "of org" org-id)
-;       (if (slack/valid-access-token? user-tkn)
-;         (do
-;           (timbre/info "Refreshing token" user-id)
-;           (ring/text-response (jwt/generate (merge (:claims decoded)
-;                                                    (store/retrieve org-id)
-;                                                    {:auth-source "slack"})) 200))
-;         (do
-;           (timbre/warn "Invalid access token for" user-id)            
-;           (ring/error-response "Could note confirm token." 400))))
-;     (do
-;       (timbre/warn "Bad refresh token request")      
-;       (ring/error-response "Could note confirm token." 400))))
+(defn refresh-token
+  "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
+  [conn {user-id :user-id :as user} slack-id slack-token]
+  (timbre/info "Refresh token request for user" user-id "with slack id of" slack-id "and access token" slack-token)
+  (if (slack/valid-access-token? slack-token)
+    (do
+      (timbre/info "Refreshing Slack user" slack-id)
+      (try
+        (let [slack-user (slack/get-user-info slack-token config/slack-scope slack-id)
+              updated-user (update-user conn slack-user user)]
+          ;; Respond w/ JWToken and location
+          (user-rep/auth-response (-> updated-user
+                                    (clean-user)
+                                    (assoc :slack-id (:slack-id slack-user))
+                                    (assoc :slack-token slack-token))
+            :slack))
+        (catch Exception e
+          (timbre/error e)
+          (timbre/warn "Unable to swap access token" slack-token "for user" user-id)
+          (api-common/error-response "Could note confirm token." 400))))
+    (do
+      (timbre/warn "Invalid access token" slack-token "for user" user-id)
+      (api-common/error-response "Could note confirm token." 400))))
 
 ;; ----- Routes -----
 

@@ -118,29 +118,52 @@
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
 
+;; A resource for the Slack orgs of a particular team
+(defresource slack-org [conn team-id slack-org-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :delete]
+
+  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                               has-org? ((set (:slack-orgs team)) slack-org-id)]
+                        {:has-org? true}
+                        false))
+
+  :delete! (fn [ctx] (when (:has-org? ctx) (team-res/remove-slack-org conn team-id slack-org-id)))
+
+  :respond-with-entity? false
+  :handle-no-content (fn [ctx] (when-not (:has-org? ctx) (api-common/missing-response))))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
-      ;; team listing
+      ;; Team listing
       (OPTIONS "/teams" [] (pool/with-pool [conn db-pool] (team-list conn)))
       (OPTIONS "/teams/" [] (pool/with-pool [conn db-pool] (team-list conn)))
       (GET "/teams" [] (pool/with-pool [conn db-pool] (team-list conn)))
       (GET "/teams/" [] (pool/with-pool [conn db-pool] (team-list conn)))
-      ;; team operations
+      ;; Team operations
       (OPTIONS "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
       (GET "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
       (DELETE "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
-      ;; invite user to team
+      ;; Invite user to team
       (OPTIONS "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       (OPTIONS "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       (POST "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       (POST "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
-      ;; team admin operations
+      ;; Team admin operations
       (OPTIONS "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
                                                                     (admin conn team-id user-id)))
       (PUT "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
                                                                     (admin conn team-id user-id)))
       (DELETE "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
-                                                                    (admin conn team-id user-id))))))
+                                                                    (admin conn team-id user-id)))
+      ;; Slack org operations
+      (OPTIONS "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id] (pool/with-pool [conn db-pool]
+                                                                    (slack-org conn team-id slack-org-id)))
+      (DELETE "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id] (pool/with-pool [conn db-pool]
+                                                                    (slack-org conn team-id slack-org-id))))))

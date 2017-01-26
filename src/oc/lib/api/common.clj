@@ -44,13 +44,16 @@
                   :headers (merge {"Content-Type" mime-type} headers)})))
 
 (defn error-response
-  "Helper to format a JSON ring response with an error and :ok false"
+  "Helper to format a JSON ring response with an error."
   ([error status] (error-response error status {}))
   
   ([error status headers]
   {:pre [(integer? status)
          (map? headers)]}
-  (ring-response error status headers)))
+  (ring-response {
+    :body error
+    :status status
+    :headers headers})))
 
 (defn options-response [methods]
   (ring-response {

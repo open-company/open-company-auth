@@ -20,7 +20,7 @@
 (defn auth-link [rel] 
   (hateoas/link-map rel
     hateoas/GET
-    (slack-auth-url "identity.basic,identity.email,identity.avatar,identity.team")
+    (slack-auth-url config/slack-scope)
     "application/jwt"
     :auth-source "slack"))
 

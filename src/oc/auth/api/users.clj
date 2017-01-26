@@ -11,6 +11,7 @@
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
+            [oc.auth.api.slack :as slack-api]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.user :as user-rep]))
@@ -81,7 +82,7 @@
                            :get (fn [ctx] (-> ctx :request :identity))})
 
   :handle-ok (fn [ctx] (user-rep/auth-response (user-res/get-user-by-email conn (-> ctx :request :identity))
-                          :email true))) ; respond w/ JWToken and location
+                          :email))) ; respond w/ JWToken and location
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
@@ -111,7 +112,7 @@
     :handle-conflict (ring-response {:status 409})
     
     :put! (fn [ctx] (create-user conn (:data ctx))) ; POST ends up handled here so we can have a 409 conflict
-    :handle-created (fn [ctx] (user-rep/auth-response (:user ctx) :email true))) ; respond w/ JWToken and location
+    :handle-created (fn [ctx] (user-rep/auth-response (:user ctx) :email))) ; respond w/ JWToken and location
 
 ;; A resource for operations on a particular user
 (defresource user [conn user-id]
@@ -161,11 +162,21 @@
       :get (fn [ctx] (= user-id (-> ctx :user :user-id)))})
 
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))]
-                        {:existing-user user}
-                        false))
+                      {:existing-user user}
+                      false))
 
-  :handle-ok (fn [ctx] (user-rep/auth-response (:existing-user ctx)
-                          :email true))) ; respond w/ JWToken and location
+  :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
+
+                        ;; Email token
+                        "email" (user-rep/auth-response (:existing-user ctx) :email) ; respond w/ JWToken and location
+
+                        ;; Slack token
+                        "slack" (slack-api/refresh-token conn (:existing-user ctx)
+                                                              (-> ctx :user :slack-id)
+                                                              (-> ctx :user :slack-token))
+        
+                        ;; What token is this?
+                        (api-common/unauthorized-response))))
 
 ;; ----- Routes -----
 

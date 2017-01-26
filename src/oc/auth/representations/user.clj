@@ -86,15 +86,14 @@
 (defn jwt-props-for [user source]
   (-> (zipmap jwt-props (map user jwt-props))
     (assoc :name (name-for user))
-    (assoc :source source)))
+    (assoc :auth-source source)))
 
 (defn auth-response
   "Return a JWToken for the user, or and a Location header."
-  [user source location?]
+  [user source]
   (let [jwt-user (jwt-props-for user source)
-        headers (if location? {"Location" (url (:user-id user))} {})
-        status (if location? 201 200)]
-    (api-common/text-response (jwt/generate jwt-user config/passphrase) status headers)))
+        headers {"Location" (url (:user-id user))}]
+    (api-common/text-response (jwt/generate jwt-user config/passphrase) 201 headers)))
 
 (defn render-user-for-collection
   "Create a JSON representation of the user for use in a collection in the REST API"
