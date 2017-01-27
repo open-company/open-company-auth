@@ -12,10 +12,10 @@
 ;; ----- Schema -----
 
 (def SlackOrg {
-  :slack-id lib-schema/NonBlankString
-  :name lib-schema/NonBlankString
-  (schema/maybe :bot-user-id) lib-schema/NonBlankString
-  (schema/maybe :bot-access-token) lib-schema/NonBlankString
+  :slack-id lib-schema/NonBlankStr
+  :name lib-schema/NonBlankStr
+  (schema/maybe :bot-user-id) lib-schema/NonBlankStr
+  (schema/maybe :bot-access-token) lib-schema/NonBlankStr
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 

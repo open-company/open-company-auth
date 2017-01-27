@@ -24,7 +24,7 @@
 (def User {
   :user-id lib-schema/UniqueID
   :teams [lib-schema/UniqueID]
-  (schema/optional-key :one-time-tokens) [lib-schema/NonBlankString]
+  (schema/optional-key :one-time-tokens) [lib-schema/NonBlankStr]
   :email (schema/maybe schema/Str)
   (schema/optional-key :password-hash) schema/Str
   :status (schema/pred #(statuses (keyword %)))
@@ -88,7 +88,7 @@
 
 (schema/defn ^:always-validate ->user :- User
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
-  ([user-props password :- lib-schema/NonBlankString] (assoc (->user user-props) :password-hash (password-hash password)))
+  ([user-props password :- lib-schema/NonBlankStr] (assoc (->user user-props) :password-hash (password-hash password)))
   ([user-props]
   {:pre [(map? user-props)]}
   (let [ts (db-common/current-timestamp)]
@@ -121,13 +121,13 @@
 
 (schema/defn ^:always-validate get-user-by-email :- (schema/maybe User)
   "Given the email address of the user, retrieve them from the database, or return nil if user doesn't exist."
-  [conn email :- lib-schema/NonBlankString]
+  [conn email :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (first (db-common/read-resources conn table-name "email" email)))
 
 (schema/defn ^:always-validate get-user-by-token :- (schema/maybe User)
   "Given the one-time-use token of the user, retrieve them from the database, or return nil if user doesn't exist."
-  [conn token :- lib-schema/NonBlankString]
+  [conn token :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (first (db-common/read-resources conn table-name "one-time-tokens" token)))
 
@@ -191,7 +191,7 @@
   Given the user-id of the user, and a one-time use token, add the token to the user if they exist.
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn user-id :- lib-schema/UniqueID token :- lib-schema/NonBlankString]
+  [conn user-id :- lib-schema/UniqueID token :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
     (db-common/add-to-set conn table-name user-id "one-time-tokens" token)))
@@ -201,7 +201,7 @@
   Given the user-id of the user, and a one-time use token, remove the token from the user if they exist.
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn user-id :- lib-schema/UniqueID token :- lib-schema/NonBlankString]
+  [conn user-id :- lib-schema/UniqueID token :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
     (db-common/remove-from-set conn table-name user-id "one-time-tokens" token)))

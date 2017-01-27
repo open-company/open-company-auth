@@ -15,18 +15,13 @@
 (defonce intro? (bool (or (env :intro) false)))
 (defonce prod? (= "production" (env :env)))
 
-;; ----- Logging -----
-
-(defonce log-level (or (env :log-level) :info))
-
-;; ----- Liberator -----
-
-;; see header response, or http://localhost:3000/x-liberator/requests/ for trace results
-(defonce liberator-trace (bool (or (env :liberator-trace) false)))
-
 ;; ----- Sentry -----
 
 (defonce dsn (or (env :open-company-sentry-auth) false))
+
+;; ----- Logging (see https://github.com/ptaoussanis/timbre) -----
+
+(defonce log-level (or (env :log-level) :info))
 
 ;; ----- RethinkDB -----
 
@@ -41,17 +36,15 @@
 (defonce db-map {:host db-host :port db-port :db db-name})
 (defonce db-options (flatten (vec db-map))) ; k/v sequence as clj-rethinkdb wants it
 
-;; ----- Slack -----
-
-(defonce slack-client-id (env :open-company-slack-client-id))
-(defonce slack-client-secret (env :open-company-slack-client-secret))
-(defonce slack-user-scope "identity.basic,identity.email,identity.avatar,identity.team")
-(defonce slack-bot-scope "bot,users:read")
-
 ;; ----- HTTP server -----
 
 (defonce hot-reload (bool (or (env :hot-reload) false)))
 (defonce auth-server-port (Integer/parseInt (or (env :port) "3003")))
+
+;; ----- Liberator -----
+
+;; see header response, or http://localhost:3000/x-liberator/requests/ for trace results
+(defonce liberator-trace (bool (or (env :liberator-trace) false)))
 
 ;; ----- URLs -----
 
@@ -69,10 +62,9 @@
 
 (defonce passphrase (env :open-company-auth-passphrase))
 
-;; ----- AWS S3 Store -----
+;; ----- Slack -----
 
-(defonce secrets-bucket (env :aws-secrets-bucket))
-(defonce secrets-file
-  (if-let [e (env :env)]
-    (str "store-" e)
-    "store"))
+(defonce slack-client-id (env :open-company-slack-client-id))
+(defonce slack-client-secret (env :open-company-slack-client-secret))
+(defonce slack-user-scope "identity.basic,identity.email,identity.avatar,identity.team")
+(defonce slack-bot-scope "bot,users:read")

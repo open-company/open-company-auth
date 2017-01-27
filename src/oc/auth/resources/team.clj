@@ -17,8 +17,8 @@
   :team-id lib-schema/UniqueID
   :name schema/Str
   :admins [lib-schema/UniqueID]
-  :email-domains [lib-schema/NonBlankString]
-  :slack-orgs [lib-schema/NonBlankString]
+  :email-domains [lib-schema/NonBlankStr]
+  :slack-orgs [lib-schema/NonBlankStr]
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 
@@ -51,7 +51,7 @@
   "
   ([team-props initial-admin] (->team team-props initial-admin nil))
 
-  ([team-props initial-admin :- lib-schema/UniqueID slack-org :- (schema/maybe lib-schema/NonBlankString)] 
+  ([team-props initial-admin :- lib-schema/UniqueID slack-org :- (schema/maybe lib-schema/NonBlankStr)] 
   {:pre [(map? team-props)]}
   (let [ts (db-common/current-timestamp)]
     (-> team-props
@@ -114,7 +114,7 @@
   Given the team-id of the team, and an email domain, add the email domain to the team if it exists.
   Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankString]
+  [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [team (get-team conn team-id)]
     (db-common/add-to-set conn table-name team-id "email-domains" email-domain)))
@@ -124,7 +124,7 @@
   Given the team-id of the team, and an email domain, remove the email domain from the team if it exists.
   Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankString]
+  [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [team (get-team conn team-id)]
     (db-common/remove-from-set conn table-name team-id "email-domains" email-domain)))
@@ -134,7 +134,7 @@
   Given the team-id of the team, and a slack org, add the slack org to the team if it exists.
   Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankString]
+  [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [team (get-team conn team-id)]
     (db-common/add-to-set conn table-name team-id "slack-orgs" slack-org)))
@@ -144,7 +144,7 @@
   Given the team-id of the team, and a slack org, remove the slack org from the team if it exists.
   Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankString]
+  [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [team (get-team conn team-id)]
     (db-common/remove-from-set conn table-name team-id "slack-orgs" slack-org)))
@@ -189,7 +189,7 @@
 
   ([conn slack-org additional-fields]
   {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/NonBlankString slack-org)
+         (schema/validate lib-schema/NonBlankStr slack-org)
          (sequential? additional-fields)
         (every? #(or (string? %) (keyword? %)) additional-fields)]}
   (db-common/read-resources conn table-name :slack-orgs slack-org (concat [:team-id :name] additional-fields))))

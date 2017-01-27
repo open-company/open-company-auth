@@ -7,8 +7,7 @@
             [taoensso.timbre :as timbre]
             [oc.lib.rethinkdb.common :as db-common]
             [oc.lib.jwt :as jwt]
-            [oc.auth.config :as config]
-            [oc.auth.lib.store :as store]))
+            [oc.auth.config :as config]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})

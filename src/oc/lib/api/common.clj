@@ -147,7 +147,7 @@
   [headers passphrase]
   (if-let [authorization (or (get headers "Authorization") (get headers "authorization"))]
     (let [jwtoken (last (s/split authorization #" "))]
-      (if (jwt/check-token jwtoken passphrase)
+      (if (jwt/valid? jwtoken passphrase)
         {:jwtoken jwtoken
          :user (:claims (jwt/decode jwtoken))}
         {:jwtoken false}))))
