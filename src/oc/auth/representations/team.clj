@@ -11,6 +11,7 @@
 
 (def admin-media-type "application/vnd.open-company.team.admin.v1")
 (def email-domain-media-type "application/vnd.open-company.team.email-domain.v1")
+(def slack-org-media-type "application/vnd.open-company.team.slack-org.v1")
 
 (def representation-props [:team-id :name :users :created-at :updated-at])
 
@@ -30,6 +31,9 @@
 
 (defn add-slack-org-link [team-id]
   (slack/auth-link "authenticate" team-id))
+
+(defn- remove-slack-org-link [team-id slack-org-id]
+  (hateoas/remove-link (s/join "/" [(url team-id) "slack-orgs" slack-org-id]) slack-org-media-type))
 
 (defn add-slack-bot-link [team-id]
   (slack/bot-link team-id))
@@ -53,6 +57,13 @@
   {:domain domain
    :links [(remove-email-domain-link team-id domain)]})
 
+(defn- slack-org
+  "Item entry for a Slack org for the team."
+  [team-id {slack-org-id :slack-org-id :as slack-org}]
+  {:name (:name slack-org)
+   :slack-org-id slack-org-id
+   :links [(remove-slack-org-link team-id slack-org-id)]})
+
 (defn render-team
   "Given a team map, create a JSON representation of the team for the REST API."
   [team]
@@ -61,6 +72,7 @@
       (-> team
         (select-keys representation-props)
         (assoc :email-domains (map #(email-domain team-id %) (:email-domains team)))
+        (assoc :slack-orgs (map #(slack-org team-id %) (:slack-orgs team)))
         (team-links))
       {:pretty true})))
 

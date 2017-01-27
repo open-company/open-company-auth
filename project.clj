@@ -29,14 +29,14 @@
     [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [raven-clj "1.5.0"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
-    [buddy "1.2.0"] ; Security library https://github.com/funcool/buddy
-    [buddy/buddy-auth "1.3.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
+    [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
+    [buddy/buddy-auth "1.4.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
     [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
     [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
     [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
-    [amazonica "0.3.84"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
+    [amazonica "0.3.85"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
     [open-company/lib "0.2.0-b926f67"] ; Library for OC projects https://github.com/open-company/open-company-lib
 
 

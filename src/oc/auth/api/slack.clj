@@ -85,12 +85,12 @@
             updated-user (if user
                             (update-user conn slack-user user user-teams)
                             (create-user-for conn new-user user-teams))
-            jwtoken (jwt/generate (-> updated-user
-                                    (clean-user)
-                                    (assoc :auth-source :slack)
-                                    (assoc :slack-id (:slack-id slack-user))
-                                    (assoc :slack-token (:slack-token slack-user)))
-                      config/passphrase)]
+            jwt-user (user-rep/jwt-props-for (-> updated-user
+                                              (clean-user)
+                                              (assoc :slack-id (:slack-id slack-user))
+                                              (assoc :slack-token (:slack-token slack-user))) :slack)
+            jwtoken (jwt/generate jwt-user config/passphrase)]
+        ;; Send them back to the OC Web UI
         (redirect-to-web-ui true jwtoken))
 
       ;; no user came back from Slack

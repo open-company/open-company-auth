@@ -9,6 +9,7 @@
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
+            [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]))
@@ -79,8 +80,10 @@
                              users (user-res/list-users conn team-id) ; users in the team
                              user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
                              user-reps (map #(user-rep/render-user-for-collection team-id %) user-admins)
-                             team (assoc (:existing-team ctx) :users user-reps)]
-                          (team-rep/render-team team))))
+                             team (assoc (:existing-team ctx) :users user-reps)
+                             slack-org-ids (:slack-orgs team)
+                             slack-orgs (if (empty? slack-org-ids) [] (slack-org-res/get-slack-orgs conn slack-org-ids [:bot-user-id :bot-token]))]
+                          (team-rep/render-team (assoc team :slack-orgs slack-orgs)))))
 
 ;; A resource for user invitations to a particular team
 (defresource invite [conn team-id]
@@ -141,7 +144,10 @@
   :available-media-types [team-rep/email-domain-media-type]
   :handle-not-acceptable (api-common/only-accept 406 team-rep/email-domain-media-type)
 
-  :malformed? (fn [ctx] (malformed-email-domain? ctx))  
+  :malformed? (by-method {
+    :options false
+    :post (fn [ctx] (malformed-email-domain? ctx))
+    :delete false})
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
   :exists? (by-method {
@@ -149,14 +155,14 @@
                         {:existing-team true :existing-domain ((set (:email-domains team)) (:data ctx))}
                         false))
     :delete (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
-                                exists? ((set (:email-domains team)) (:data ctx))]
+                                exists? ((set (:email-domains team)) domain)]
                         {:existing-team true :existing-domain true}
                         false))})
 
   :post! (fn [ctx] (when (and (:existing-team ctx) (not (:existing-domain ctx)))
                     {:updated-team (team-res/add-email-domain conn team-id (:data ctx))}))
   :delete! (fn [ctx] (when (:existing-domain ctx)
-                    {:updated-team (team-res/remove-email-domain conn team-id (:data ctx))}))
+                    {:updated-team (team-res/remove-email-domain conn team-id domain)}))
   
   :respond-with-entity? false
   :handle-created (fn [ctx] (if (or (:updated-team ctx) (:existing-domain ctx))

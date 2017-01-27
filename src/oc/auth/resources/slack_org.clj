@@ -77,6 +77,35 @@
     (db-common/delete-resource conn table-name slack-org-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no Slack org to delete
 
+;; ----- Collection of Slack orgs -----
+
+(defn list-slack-orgs
+  "List all Slack orgs, returning `slack-org-id` and `name`. Additional fields can be optionally specified."
+  ([conn]
+  (list-slack-orgs conn []))
+
+  ([conn additional-fields]
+  {:pre [(db-common/conn? conn)
+        (sequential? additional-fields)
+        (every? #(or (string? %) (keyword? %)) additional-fields)]}
+  (db-common/read-resources conn table-name (concat [:slack-org-id :name] additional-fields))))
+
+(defn get-slack-orgs
+  "
+  Get Slack orgs by a sequence of slack-org-id's, returning `slack-org-id` and `name`. 
+  
+  Additional fields can be optionally specified.
+  "
+  ([conn slack-org-ids]
+  (get-slack-orgs conn slack-org-ids []))
+
+  ([conn slack-org-ids additional-fields]
+  {:pre [(db-common/conn? conn)
+         (schema/validate [lib-schema/NonBlankStr] slack-org-ids)
+         (sequential? additional-fields)
+        (every? #(or (string? %) (keyword? %)) additional-fields)]}
+  (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :name] additional-fields))))
+
 ;; ----- Armageddon -----
 
 (defn delete-all-slack-orgs!
