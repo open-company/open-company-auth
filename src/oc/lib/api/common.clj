@@ -139,7 +139,7 @@
   (and (:jwtoken ctx) (:user ctx)))
 
 (defn- read-token
-  "Read supplied jwtoken from headers.
+  "Read supplied JWToken from the request headers.
 
    If a valid token is supplied return a map containing :jwtoken and associated :user.
    If invalid token is supplied return {:jwtoken false}.

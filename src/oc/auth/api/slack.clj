@@ -10,6 +10,7 @@
             [oc.auth.lib.slack :as slack]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
+            [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.user :as user-rep]))
 
@@ -27,11 +28,17 @@
 
 ;; ----- Actions -----
 
+(defn- create-slack-org-for
+  "Create a new Slack org for the specified Slack user."
+  [conn {slack-org-id :slack-org-id :as slack-user}]
+  (timbre/info "Creating new Slack org for:" slack-org-id)
+  (slack-org-res/create-slack-org! conn 
+    (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :bot]))))
+
 (defn- create-team-for
   "Create a new team for the specified Slack user."
   [conn {slack-org-id :slack-org-id team-name :slack-org-name} admin-id]
   (timbre/info "Creating new team for Slack org:" slack-org-id team-name)
-  ;; TODO capture bot
   (if-let [team (team-res/create-team! conn (team-res/->team {:name team-name} admin-id))]
     (team-res/add-slack-org conn (:team-id team) slack-org-id)))
 
@@ -68,7 +75,9 @@
     ;; This is NOT a test
     (if-let [slack-user (slack/oauth-callback params)]
       ;; got an auth'd user back from Slack
-      (let [user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
+      (let [slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user))
+            new-slack-org (when-not slack-org (create-slack-org-for conn slack-user))
+            user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
             new-user (when-not user (user-res/->user (clean-slack-user slack-user)))
             teams (team-res/get-teams-by-slack-org conn (:slack-org-id slack-user)) ; team(s) already exist?
             new-team (when (empty? teams) (create-team-for conn slack-user (or (:user-id user) (:user-id new-user))))
@@ -76,12 +85,12 @@
             updated-user (if user
                             (update-user conn slack-user user user-teams)
                             (create-user-for conn new-user user-teams))
-            jwtoken   (jwt/generate (-> updated-user
-                                      (clean-user)
-                                      (assoc :auth-source :slack)
-                                      (assoc :slack-id (:slack-id slack-user))
-                                      (assoc :slack-token (:slack-token slack-user)))
-                        config/passphrase)]
+            jwtoken (jwt/generate (-> updated-user
+                                    (clean-user)
+                                    (assoc :auth-source :slack)
+                                    (assoc :slack-id (:slack-id slack-user))
+                                    (assoc :slack-token (:slack-token slack-user)))
+                      config/passphrase)]
         (redirect-to-web-ui true jwtoken))
 
       ;; no user came back from Slack

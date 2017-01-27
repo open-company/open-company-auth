@@ -72,7 +72,7 @@
   (db-common/create-resource conn table-name team (db-common/current-timestamp)))
 
 (schema/defn ^:always-validate get-team :- (schema/maybe Team)
-  "Given the team-id of the team, retrieve it from the database, or return nil if it don't exist."
+  "Given the team-id of the team, retrieve it, or return nil if it don't exist."
   [conn team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
   (db-common/read-resource conn table-name team-id))
@@ -85,7 +85,7 @@
   ;; TODO remove team from users
   (try
     (db-common/delete-resource conn table-name team-id)
-    (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+    (catch java.lang.RuntimeException e))) ; it's OK if there is no team to delete
 
 ;; ----- Team's set operations -----
 

@@ -1,4 +1,5 @@
 ;; productive set of development namespaces
+(require '[schema.core :as schema])
 (require '[oc.lib.jwt :as jwt] :reload)
 (require '[oc.lib.rethinkdb.common :as common] :reload)
 (require '[oc.lib.api.common :as api-common] :reload)
