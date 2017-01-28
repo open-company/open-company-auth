@@ -46,15 +46,17 @@
 
 ;; ----- Utility functions -----
 
-(defn valid-email? [email-address]
+(defn valid-email?
   "Return true if this is a valid email address according to the regex, otherwise false."
+  [email-address]
   (if (and (string? email-address)
            (re-matches #"^[^@]+@[^@\\.]+[\\.].+" email-address))
     true
     false))
 
-(defn valid-password? [password]
+(defn valid-password?
   "Return true if the password is valid, false if not."
+  [password]
   (and (string? password)
        (>= (count password) 5)))
 

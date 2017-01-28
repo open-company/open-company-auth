@@ -1,7 +1,6 @@
 (ns oc.auth.api.slack
   "Liberator API for Slack callback to auth service."
-  (:require [if-let.core :refer (if-let*)]
-            [taoensso.timbre :as timbre]
+  (:require [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :refer (redirect)]
             [oc.lib.rethinkdb.pool :as pool]

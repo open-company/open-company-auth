@@ -7,8 +7,7 @@
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
-            [oc.auth.representations.team :as team-rep]
-            [oc.auth.resources.user :as user-res]))
+            [oc.auth.representations.team :as team-rep]))
 
 (def media-type "application/vnd.open-company.user.v1+json")
 (def collection-media-type "application/vnd.collection+vnd.open-company.user+json;version=1")
