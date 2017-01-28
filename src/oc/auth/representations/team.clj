@@ -60,9 +60,13 @@
 (defn- slack-org
   "Item entry for a Slack org for the team."
   [team-id {slack-org-id :slack-org-id :as slack-org}]
+  (let [remove-link (remove-slack-org-link team-id slack-org-id)
+        links (if (:bot-token slack-org)
+                [remove-link]
+                [remove-link (add-slack-bot-link team-id)])]
   {:name (:name slack-org)
    :slack-org-id slack-org-id
-   :links [(remove-slack-org-link team-id slack-org-id)]})
+   :links links}))
 
 (defn render-team
   "Given a team map, create a JSON representation of the team for the REST API."
