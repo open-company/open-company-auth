@@ -108,7 +108,7 @@
 
     :post-to-existing? false
     :put-to-existing? true ; needed for a 409 conflict
-    :conflict? (fn [ctx] (:existing-user ctx))
+    :conflict? :existing-user
     :handle-conflict (ring-response {:status 409})
     
     :put! (fn [ctx] (create-user conn (:data ctx))) ; POST ends up handled here so we can have a 409 conflict

@@ -148,7 +148,7 @@
          (map? user)]}
   (if-let [original-user (get-user conn user-id)]
     (let [updated-password (:password user)
-          hashed-password (when (not (s/blank? updated-password)) (password-hash updated-password))
+          hashed-password (when-not (s/blank? updated-password) (password-hash updated-password))
           updated-user (merge original-user (ignore-props user))
           final-user (if hashed-password (assoc updated-user :password-hash hashed-password) updated-user)]
       (schema/validate User final-user)

@@ -30,7 +30,7 @@
   that corresponds to an email domain. Otherwise just indicate it's malformed."
   [ctx]
   (try
-    (if-let* [domain (-> (get-in ctx [:request :body]) slurp)
+    (if-let* [domain (slurp (get-in ctx [:request :body]))
               valid? (team-res/valid-email-domain? domain)]
       [false {:data domain}]
       true)
