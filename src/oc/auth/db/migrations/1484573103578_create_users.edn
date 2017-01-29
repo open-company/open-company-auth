@@ -8,6 +8,6 @@
   (println "Creating table: " u/table-name)
   (println (m/create-table conn config/db-name u/table-name u/primary-key))
   (println (m/create-index conn u/table-name "teams" {:multi true}))
-  (println (m/create-index conn u/table-name "one-time-tokens" {:multi true}))
+  (println (m/create-index conn u/table-name "one-time-token"))
   (println (m/create-index conn u/table-name "email"))
   true) ; return true on success

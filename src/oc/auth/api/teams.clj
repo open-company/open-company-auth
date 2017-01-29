@@ -1,6 +1,7 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
   (:require [if-let.core :refer (if-let* when-let*)]
+            [defun.core :refer (defun-)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET POST PUT PATCH DELETE)]
             [liberator.core :refer (defresource by-method)]
@@ -22,6 +23,33 @@
   (when-let* [user (user-res/get-user conn user-id)
             teams (:teams user)]
     (team-res/get-teams conn teams [:admins :created-at :updated-at])))
+
+(defun- handle-invite
+  "Handle an invitation/re-invite request.
+
+  This may involve one or more of the following:
+  Creating the user
+  Adding the user to the team
+  Creating a one-time token for the invitee to auth with
+  Sending an email with the token to invite them"
+
+  ;; No team
+  ([nil nil _member?] (timbre/warn "Invite request to non-existent team.") false)
+  
+  ;; No user yet
+  ([team nil _member?] (println "Add user.") false)
+  
+  ;; User, but not a team member yet
+  ([team user false] (println "Add membership.") false)
+
+  ;; Team member, but no token yet
+  ([team user :guard #(not (:one-time-token %)) true] (println "Add token.") false)
+  
+  ;; Team member with a token, needs an email invite
+  ([team user true] (println "Send email.") false)
+
+  ;; Should never get here, but want to avoid a stack overflow
+  ([_ _ _] (println "Eghads.") false))
 
 ;; ----- Validations -----
 
@@ -52,10 +80,14 @@
 
   :allowed-methods [:options :get]
 
+  ;; Media type client accepts
   :available-charsets [api-common/UTF8]
   :available-media-types [team-rep/collection-media-type]
+
+  ;; Media type client sends
   :handle-not-acceptable (api-common/only-accept 406 team-rep/collection-media-type)
 
+  ;; Responses
   :handle-ok (fn [ctx] (let [user-id (-> ctx :user :user-id)]
                         (team-rep/render-team-list (teams-for-user conn user-id) user-id))))
 
@@ -63,19 +95,23 @@
 (defresource team [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
-  :allowed-methods [:options :get :delete]
+  :allowed-methods [:options :get :delete] ; TODO PATCH
 
+  ;; Media type client accepts
   :available-media-types [team-rep/media-type]
   :handle-not-acceptable (api-common/only-accept 406 team-rep/media-type)
   
+  ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         {:existing-team team}
                         false))
 
+  ;; Actions
   :delete! (fn [_] (team-res/delete-team! conn team-id))
 
+  ;; Responses
   :handle-ok (fn [ctx] (let [admins (set (-> ctx :existing-team :admins))
                              users (user-res/list-users conn team-id) ; users in the team
                              user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
@@ -91,32 +127,61 @@
 
   :allowed-methods [:options :post]
 
+  ;; Media type client accepts
   :available-media-types [user-rep/media-type]
+  :handle-not-acceptable (api-common/only-accept 406 user-rep/media-type)
 
-  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :post (fn [ctx] (api-common/known-content-type? ctx team-rep/invite-media-type))})
 
-  ; :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
-  ;                              user (and (lib-schema/unique-id? user-id) (user-res/get-user-by-email conn user-id))
-  ;                              member? ((set (:teams user)) (:team-id team))]
-  ;                       {:existing-user user :admin? ((set (:admins team)) (:user-id user))}
-  ;                       false))
+  ;; Authorization
+  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id)) ; team admins only
 
-  :post! (fn [ctx] (println "post!"))
+  ; :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+  ;                       (let [user (user-res/get-user-by-email conn user-id)
+  ;                             member? (when (and team user) ((set (:teams user)) (:team-id team)))]
+  ;                         {:existing-team team :existing-user user :member? member?})
+  ;                       false)) ; No team by that ID
 
-  :respond-with-entity? false
-  :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
-)
+  ;; Validations
+  :processable? (by-method {
+    :options true
+    :post (fn [ctx] (and (user-res/valid-email? (-> ctx :data :email))
+                         (user-res/valid-password? (-> ctx :data :password))
+                         (string? (-> ctx :data :first-name))
+                         (string? (-> ctx :data :last-name))))})
+
+  ;; Actions
+  :post! (fn [ctx] {:updated-user (handle-invite (:existing-team ctx) (:existing-user ctx) (:member? ctx))})
+
+  ;; Responses
+  :respond-with-entity? true
+  :handle-created (fn [ctx] (if-let [updated-user (:updated-user ctx)]
+                              (common-api/json-response (user-rep/render-user updated-user)
+                                                         201
+                                                         {"Location" (user-rep/url updated-user)})
+                              (api-common/missing-response))))
 
 ;; A resource for the admins of a particular team
 (defresource admin [conn team-id user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :put :delete]
-  :malformed? false
 
+  ;; Media type client accepts
   :available-media-types [team-rep/admin-media-type]
   :handle-not-acceptable (api-common/only-accept 406 team-rep/admin-media-type)
+
+  ;; Media type client sends
+  :malformed? false ; no check, this media type is blank
+  :known-content-type? (by-method {
+    :options true
+    :delete true
+    :put (fn [ctx] (api-common/known-content-type? ctx team-rep/admin-media-type))})
   
+  ;; Auhorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
   :put-to-existing? true
@@ -124,13 +189,15 @@
                                user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))
                                member? ((set (:teams user)) (:team-id team))]
                         {:existing-user user :admin? ((set (:admins team)) (:user-id user))}
-                        false))
+                        false)) ; no team, no user, or user not a member of the team
 
+  ;; Actions
   :put! (fn [ctx] (when (:existing-user ctx)
                     {:updated-team (team-res/add-admin conn team-id user-id)}))
   :delete! (fn [ctx] (when (:admin? ctx)
                       {:updated-team (team-res/remove-admin conn team-id user-id)}))
 
+  ;; Responses
   :respond-with-entity? false
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
@@ -141,13 +208,21 @@
 
   :allowed-methods [:options :post :delete]
 
+  ;; Media type client accepts
   :available-media-types [team-rep/email-domain-media-type]
   :handle-not-acceptable (api-common/only-accept 406 team-rep/email-domain-media-type)
 
+  ;; Media type client sends
   :malformed? (by-method {
     :options false
     :post (fn [ctx] (malformed-email-domain? ctx))
     :delete false})
+  :known-content-type? (by-method {
+    :options true
+    :post (fn [ctx] (api-common/known-content-type? ctx team-rep/email-domain-media-type))
+    :delete true})
+
+  ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
   :exists? (by-method {
@@ -157,13 +232,15 @@
     :delete (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
                                 exists? ((set (:email-domains team)) domain)]
                         {:existing-team true :existing-domain true}
-                        false))})
+                        false))}) ; team or email domain doesn't exist
 
+  ;; Actions
   :post! (fn [ctx] (when (and (:existing-team ctx) (not (:existing-domain ctx)))
                     {:updated-team (team-res/add-email-domain conn team-id (:data ctx))}))
   :delete! (fn [ctx] (when (:existing-domain ctx)
                     {:updated-team (team-res/remove-email-domain conn team-id domain)}))
   
+  ;; Responses
   :respond-with-entity? false
   :handle-created (fn [ctx] (if (or (:updated-team ctx) (:existing-domain ctx))
                               (api-common/blank-response)
@@ -179,6 +256,11 @@
 
   :allowed-methods [:options :delete]
 
+  ;; Media type client accepts
+  :available-media-types [team-rep/slack-org-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 team-rep/slack-org-media-type)
+
+  ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
   :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
@@ -186,8 +268,10 @@
                         {:has-org? true}
                         false))
 
+  ;; Actions
   :delete! (fn [ctx] (when (:has-org? ctx) (team-res/remove-slack-org conn team-id slack-org-id)))
 
+  ;; Responses
   :respond-with-entity? false
   :handle-no-content (fn [ctx] (when-not (:has-org? ctx) (api-common/missing-response))))
 

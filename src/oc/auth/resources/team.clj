@@ -17,10 +17,18 @@
   :team-id lib-schema/UniqueID
   :name schema/Str
   :admins [lib-schema/UniqueID]
-  :email-domains [lib-schema/NonBlankStr]
+  :email-domains [lib-schema/EmailDomain]
   :slack-orgs [lib-schema/NonBlankStr]
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
+
+(def Invite {
+  :email lib-schema/EmailAddress
+  :admin schema/Bool
+  (schema/optional-key :org-name) (schema/maybe schema/Str)
+  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :first-name) (schema/maybe schema/Str)
+  (schema/optional-key :last-name) (schema/maybe schema/Str)})
 
 ;; ----- Metadata -----
 
@@ -34,14 +42,6 @@
   "Remove any reserved properties from the user."
   [team]
   (apply dissoc team reserved-properties))
-
-(defn valid-email-domain?
-  "Return true if this is a valid email domain according to the regex, otherwise false."
-  [email-domain]
-  (if (and (string? email-domain)
-      (re-matches #"^[^@\\.]+[\\.].+" email-domain))
-    true
-    false))
 
 ;; ----- Team CRUD -----
 

@@ -24,8 +24,8 @@
 (def User {
   :user-id lib-schema/UniqueID
   :teams [lib-schema/UniqueID]
-  (schema/optional-key :one-time-tokens) [lib-schema/NonBlankStr]
-  :email (schema/maybe schema/Str)
+  (schema/optional-key :one-time-token) lib-schema/UUIDStr
+  :email (schema/maybe lib-schema/EmailAddress)
   (schema/optional-key :password-hash) schema/Str
   :status (schema/pred #(statuses (keyword %)))
   :first-name schema/Str
@@ -42,23 +42,9 @@
 
 (def ignored-properties
   "Properties of a resource that are ignored during an update."
-  (merge reserved-properties #{:teams :one-time-tokens :status}))
+  (merge reserved-properties #{:teams :one-time-token :status}))
 
 ;; ----- Utility functions -----
-
-(defn valid-email?
-  "Return true if this is a valid email address according to the regex, otherwise false."
-  [email-address]
-  (if (and (string? email-address)
-           (re-matches #"^[^@]+@[^@\\.]+[\\.].+" email-address))
-    true
-    false))
-
-(defn valid-password?
-  "Return true if the password is valid, false if not."
-  [password]
-  (and (string? password)
-       (>= (count password) 5)))
 
 (defn clean-props
   "Remove any reserved properties from the user."
@@ -131,7 +117,7 @@
   "Given the one-time-use token of the user, retrieve them from the database, or return nil if user doesn't exist."
   [conn token :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (first (db-common/read-resources conn table-name "one-time-tokens" token)))
+  (first (db-common/read-resources conn table-name "one-time-token" token)))
 
 (schema/defn ^:always-validate update-user! :- User
   "
@@ -141,7 +127,7 @@
   to the User schema.
   
   NOTE: doesn't update teams, see: `add-team`, `remove-team`
-  NOTE: doesn't update one-time tokens, see: `add-token`, `remove-token`
+  NOTE: doesn't update one-time token, see: `add-token`, `remove-token`
   NOTE: doesn't handle case of user-id change.
   NOTE: doesn't handle case of status change, see: `activate!`, `unverify!`
   "
@@ -193,20 +179,20 @@
   Given the user-id of the user, and a one-time use token, add the token to the user if they exist.
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn user-id :- lib-schema/UniqueID token :- lib-schema/NonBlankStr]
+  [conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
-    (db-common/add-to-set conn table-name user-id "one-time-tokens" token)))
+    (db-common/updated-resource conn table-name user-id user (assoc user :one-time-token token))))
 
 (schema/defn ^:always-validate remove-token :- (schema/maybe User)
   "
   Given the user-id of the user, and a one-time use token, remove the token from the user if they exist.
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn user-id :- lib-schema/UniqueID token :- lib-schema/NonBlankStr]
+  [conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
-    (db-common/remove-from-set conn table-name user-id "one-time-tokens" token)))
+    (db-common/remove-from-set conn table-name user-id "one-time-token" token)))
 
 ;; ----- Collection of users -----
 

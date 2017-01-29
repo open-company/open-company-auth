@@ -10,6 +10,7 @@
 (def collection-media-type "application/vnd.collection+vnd.open-company.team+json;version=1")
 
 (def admin-media-type "application/vnd.open-company.team.admin.v1")
+(def invite-media-type "application/vnd.open-company.team.invite.v1")
 (def email-domain-media-type "application/vnd.open-company.team.email-domain.v1")
 (def slack-org-media-type "application/vnd.open-company.team.slack-org.v1")
 
@@ -23,11 +24,14 @@
 
 (defn- delete-link [team-id] (hateoas/delete-link (url team-id)))
 
+(defn- add-email-domain-link [team-id]
+  (hateoas/add-link hateoas/POST (str (url team-id) "/email-domains/") email-domain-media-type))
+
 (defn- remove-email-domain-link [team-id domain]
   (hateoas/remove-link (s/join "/" [(url team-id) "email-domains" domain]) email-domain-media-type))
 
-(defn- add-email-domain-link [team-id]
-  (hateoas/add-link hateoas/POST (str (url team-id) "/email-domains/") email-domain-media-type))
+(defn- invite-user-link [team-id]
+  (hateoas/add-link hateoas/POST (str (url team-id) "/users/") invite-media-type))
 
 (defn add-slack-org-link [team-id]
   (slack/auth-link "authenticate" team-id))
@@ -46,6 +50,7 @@
       (if self-name 
         (hateoas/link-map self-name hateoas/GET (url team-id) media-type)
         (self-link team-id))
+      (invite-user-link team-id)
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)

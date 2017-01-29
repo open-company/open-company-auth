@@ -90,15 +90,18 @@
 
     :allowed-methods [:options :post]
 
+    ;; Media type client accepts
     :available-media-types [jwt/media-type]
     :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
+    ;; Media type client sends
     :known-content-type? (by-method {
       :options true
       :get (fn [ctx] (api-common/known-content-type? ctx user-rep/media-type))})
 
     :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
 
+    ;; Validations
     :processable? (by-method {
       :options true
       :post (fn [ctx] (and (user-res/valid-email? (-> ctx :data :email))
@@ -106,12 +109,14 @@
                            (string? (-> ctx :data :first-name))
                            (string? (-> ctx :data :last-name))))})
 
+    ;; Actions
     :post-to-existing? false
     :put-to-existing? true ; needed for a 409 conflict
     :conflict? :existing-user
-    :handle-conflict (ring-response {:status 409})
-    
     :put! (fn [ctx] (create-user conn (:data ctx))) ; POST ends up handled here so we can have a 409 conflict
+
+    ;; Responses
+    :handle-conflict (ring-response {:status 409})
     :handle-created (fn [ctx] (user-rep/auth-response (:user ctx) :email))) ; respond w/ JWToken and location
 
 ;; A resource for operations on a particular user
