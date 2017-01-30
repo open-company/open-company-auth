@@ -32,7 +32,7 @@
 
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id)))
 
-(defn- remove-link [user-id] (hateoas/delete-link (url user-id)))
+(defn- remove-link [user-id] (hateoas/remove-link (url user-id)))
 
 (defn refresh-link [user-id] (hateoas/link-map "refresh" 
                                 hateoas/GET
