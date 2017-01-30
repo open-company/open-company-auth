@@ -44,7 +44,7 @@
   ([_conn _sender nil _user _member? _invite] (timbre/warn "Invite request to non-existent team.") false)
 
   ;; An already active team member... who is inviting this person, yoh?
-  ([_conn _sender team-id user :guard #(= "active" (:status %)) true _invite]
+  ([_conn _sender team user :guard #(= "active" (:status %)) true _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   true)
   
