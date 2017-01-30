@@ -3,7 +3,7 @@
             [amazonica.aws.sqs :as sqs]
             [taoensso.timbre :as timbre]
             [oc.lib.schema :as lib-schema]
-            [oc.auth.config :as c]))
+            [oc.auth.config :as config]))
 
 ;; ----- SQS Message Schemas -----
 
@@ -59,8 +59,8 @@
   (schema/validate type msg)
   (timbre/info "Sending...")
   (sqs/send-message
-    {:access-key c/aws-access-key-id
-     :secret-key c/aws-secret-access-key}
-    c/aws-sqs-email-queue
+    {:access-key config/aws-access-key-id
+     :secret-key config/aws-secret-access-key}
+    config/aws-sqs-email-queue
     msg)
   (timbre/info "Sent"))
