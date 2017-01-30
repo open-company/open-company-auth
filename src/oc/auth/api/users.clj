@@ -1,6 +1,7 @@
 (ns oc.auth.api.users
   "Liberator API for user resources."
-  (:require [if-let.core :refer (if-let* when-let*)]
+  (:require [clojure.string :as s]
+            [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET PATCH POST DELETE)]
             [liberator.core :refer (defresource by-method)]
@@ -32,6 +33,22 @@
     false))
 
 ;; ----- Validations -----
+
+(defn token-auth [conn headers]
+  (if-let* [authorization (or (get headers "Authorization") (get headers "authorization"))
+            token (last (s/split authorization #" "))]
+    
+    (if-let [user (and (lib-schema/valid? lib-schema/UUIDStr token) ; it's a valid UUID
+                       (user-res/get-user-by-token conn token))] ; and a user has it as their token
+      (let [user-id (:user-id user)]
+        (timbre/info "Auth'd user" user-id "by token" token)
+        (user-res/update-user! conn user-id (assoc user :status :active)) ; mark user active
+        (user-res/remove-token conn user-id) ; remove the used token
+        {:email (:email user)})
+    
+      false) ; token is not a UUID, or no user for the token
+    
+    false)) ; no Authorization header or no token in the header
 
 (defn email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
@@ -79,9 +96,12 @@
   :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
   :authorized? (by-method {:options true
-                           :get (fn [ctx] (-> ctx :request :identity))})
+                           :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
+                                              (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
 
-  :handle-ok (fn [ctx] (user-rep/auth-response (user-res/get-user-by-email conn (-> ctx :request :identity))
+  :handle-ok (fn [ctx] (user-rep/auth-response
+                          (user-res/get-user-by-email conn (or (-> ctx :request :identity) ; Basic HTTP Auth
+                                                               (:email ctx))) ; one time use token auth
                           :email))) ; respond w/ JWToken and location
 
 ;; A resource for creating users by email
@@ -193,7 +213,7 @@
       (OPTIONS "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
       (POST "/users" [] (pool/with-pool [conn db-pool] (user-create conn)))
       (POST "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
-      ;; email user authentication
+      ;; email / token user authentication
       (OPTIONS "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
       (OPTIONS "/users/auth/" [] (pool/with-pool [conn db-pool] (user-auth conn)))
       (GET "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
