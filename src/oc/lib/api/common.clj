@@ -38,8 +38,11 @@
 
   ([body status mime-type :guard string?] (json-response body status mime-type {}))
 
-  ([body :guard #(or (map? %) (sequential? %)) status :guard integer? mime-type :guard string? headers :guard map?]
-  (ring-response {:body (json/generate-string body {:pretty true})
+  ([body :guard #(or (map? %) (sequential? %)) status mime-type headers]
+  (json-response (json/generate-string body {:pretty true}) status mime-type headers))
+  
+  ([body :guard string? status :guard integer? mime-type :guard string? headers :guard map?]
+  (ring-response {:body body
                   :status status 
                   :headers (merge {"Content-Type" mime-type} headers)})))
 

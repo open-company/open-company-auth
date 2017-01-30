@@ -83,11 +83,11 @@
       (do (timbre/error "Add token to user" user-id "failed.") false)))
 
   ;; Non-active team member with a token, needs an email invite
-  ([_conn sender _team user :guard #(not= "active" (:status %)) true _invite]
+  ([_conn sender _team user :guard #(not= "active" (:status %)) true invite]
   (let [user-id (:user-id user)
         email (:email user)
         one-time-token (:one-time-token user)]
-    (timbre/info "Sending email inviting to user" user-id "at" invite)
+    (timbre/info "Sending email inviting to user" user-id "at" email)
     (sqs/send! sqs/EmailInvite
       (sqs/->invite
         (merge invite {:token-link (token-link :invite one-time-token)})
