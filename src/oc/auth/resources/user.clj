@@ -84,7 +84,7 @@
         keywordize-keys
         clean-props
         (assoc :user-id (db-common/unique-id))
-        (assoc :teams [])
+        (update :teams #(or % []))
         (update :email #(or % ""))
         (update :first-name #(or % ""))
         (update :last-name #(or % ""))
