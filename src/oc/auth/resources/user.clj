@@ -179,10 +179,12 @@
   Given the user-id of the user, and a one-time use token, add the token to the user if they exist.
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
+  ([conn user-id :- lib-schema/UniqueID] (add-token conn user-id (str (java.util.UUID/randomUUID))))
+
+  ([conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
-    (db-common/updated-resource conn table-name user-id user (assoc user :one-time-token token))))
+    (db-common/update-resource conn table-name user-id user (assoc user :one-time-token token)))))
 
 (schema/defn ^:always-validate remove-token :- (schema/maybe User)
   "
@@ -192,7 +194,7 @@
   [conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
-    (db-common/remove-from-set conn table-name user-id "one-time-token" token)))
+    (db-common/remove-property conn table-name user-id "one-time-token")))
 
 ;; ----- Collection of users -----
 

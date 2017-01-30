@@ -59,7 +59,7 @@
   [ctx]
   (try
     (if-let* [domain (slurp (get-in ctx [:request :body]))
-              valid? (team-res/valid-email-domain? domain)]
+              valid? (lib-schema/valid-email-domain? domain)]
       [false {:data domain}]
       true)
     (catch Exception e
@@ -146,12 +146,12 @@
   ;                       false)) ; No team by that ID
 
   ;; Validations
-  :processable? (by-method {
-    :options true
-    :post (fn [ctx] (and (user-res/valid-email? (-> ctx :data :email))
-                         (user-res/valid-password? (-> ctx :data :password))
-                         (string? (-> ctx :data :first-name))
-                         (string? (-> ctx :data :last-name))))})
+  ; :processable? (by-method {
+  ;   :options true
+  ;   :post (fn [ctx] (and (user-res/valid-email? (-> ctx :data :email))
+  ;                        (user-res/valid-password? (-> ctx :data :password))
+  ;                        (string? (-> ctx :data :first-name))
+  ;                        (string? (-> ctx :data :last-name))))})
 
   ;; Actions
   :post! (fn [ctx] {:updated-user (handle-invite (:existing-team ctx) (:existing-user ctx) (:member? ctx))})
@@ -159,7 +159,7 @@
   ;; Responses
   :respond-with-entity? true
   :handle-created (fn [ctx] (if-let [updated-user (:updated-user ctx)]
-                              (common-api/json-response (user-rep/render-user updated-user)
+                              (api-common/json-response (user-rep/render-user updated-user)
                                                          201
                                                          {"Location" (user-rep/url updated-user)})
                               (api-common/missing-response))))

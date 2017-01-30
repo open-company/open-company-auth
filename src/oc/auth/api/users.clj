@@ -104,8 +104,8 @@
     ;; Validations
     :processable? (by-method {
       :options true
-      :post (fn [ctx] (and (user-res/valid-email? (-> ctx :data :email))
-                           (user-res/valid-password? (-> ctx :data :password))
+      :post (fn [ctx] (and (lib-schema/valid-email-address? (-> ctx :data :email))
+                           (lib-schema/valid-password? (-> ctx :data :password))
                            (string? (-> ctx :data :first-name))
                            (string? (-> ctx :data :last-name))))})
 
