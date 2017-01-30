@@ -151,6 +151,28 @@
     (db-common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
 
+(schema/defn ^:always-validate add-token :- (schema/maybe User)
+  "
+  Given the user-id of the user, and a one-time use token, add the token to the user if they exist.
+  Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  ([conn user-id :- lib-schema/UniqueID] (add-token conn user-id (str (java.util.UUID/randomUUID))))
+
+  ([conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [user (get-user conn user-id)]
+    (db-common/update-resource conn table-name primary-key user (assoc user :one-time-token token)))))
+
+(schema/defn ^:always-validate remove-token :- (schema/maybe User)
+  "
+  Given the user-id of the user, and a one-time use token, remove the token from the user if they exist.
+  Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
+  "
+  [conn user-id :- lib-schema/UniqueID]
+  {:pre [(db-common/conn? conn)]}
+  (if-let [user (get-user conn user-id)]
+    (db-common/remove-property conn table-name user-id "one-time-token")))
+
 ;; ----- User's set operations -----
 
 (schema/defn ^:always-validate add-team :- (schema/maybe User)
@@ -173,28 +195,6 @@
   {:pre [(db-common/conn? conn)]}
   (if-let [user (get-user conn user-id)]
     (db-common/remove-from-set conn table-name user-id "teams" team-id)))
-
-(schema/defn ^:always-validate add-token :- (schema/maybe User)
-  "
-  Given the user-id of the user, and a one-time use token, add the token to the user if they exist.
-  Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
-  "
-  ([conn user-id :- lib-schema/UniqueID] (add-token conn user-id (str (java.util.UUID/randomUUID))))
-
-  ([conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
-  {:pre [(db-common/conn? conn)]}
-  (if-let [user (get-user conn user-id)]
-    (db-common/update-resource conn table-name user-id user (assoc user :one-time-token token)))))
-
-(schema/defn ^:always-validate remove-token :- (schema/maybe User)
-  "
-  Given the user-id of the user, and a one-time use token, remove the token from the user if they exist.
-  Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
-  "
-  [conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
-  {:pre [(db-common/conn? conn)]}
-  (if-let [user (get-user conn user-id)]
-    (db-common/remove-property conn table-name user-id "one-time-token")))
 
 ;; ----- Collection of users -----
 
