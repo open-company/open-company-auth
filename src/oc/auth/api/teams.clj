@@ -1,6 +1,7 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
-  (:require [if-let.core :refer (if-let* when-let*)]
+  (:require [clojure.string :as s]
+            [if-let.core :refer (if-let* when-let*)]
             [defun.core :refer (defun-)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes OPTIONS GET POST PUT PATCH DELETE)]
@@ -9,11 +10,17 @@
             [oc.lib.rethinkdb.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
+            [oc.auth.lib.sqs :as sqs]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]))
+
+;; ----- Utility Functions -----
+
+(defn- token-link [type token]
+  (s/join "/" [config/ui-server-url (str (name type) "?token=" token)]))
 
 ;; ----- Actions -----
 
@@ -33,23 +40,60 @@
   Creating a one-time token for the invitee to auth with
   Sending an email with the token to invite them"
 
-  ;; No team
-  ([nil nil _member?] (timbre/warn "Invite request to non-existent team.") false)
+  ;; No team to invite to!
+  ([_conn _sender nil _user _member? _invite] (timbre/warn "Invite request to non-existent team.") false)
+
+  ;; An already active team member... who is inviting this person, yoh?
+  ([_conn _sender team-id user :guard #(= "active" (:status %)) true _invite]
+  (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
+  true)
   
   ;; No user yet
-  ([team nil _member?] (println "Add user.") false)
+  ([conn sender team nil member? invite]
+  (let [team-id (:team-id team)
+        email (:email invite)]
+    (timbre/info "Creating user" email "for team" team-id)
+    (if-let [new-user (user-res/create-user! conn
+                        (user-res/->user (-> invite
+                          (dissoc :admin :org-name :logo-url)
+                          (assoc :one-time-token (str (java.util.UUID/randomUUID)))
+                          (assoc :teams [team-id]))))]
+      (handle-invite conn sender team new-user true invite) ; recurse
+      (do (timbre/error "Add user" email "failed.") false))))
   
-  ;; User, but not a team member yet
-  ([team user false] (println "Add membership.") false)
+  ;; User exists, but not a team member yet
+  ([conn sender team user member? :guard not invite]
+  (let [team-id (:team-id team)
+        user-id (:user-id user)
+        status (:status user)]
+    (timbre/info "Adding user" user-id "to team" team-id)
+    (if-let [updated-user (user-res/add-team conn user-id team-id)]
+      (if (= status "active")
+        user ; TODO need to send a welcome to the team email
+        (handle-invite conn sender team updated-user true invite)) ; recurse
+      (do (timbre/error "Add team" team-id "to user" user-id "failed.") false))))
 
-  ;; Team member, but no token yet
-  ([team user :guard #(not (:one-time-token %)) true] (println "Add token.") false)
-  
-  ;; Team member with a token, needs an email invite
-  ([team user true] (println "Send email.") false)
+  ;; Non-active team member without a token, needs a token
+  ([conn sender team user :guard #(and (not= "active" (:status %))
+                                (not (:one-time-token %))) true invite]
+  (let [user-id (:user-id user)]
+    (timbre/info "Adding token to" user-id)
+    (if-let [updated-user (user-res/add-token conn user-id)]
+      (handle-invite conn sender team updated-user true invite)) ; recurse
+      (do (timbre/error "Add token to user" user-id "failed.") false)))
 
-  ;; Should never get here, but want to avoid a stack overflow
-  ([_ _ _] (println "Eghads.") false))
+  ;; Non-active team member with a token, needs an email invite
+  ([_conn sender _team user :guard #(not= "active" (:status %)) true _invite]
+  (let [user-id (:user-id user)
+        email (:email user)
+        one-time-token (:one-time-token user)]
+    (timbre/info "Sending email inviting to user" user-id "at" invite)
+    (sqs/send! sqs/EmailInvite
+      (sqs/->invite
+        (merge invite {:token-link (token-link :invite one-time-token)})
+        (:name sender)
+        (:email sender)))
+    user)))
 
 ;; ----- Validations -----
 
@@ -139,22 +183,26 @@
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id)) ; team admins only
 
-  ; :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
-  ;                       (let [user (user-res/get-user-by-email conn user-id)
-  ;                             member? (when (and team user) ((set (:teams user)) (:team-id team)))]
-  ;                         {:existing-team team :existing-user user :member? member?})
-  ;                       false)) ; No team by that ID
+  :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+                        (let [user (user-res/get-user-by-email conn (-> ctx :data :email))
+                              member? (when (and team user) ((set (:teams user)) (:team-id team)))]
+                          {:existing-team team :existing-user user :member? member?})
+                        false)) ; No team by that ID
 
   ;; Validations
-  ; :processable? (by-method {
-  ;   :options true
-  ;   :post (fn [ctx] (and (user-res/valid-email? (-> ctx :data :email))
-  ;                        (user-res/valid-password? (-> ctx :data :password))
-  ;                        (string? (-> ctx :data :first-name))
-  ;                        (string? (-> ctx :data :last-name))))})
+  :processable? (by-method {
+    :options true
+    :post (fn [ctx] (lib-schema/valid? team-res/Invite (:data ctx)))})
 
   ;; Actions
-  :post! (fn [ctx] {:updated-user (handle-invite (:existing-team ctx) (:existing-user ctx) (:member? ctx))})
+  :post! (fn [ctx] {:updated-user 
+                    (handle-invite
+                      conn
+                      (:user ctx) ; sender
+                      (:existing-team ctx)
+                      (:existing-user ctx) ; recipient
+                      (:member? ctx)
+                      (:data ctx))}) ; invitation
 
   ;; Responses
   :respond-with-entity? true

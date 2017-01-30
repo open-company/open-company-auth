@@ -2,6 +2,7 @@
   (:require [schema.core :as schema]
             [amazonica.aws.sqs :as sqs]
             [taoensso.timbre :as timbre]
+            [oc.lib.schema :as lib-schema]
             [oc.auth.config :as c]))
 
 ;; ----- SQS Message Schemas -----
@@ -10,15 +11,16 @@
   {:type (schema/pred #(= "invite" %))
    :from schema/Str
    :reply-to schema/Str
-   :to schema/Str
-   :company-name schema/Str
-   :logo schema/Str
-   :token-link schema/Str})
+   :to lib-schema/EmailAddress
+   :first-name schema/Str
+   :org-name schema/Str
+   :logo-url schema/Str
+   :token-link lib-schema/NonBlankStr})
 
 (def PasswordReset
   {:type (schema/pred #(= "reset" %))
-   :to schema/Str
-   :token-link schema/Str})
+   :to lib-schema/EmailAddress
+   :token-link lib-schema/NonBlankStr})
 
 ;; ----- SQS Message Creation -----
 
@@ -33,8 +35,9 @@
     :to (:email payload)
     :from (or from "")
     :reply-to (or reply-to "")
-    :company-name (or (:company-name payload) "")
-    :logo (or (:logo payload) "")
+    :first-name (or (:first-name payload) "")
+    :org-name (or (:org-name payload) "")
+    :logo-url (or (:logo-url payload) "")
     :token-link (:token-link payload)
   })
 
