@@ -41,15 +41,15 @@
   Sending an email with the token to invite them"
 
   ;; No team to invite to!
-  ([_conn _sender nil _user _member? _invite] (timbre/warn "Invite request to non-existent team.") false)
+  ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
 
   ;; An already active team member... who is inviting this person, yoh?
-  ([_conn _sender team user :guard #(= "active" (:status %)) true _invite]
+  ([_conn _sender team user :guard #(= "active" (:status %)) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   true)
   
   ;; No user yet
-  ([conn sender team nil member? invite]
+  ([conn sender team nil member? admin? invite]
   (let [team-id (:team-id team)
         email (:email invite)]
     (timbre/info "Creating user" email "for team" team-id)
@@ -58,11 +58,11 @@
                           (dissoc :admin :org-name :logo-url)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
-      (handle-invite conn sender team new-user true invite) ; recurse
+      (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Add user" email "failed.") false))))
   
   ;; User exists, but not a team member yet
-  ([conn sender team user member? :guard not invite]
+  ([conn sender team user member? :guard not admin? invite]
   (let [team-id (:team-id team)
         user-id (:user-id user)
         status (:status user)]
@@ -70,20 +70,29 @@
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (if (= status "active")
         user ; TODO need to send a welcome to the team email
-        (handle-invite conn sender team updated-user true invite)) ; recurse
+        (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Add team" team-id "to user" user-id "failed.") false))))
+
+  ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
+  ([conn sender team user true _admin? :guard not invite :guard :admin]
+  (let [team-id (:team-id team)
+        user-id (:user-id user)]
+    (timbre/info "Making user" user-id "an admin of team" team-id)
+    (if-let [updated-team (team-res/add-admin conn team-id user-id)]
+      (handle-invite conn sender team user true true invite) ; recurse
+      (do (timbre/error "Add admin" user-id "to team" team-id "failed.") false))))
 
   ;; Non-active team member without a token, needs a token
   ([conn sender team user :guard #(and (not= "active" (:status %))
-                                (not (:one-time-token %))) true invite]
+                                (not (:one-time-token %))) true admin? invite]
   (let [user-id (:user-id user)]
     (timbre/info "Adding token to" user-id)
     (if-let [updated-user (user-res/add-token conn user-id)]
-      (handle-invite conn sender team updated-user true invite)) ; recurse
+      (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Add token to user" user-id "failed.") false)))
 
   ;; Non-active team member with a token, needs an email invite
-  ([_conn sender _team user :guard #(not= "active" (:status %)) true invite]
+  ([_conn sender _team user :guard #(not= "active" (:status %)) true _admin? invite]
   (let [user-id (:user-id user)
         email (:email user)
         one-time-token (:one-time-token user)]
@@ -185,8 +194,9 @@
 
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         (let [user (user-res/get-user-by-email conn (-> ctx :data :email))
-                              member? (when (and team user) ((set (:teams user)) (:team-id team)))]
-                          {:existing-team team :existing-user user :member? member?})
+                              member? (when (and team user) ((set (:teams user)) (:team-id team)))
+                              admin? (when (and team user) ((set (:admins team)) (:user-id user)))]
+                          {:existing-team team :existing-user user :member? member? :admin? admin?})
                         false)) ; No team by that ID
 
   ;; Validations
@@ -202,6 +212,7 @@
                       (:existing-team ctx)
                       (:existing-user ctx) ; recipient
                       (:member? ctx)
+                      (:admin? ctx)
                       (:data ctx))}) ; invitation
 
   ;; Responses
