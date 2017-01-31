@@ -59,8 +59,7 @@
         (item-link user-id)
         (partial-update-link user-id)
         (admin-action-link team-id user-id (:admin user))
-        (remove-link user-id)])
-      (dissoc :admin))))
+        (remove-link user-id)]))))
 
 (defn- user-links
   "HATEOAS links for a user resource"
