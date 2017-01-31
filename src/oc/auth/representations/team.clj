@@ -38,7 +38,9 @@
 
 (defn- team-links
   "HATEOAS links for a team resource"
-  [team & self-name]
+  ([team] (team-links team nil))
+  
+  ([team self-name]
   (let [team-id (:team-id team)]
     (assoc team :links [
       (if self-name 
@@ -48,7 +50,7 @@
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)
-      (delete-link team-id)])))
+      (delete-link team-id)]))))
 
 (defn- email-domain
   "Item entry for an email domain for the team."
@@ -91,6 +93,6 @@
                   :href "/teams"
                   :links [(hateoas/self-link "/teams" {:accept mt/team-collection-media-type})]
                   :teams (->> teams
-                          (map #(if ((set (:admins %)) user-id) (team-links % :item) %))
+                          (map #(if ((set (:admins %)) user-id) (team-links % "item") %))
                           (map #(dissoc % :admins)))}}
     {:pretty true}))
