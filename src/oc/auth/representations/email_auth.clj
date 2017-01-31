@@ -12,7 +12,7 @@
                                  :authentication "basic"}))
 
 (def create-link (hateoas/create-link "/users/"
-                                 {:accept mt/user-media-type
+                                 {:accept jwt/media-type
                                   :content-type mt/user-media-type}
                                  {:auth-source "email"}))
 
