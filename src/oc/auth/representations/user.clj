@@ -97,7 +97,7 @@
   [team-id user]
   (let [user-id (:user-id user)]
     (-> user
-      (select-keys (conj representation-props :status))
+      (select-keys (concat representation-props [:admin :status]))
       (user-collection-links team-id))))
 
 (defn render-user
