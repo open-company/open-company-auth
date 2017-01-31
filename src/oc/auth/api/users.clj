@@ -15,6 +15,7 @@
             [oc.auth.api.slack :as slack-api]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
+            [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.user :as user-rep]))
 
 ;; ----- Actions -----
@@ -117,7 +118,7 @@
     ;; Media type client sends
     :known-content-type? (by-method {
       :options true
-      :get (fn [ctx] (api-common/known-content-type? ctx user-rep/media-type))})
+      :get (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
     :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
 
@@ -145,13 +146,13 @@
 
   :allowed-methods [:options :get :patch :delete]
 
-  :available-media-types [user-rep/media-type]
-  :handle-not-acceptable (api-common/only-accept 406 user-rep/media-type)
+  :available-media-types [mt/user-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
   
   :known-content-type? (by-method {
                           :options true
                           :get true
-                          :patch (fn [ctx] (api-common/known-content-type? ctx user-rep/media-type))
+                          :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))
                           :delete true})
 
   :allowed? (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))

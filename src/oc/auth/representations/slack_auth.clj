@@ -29,8 +29,9 @@
   (hateoas/link-map rel
     hateoas/GET
     (slack-auth-url scope state)
-    "application/jwt"
-    :auth-source "slack"))
+    {:accept "application/jwt"}
+    {:auth-source "slack"
+    :authentication "oauth"}))
 
 (defn bot-link 
   ([] (bot-link nil))

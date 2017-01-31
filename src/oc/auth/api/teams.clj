@@ -14,6 +14,7 @@
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
+            [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]))
 
@@ -135,10 +136,10 @@
 
   ;; Media type client accepts
   :available-charsets [api-common/UTF8]
-  :available-media-types [team-rep/collection-media-type]
+  :available-media-types [mt/team-collection-media-type]
 
   ;; Media type client sends
-  :handle-not-acceptable (api-common/only-accept 406 team-rep/collection-media-type)
+  :handle-not-acceptable (api-common/only-accept 406 mt/team-collection-media-type)
 
   ;; Responses
   :handle-ok (fn [ctx] (let [user-id (-> ctx :user :user-id)]
@@ -151,8 +152,8 @@
   :allowed-methods [:options :get :delete] ; TODO PATCH
 
   ;; Media type client accepts
-  :available-media-types [team-rep/media-type]
-  :handle-not-acceptable (api-common/only-accept 406 team-rep/media-type)
+  :available-media-types [mt/team-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/team-media-type)
   
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
@@ -181,13 +182,13 @@
   :allowed-methods [:options :post]
 
   ;; Media type client accepts
-  :available-media-types [user-rep/media-type]
-  :handle-not-acceptable (api-common/only-accept 406 user-rep/media-type)
+  :available-media-types [mt/user-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
 
   ;; Media type client sends
   :known-content-type? (by-method {
     :options true
-    :post (fn [ctx] (api-common/known-content-type? ctx team-rep/invite-media-type))})
+    :post (fn [ctx] (api-common/known-content-type? ctx mt/invite-media-type))})
 
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id)) ; team admins only
@@ -230,15 +231,15 @@
   :allowed-methods [:options :put :delete]
 
   ;; Media type client accepts
-  :available-media-types [team-rep/admin-media-type]
-  :handle-not-acceptable (api-common/only-accept 406 team-rep/admin-media-type)
+  :available-media-types [mt/admin-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/admin-media-type)
 
   ;; Media type client sends
   :malformed? false ; no check, this media type is blank
   :known-content-type? (by-method {
     :options true
     :delete true
-    :put (fn [ctx] (api-common/known-content-type? ctx team-rep/admin-media-type))})
+    :put (fn [ctx] (api-common/known-content-type? ctx mt/admin-media-type))})
   
   ;; Auhorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
@@ -268,8 +269,8 @@
   :allowed-methods [:options :post :delete]
 
   ;; Media type client accepts
-  :available-media-types [team-rep/email-domain-media-type]
-  :handle-not-acceptable (api-common/only-accept 406 team-rep/email-domain-media-type)
+  :available-media-types [mt/email-domain-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/email-domain-media-type)
 
   ;; Media type client sends
   :malformed? (by-method {
@@ -278,7 +279,7 @@
     :delete false})
   :known-content-type? (by-method {
     :options true
-    :post (fn [ctx] (api-common/known-content-type? ctx team-rep/email-domain-media-type))
+    :post (fn [ctx] (api-common/known-content-type? ctx mt/email-domain-media-type))
     :delete true})
 
   ;; Authorization
@@ -316,8 +317,8 @@
   :allowed-methods [:options :delete]
 
   ;; Media type client accepts
-  :available-media-types [team-rep/slack-org-media-type]
-  :handle-not-acceptable (api-common/only-accept 406 team-rep/slack-org-media-type)
+  :available-media-types [mt/slack-org-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/slack-org-media-type)
 
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
