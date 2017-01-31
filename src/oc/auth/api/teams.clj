@@ -239,7 +239,7 @@
   :known-content-type? (by-method {
     :options true
     :delete true
-    :put (fn [ctx] (api-common/known-content-type? ctx mt/admin-media-type))})
+    :put true})
   
   ;; Auhorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
