@@ -195,8 +195,8 @@
 
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         (let [user (user-res/get-user-by-email conn (-> ctx :data :email))
-                              member? (when (and team user) ((set (:teams user)) (:team-id team)))
-                              admin? (when (and team user) ((set (:admins team)) (:user-id user)))]
+                              member? (when (and team user) (if ((set (:teams user)) (:team-id team)) true false))
+                              admin? (when (and team user) (if ((set (:admins team)) (:user-id user)) true false))]
                           {:existing-team team :existing-user user :member? member? :admin? admin?})
                         false)) ; No team by that ID
 
