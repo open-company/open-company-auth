@@ -30,7 +30,7 @@
 
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id) {:ref mt/user-media-type}))
 
-(defn- remove-link [user-id] (hateoas/remove-link (url user-id) {:ref mt/user-media-type}))
+(defn- remove-link [user-id] (hateoas/remove-link (url user-id) {} {:ref mt/user-media-type}))
 
 (defn refresh-link [user-id] (hateoas/link-map "refresh" 
                                 hateoas/GET
