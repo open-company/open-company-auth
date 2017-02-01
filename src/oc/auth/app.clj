@@ -40,9 +40,9 @@
 
 (defn routes [sys]
   (compojure/routes
-    (GET "/ping" [] (api-common/text-response  "OpenCompany auth server: OK" 200)) ; Up-time monitor
-    (GET "/---error-test---" req (/ 1 0))
-    (GET "/---500-test---" req {:status 500 :body "Testing bad things."})
+    (GET "/ping" [] {:body "OpenCompany Auth Service: OK" :status 200}) ; Up-time monitor
+    (GET "/---error-test---" [] (/ 1 0))
+    (GET "/---500-test---" [] {:body "Testing bad things." :status 500})
     (entry-point-api/routes sys)
     (slack-api/routes sys)
     (users-api/routes sys)

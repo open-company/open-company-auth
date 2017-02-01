@@ -198,13 +198,13 @@ Users of the [OpenCompany](https://opencompany.com/) platform should get started
 
 **Make sure you've updated `project.clj` as described above.**
 
-To start a production Auth server:
+To start a production instance:
 
 ```console
 lein start!
 ```
 
-Or to start a development Auth server:
+Or to start a development instance:
 
 ```console
 lein start
