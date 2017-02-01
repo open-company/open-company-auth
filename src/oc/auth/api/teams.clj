@@ -236,10 +236,6 @@
 
   ;; Media type client sends
   :malformed? false ; no check, this media type is blank
-  :known-content-type? (by-method {
-    :options true
-    :delete true
-    :put true})
   
   ;; Auhorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))

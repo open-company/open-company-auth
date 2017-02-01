@@ -2,7 +2,7 @@
   "Liberator API for Slack callback to auth service."
   (:require [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
-            [ring.util.response :refer (redirect)]
+            [ring.util.response :as response]
             [oc.lib.rethinkdb.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.lib.jwt :as jwt]
@@ -18,7 +18,7 @@
 (defn- clean-slack-user
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
-  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name))
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -60,40 +60,54 @@
 ;; ----- Slack Request Handling Functions -----
 
 (defn- redirect-to-web-ui
-  "Send them back to the UI login page with a JWT token or a reason they don't have one."
-  [success? jwt-or-reason]
-  (let [param (if success? "jwt" "access")]
-    (redirect (str config/ui-server-url "/login?" param "=" jwt-or-reason))))
+  "Send them back to a UI page with a JWT token or a reason they don't have one."
+  [team-id success? param-value]
+  (let [page (if team-id (str "/" team-id "/settings/user-management") "login")
+        param (if (and (not team-id) success?) "jwt" "access")
+        url (str config/ui-server-url page "?" param "=" param-value)]
+    (response/redirect url)))
 
 (defn- slack-callback
   "Redirect browser to web UI after callback from Slack."
   [conn params]
-  (if (get params "test")
-    ;; Just a test
-    (api-common/json-response {:test true :ok true} 200)
-    ;; This is NOT a test
-    (if-let [slack-user (slack/oauth-callback params)]
+  (let [slack-response (slack/oauth-callback params) ; process the response from Slack
+        team-id (:team-id slack-response) ; team-id in the response?
+        slack-org-only? (when team-id true)] ; a team-id means we are just adding a Slack org to an existing team
+    (if-let [slack-user (when-not (:error slack-response) slack-response)]
       ;; got an auth'd user back from Slack
-      (let [slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user))
-            new-slack-org (when-not slack-org (create-slack-org-for conn slack-user))
-            user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
-            new-user (when-not user (user-res/->user (clean-slack-user slack-user)))
-            teams (team-res/get-teams-by-slack-org conn (:slack-org-id slack-user)) ; team(s) already exist?
-            new-team (when (empty? teams) (create-team-for conn slack-user (or (:user-id user) (:user-id new-user))))
+      (let [existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
+            slack-org (or existing-slack-org (create-slack-org-for conn slack-user)) ; create new Slack org
+            user (when-not slack-org-only?
+              (user-res/get-user-by-email conn (:email slack-user))) ; user already exists?
+            new-user (when-not (or slack-org-only? user)
+              (user-res/->user (clean-slack-user slack-user))) ; create a new user map
+            teams (if team-id
+                     ;; The team this Slack org is being added to
+                     (team-res/get-teams conn [team-id])
+                    ;; Do team(s) already exist for this Slack org?
+                    (team-res/get-teams-by-slack-org conn (:slack-org-id slack-user)))
+            new-team (when (and (not slack-org-only?)
+                                (empty? teams))
+                      (create-team-for conn slack-user (or (:user-id user) (:user-id new-user)))) ; create a new team
             user-teams (if (empty? teams) [new-team] teams)
-            updated-user (if user
-                            (update-user conn slack-user user user-teams)
-                            (create-user-for conn new-user user-teams))
-            jwt-user (user-rep/jwt-props-for (-> updated-user
-                                              (clean-user)
-                                              (assoc :slack-id (:slack-id slack-user))
-                                              (assoc :slack-token (:slack-token slack-user))) :slack)
-            jwtoken (jwt/generate jwt-user config/passphrase)]
-        ;; Send them back to the OC Web UI
-        (redirect-to-web-ui true jwtoken))
+            updated-user (when-not slack-org-only?
+                            (if user
+                              (update-user conn slack-user user user-teams) ; update user's teams
+                              (create-user-for conn new-user user-teams))) ; create new user 
+            jwt-user (when-not slack-org-only? (user-rep/jwt-props-for
+                                                  (-> updated-user
+                                                    (clean-user)
+                                                    (assoc :slack-id (:slack-id slack-user))
+                                                    (assoc :slack-token (:slack-token slack-user))) :slack))
+            redirect-arg (if slack-org-only? "true" (jwt/generate jwt-user config/passphrase))]
+        ;; Add the Slack org to the existing team if needed
+        (when (and team-id slack-org)
+          (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
+        ;; All done, send them back to the OC Web UI
+        (redirect-to-web-ui team-id true redirect-arg))
 
-      ;; no user came back from Slack
-      (redirect-to-web-ui false "failed"))))
+      ;; Error came back from Slack, send them back to the OC Web UI
+      (redirect-to-web-ui team-id false "failed"))))
 
 (defn refresh-token
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."

@@ -63,9 +63,10 @@
 (defn- swap-code-for-user
   "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
   If the swap works, then test the access token to get user information."
-  [slack-code]
-  
-  (let [response      (slack-oauth/access slack-connection
+  [slack-code slack-state]
+  (let [split-state   (s/split slack-state #":")
+        team-id       (when (= (count split-state) 2) (last split-state)) ; team-id from state
+        response      (slack-oauth/access slack-connection
                                         config/slack-client-id
                                         config/slack-client-secret
                                         slack-code
@@ -88,12 +89,12 @@
                     (coerce-to-user user-profile)
                     (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
-        (merge user slack-org {:bot slack-bot} {:slack-token access-token}))
+        (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id}))
 
       ;; invalid response or access token
       (do
         (timbre/warn "Could not swap code for token" {:oauth-response response})
-        false))))
+        {:error true :team-id team-id}))))
 
 (defn oauth-callback
   "Handle the callback from Slack, returning either a tuple of:
@@ -103,7 +104,7 @@
   [params]
   (cond
     (get params "error") [false "denied"]
-    (get params "code")  (swap-code-for-user (get params "code"))
+    (get params "code")  (swap-code-for-user (get params "code") (get params "state"))
     :else                [false "no-code"]))
 
 (defn channel-list
