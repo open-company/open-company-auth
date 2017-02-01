@@ -62,7 +62,7 @@
 (defn- redirect-to-web-ui
   "Send them back to a UI page with a JWT token or a reason they don't have one."
   [team-id success? param-value]
-  (let [page (if team-id (str "/" team-id "/settings/user-management") "login")
+  (let [page (if team-id (str "/" team-id "/settings/user-management") "/login")
         param (if (and (not team-id) success?) "jwt" "access")
         url (str config/ui-server-url page "?" param "=" param-value)]
     (response/redirect url)))
