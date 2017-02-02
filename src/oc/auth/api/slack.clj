@@ -117,18 +117,13 @@
   (if-let [slack-user (slack/valid-access-token? slack-token)]
     (do
       (timbre/info "Refreshing Slack user" slack-id)
-      (try
-        (let [updated-user (update-user conn slack-user user)]
-          ;; Respond w/ JWToken and location
-          (user-rep/auth-response (-> updated-user
-                                    (clean-user)
-                                    (assoc :slack-id (:slack-id slack-user))
-                                    (assoc :slack-token slack-token))
-            :slack))
-        (catch Exception e
-          (timbre/error e)
-          (timbre/warn "Unable to swap access token" slack-token "for user" user-id)
-          (api-common/error-response "Could note confirm token." 400))))
+      (let [updated-user (update-user conn slack-user user)]
+        ;; Respond w/ JWToken and location
+        (user-rep/auth-response (-> updated-user
+                                  (clean-user)
+                                  (assoc :slack-id (:slack-id slack-user))
+                                  (assoc :slack-token slack-token))
+          :slack)))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)
       (api-common/error-response "Could note confirm token." 400))))
