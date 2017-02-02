@@ -54,8 +54,10 @@
   ([conn slack-user existing-user] (update-user conn slack-user existing-user (:teams existing-user)))
 
   ([conn slack-user existing-user teams]
-  (timbre/info "TODO: Refreshing user from Slack:" (:email slack-user) (:name slack-user))
-  existing-user))
+  (let [updated-user (merge existing-user (dissoc (clean-slack-user slack-user) :user-id))]
+    (timbre/info "Updating user " (:user-id updated-user))
+    (user-res/update-user! conn (:user-id updated-user) updated-user)
+    updated-user)))
 
 ;; ----- Slack Request Handling Functions -----
 
@@ -113,12 +115,11 @@
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
   [conn {user-id :user-id :as user} slack-id slack-token]
   (timbre/info "Refresh token request for user" user-id "with slack id of" slack-id "and access token" slack-token)
-  (if (slack/valid-access-token? slack-token)
+  (if-let [slack-user (slack/valid-access-token? slack-token)]
     (do
       (timbre/info "Refreshing Slack user" slack-id)
       (try
-        (let [slack-user (slack/get-user-info slack-token config/slack-user-scope slack-id)
-              updated-user (update-user conn slack-user user)]
+        (let [updated-user (update-user conn slack-user user)]
           ;; Respond w/ JWToken and location
           (user-rep/auth-response (-> updated-user
                                     (clean-user)
