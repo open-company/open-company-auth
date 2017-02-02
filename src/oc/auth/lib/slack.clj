@@ -56,7 +56,7 @@
         identity  (slack/slack-request conn "users.identity")
         auth-test (slack-auth/test conn)]
     (if (or (:ok identity) (:ok auth-test))
-      true
+      (coerce-to-user (merge (:user identity) (-> identity :user :profile)))
       (timbre/warn "Access token could not be validated"
                    {:identity identity :auth-test auth-test}))))
 
