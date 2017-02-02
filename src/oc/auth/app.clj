@@ -15,7 +15,6 @@
     [compojure.core :as compojure :refer (GET)]
     [com.stuartsierra.component :as component]
     [oc.lib.sentry-appender :as sa]
-    [oc.lib.api.common :as api-common]
     [oc.auth.components :as components]
     [oc.auth.config :as c]
     [oc.auth.api.entry-point :as entry-point-api]
