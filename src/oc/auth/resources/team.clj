@@ -176,7 +176,7 @@
   {:pre [(db-common/conn? conn)
          (schema/validate [lib-schema/UniqueID] team-ids)
          (sequential? additional-fields)
-        (every? #(or (string? %) (keyword? %)) additional-fields)]}
+         (every? #(or (string? %) (keyword? %)) additional-fields)]}
   (db-common/read-resources-by-primary-keys conn table-name team-ids (concat [:team-id :name] additional-fields))))
 
 (defn get-teams-by-slack-org

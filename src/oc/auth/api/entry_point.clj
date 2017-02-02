@@ -33,15 +33,14 @@
   (api-common/anonymous-resource config/passphrase)
 
   :allowed-methods [:options :get]
+
+  ;; Media type client accepts
   :allowed? (fn [ctx] (api-common/allow-anonymous ctx))
   :available-media-types ["application/json"]
-
   :handle-not-acceptable (fn [_] (api-common/only-accept 406 "application/json"))
-  :handle-unsupported-media-type (fn [_] (api-common/only-accept 415 "application/json"))
 
-  :handle-ok (fn [ctx] (render-entry-point conn ctx))
-
-  :handle-options (api-common/options-response [:options :get]))
+  ;; Responses
+  :handle-ok (fn [ctx] (render-entry-point conn ctx)))
 
 ;; ----- Routes -----
 
