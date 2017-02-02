@@ -10,7 +10,7 @@
             [oc.auth.representations.media-types :as mt]))
 
 (def representation-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :slack-id :slack-token :slack-bots])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
@@ -78,10 +78,23 @@
   ([first-name :guard s/blank? last-name] last-name)
   ([first-name last-name] (str first-name " " last-name)))
 
+(def jwt-slack-props [:slack-id :slack-token :slack-bots])
+
 (defn jwt-props-for [user source]
-  (-> (zipmap jwt-props (map user jwt-props))
-    (assoc :name (name-for user))
-    (assoc :auth-source source)))
+  (let [jwt-props (zipmap jwt-props (map user jwt-props))
+        slack? (:slack-id user)
+        slack-bots? (:slack-bots user)
+        slack-props (if slack?
+                      (-> jwt-props
+                        (assoc :slack-id (:slack-id user))
+                        (assoc :slack-token (:slack-token user)))
+                      jwt-props)
+        bot-props (if slack-bots?
+                    (assoc jwt-props :slack-bots (:slack-bots user))
+                    slack-props)]
+    (-> bot-props
+      (assoc :name (name-for user))
+      (assoc :auth-source source))))
 
 (defn auth-response
   "Return a JWToken for the user, or and a Location header."
