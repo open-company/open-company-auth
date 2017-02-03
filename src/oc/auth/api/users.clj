@@ -24,7 +24,7 @@
   (timbre/info "Creating user" email)
   (if-let [created-user (user-res/create-user! conn (user-res/->user user-props password))]
     (do (timbre/info "Created user" email)
-      {:user created-user})
+      {:new-user created-user})
     (do (timbre/error "Failed creating user" email)
       false)))
 
@@ -138,7 +138,7 @@
 
     ;; Responses
     :handle-conflict (ring-response {:status 409})
-    :handle-created (fn [ctx] (user-rep/auth-response (:user ctx) :email))) ; respond w/ JWToken and location
+    :handle-created (fn [ctx] (user-rep/auth-response (:new-user ctx) :email))) ; respond w/ JWToken and location
 
 ;; A resource for operations on a particular user
 (defresource user [conn user-id]
