@@ -37,7 +37,7 @@
     [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
     [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
     [amazonica "0.3.85"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
-    [open-company/lib "0.5.2-6719430"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.5.3-d70a87c"] ; Library for OC projects https://github.com/open-company/open-company-lib
   ]
 
   :plugins [

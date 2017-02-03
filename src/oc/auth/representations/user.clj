@@ -114,10 +114,9 @@
 (defn render-user
   "Create a JSON representation of the user for the REST API"
   [user]
-  (let [user-id (:user-id user)]
-    (json/generate-string
-      (-> user
-        (select-keys representation-props)
-        (assoc :password "")
-        (user-links))
-      {:pretty true})))
+  (json/generate-string
+    (-> user
+      (select-keys representation-props)
+      (assoc :password "")
+      (user-links))
+    {:pretty true}))
