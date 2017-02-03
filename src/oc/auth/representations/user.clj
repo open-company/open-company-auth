@@ -104,7 +104,7 @@
     (api-common/text-response (jwt/generate jwt-user config/passphrase) 201 headers)))
 
 (defn render-user-for-collection
-  "Create a JSON representation of the user for use in a collection in the REST API"
+  "Create a map of the user for use in a collection in the REST API"
   [team-id user]
   (let [user-id (:user-id user)]
     (-> user
