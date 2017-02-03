@@ -122,7 +122,6 @@
         ;; Respond w/ JWToken and location
         (user-rep/auth-response (-> updated-user
                                   (clean-user)
-                                  (assoc :admin (user-res/admin-of conn user-id))
                                   (assoc :slack-id (:slack-id slack-user))
                                   (assoc :slack-token slack-token))
           :slack)))
