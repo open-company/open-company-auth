@@ -37,7 +37,7 @@
   (slack/bot-link team-id))
 
 (defn- team-links
-  "HATEOAS links for a team resource"
+  "HATEOAS links for a team resource."
   ([team] (team-links team nil))
   
   ([team self-name]
