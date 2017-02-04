@@ -6,6 +6,7 @@
     [raven-clj.interfaces :as sentry-interfaces]
     [raven-clj.ring :as sentry-mw]
     [taoensso.timbre :as timbre]
+    [ring.logger.timbre :refer (wrap-with-logger)]
     [liberator.dev :refer (wrap-trace)]
     [ring.middleware.params :refer (wrap-params)]
     [ring.middleware.reload :refer (wrap-reload)]
@@ -52,13 +53,14 @@
 ;; Ring app definition
 (defn app [sys]
   (cond-> (routes sys)
-    true          wrap-params
+    true              wrap-with-logger
+    true              wrap-params
     c/liberator-trace (wrap-trace :header :ui)
-    true          (wrap-cors #".*")
-    true          (wrap-authentication (backends/basic {:realm "oc-auth"
-                                                        :authfn (partial users-api/email-basic-auth sys)}))
-    c/hot-reload  wrap-reload
-    c/dsn         (sentry-mw/wrap-sentry c/dsn)))
+    true              (wrap-cors #".*")
+    true              (wrap-authentication (backends/basic {:realm "oc-auth"
+                                                           :authfn (partial users-api/email-basic-auth sys)}))
+    c/hot-reload      wrap-reload
+    c/dsn             (sentry-mw/wrap-sentry c/dsn)))
 
 (defn start
   "Start a development server"
