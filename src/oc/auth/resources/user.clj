@@ -196,6 +196,13 @@
   (if-let [user (get-user conn user-id)]
     (db-common/remove-from-set conn table-name user-id "teams" team-id)))
 
+(schema/defn ^:always-validate admin-of :- (schema/maybe [lib-schema/UniqueID])
+  "Given the user-id of the user, return a sequence of team-ids for the teams the user is an admin of."
+  [conn user-id :- lib-schema/UniqueID]
+  {:pre [(db-common/conn? conn)]}
+  (let [teams (team/get-teams-by-index conn :admins user-id)]
+    (vec (map :team-id teams))))
+
 ;; ----- Collection of users -----
 
 (defn list-users

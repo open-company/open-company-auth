@@ -86,7 +86,7 @@
                      ;; The team this Slack org is being added to
                      (team-res/get-teams conn [team-id])
                     ;; Do team(s) already exist for this Slack org?
-                    (team-res/get-teams-by-slack-org conn (:slack-org-id slack-user)))
+                    (team-res/get-teams-by-index conn :slack-orgs (:slack-org-id slack-user)))
             new-team (when (and (not slack-org-only?)
                                 (empty? teams))
                       (create-team-for conn slack-user (or (:user-id user) (:user-id new-user)))) ; create a new team
@@ -94,10 +94,11 @@
             updated-user (when-not slack-org-only?
                             (if user
                               (update-user conn slack-user user user-teams) ; update user's teams
-                              (create-user-for conn new-user user-teams))) ; create new user 
+                              (create-user-for conn new-user user-teams))) ; create new user
             jwt-user (when-not slack-org-only? (user-rep/jwt-props-for
                                                   (-> updated-user
                                                     (clean-user)
+                                                    (assoc :admin (user-res/admin-of conn (:user-id updated-user)))
                                                     (assoc :slack-id (:slack-id slack-user))
                                                     (assoc :slack-token (:slack-token slack-user))) :slack))
             redirect-arg (if slack-org-only? "true" (jwt/generate jwt-user config/passphrase))]
@@ -117,10 +118,11 @@
   (if-let [slack-user (slack/valid-access-token? slack-token)]
     (do
       (timbre/info "Refreshing Slack user" slack-id)
-      (let [updated-user (update-user conn slack-user user)]
+      (let [updated-user (update-user conn slack-user (dissoc user :admin))]
         ;; Respond w/ JWToken and location
         (user-rep/auth-response (-> updated-user
                                   (clean-user)
+                                  (assoc :admin (:admin user))
                                   (assoc :slack-id (:slack-id slack-user))
                                   (assoc :slack-token slack-token))
           :slack)))

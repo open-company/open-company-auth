@@ -179,21 +179,31 @@
          (every? #(or (string? %) (keyword? %)) additional-fields)]}
   (db-common/read-resources-by-primary-keys conn table-name team-ids (concat [:team-id :name] additional-fields))))
 
-(defn get-teams-by-slack-org
+(defn get-teams-by-index
   "
-  Get teams by a Slack org, returning `team-id` and `name`. 
+  Given the name of a secondary index and a value, retrieve all matching teams
+  as a sequence of maps with team-id, and names.
   
-  Additional fields can be optionally specified.
-  "
-  ([conn slack-org]
-  (get-teams-by-slack-org conn slack-org []))
+  Secondary indexes:
+  :slack-orgs
+  :admins
+  :email-domains
 
-  ([conn slack-org additional-fields]
+  Note: if additional-keys are supplied, they will be included in the map, and only teams
+  containing those keys will be returned.
+  "
+  ([conn index-key index-value]
+  (get-teams-by-index conn index-key index-value []))
+
+  ([conn index-key index-value additional-keys]
   {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/NonBlankStr slack-org)
-         (sequential? additional-fields)
-        (every? #(or (string? %) (keyword? %)) additional-fields)]}
-  (db-common/read-resources conn table-name :slack-orgs slack-org (concat [:team-id :name] additional-fields))))
+         (or (keyword? index-key) (string? index-key))
+         (sequential? additional-keys)
+         (every? #(or (string? %) (keyword? %)) additional-keys)]}
+
+  (->> (into [primary-key :name] additional-keys)
+    (db-common/read-resources conn table-name index-key index-value)
+    vec)))
 
 ;; ----- Armageddon -----
 

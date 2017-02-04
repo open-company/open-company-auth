@@ -22,9 +22,10 @@
 
 (defn- create-user [conn {email :email password :password :as user-props}]
   (timbre/info "Creating user" email)
-  (if-let [created-user (user-res/create-user! conn (user-res/->user user-props password))]
+  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
+            admin-teams (user-res/admin-of conn (:user-id created-user))]
     (do (timbre/info "Created user" email)
-      {:user created-user})
+      {:new-user (assoc created-user :admin admin-teams)})
     (do (timbre/error "Failed creating user" email)
       false)))
 
@@ -100,10 +101,11 @@
                            :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
                                               (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
 
-  :handle-ok (fn [ctx] (user-rep/auth-response
-                          (user-res/get-user-by-email conn (or (-> ctx :request :identity) ; Basic HTTP Auth
-                                                               (:email ctx))) ; one time use token auth
-                          :email))) ; respond w/ JWToken and location
+  :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or
+                                                                            (-> ctx :request :identity) ; Basic HTTP Auth
+                                                                            (:email ctx))) ; one time use token auth
+                                   admin-teams (user-res/admin-of conn (:user-id user))]
+                        (user-rep/auth-response (assoc user :admin admin-teams) :email)))) ; respond w/ JWToken and location
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
@@ -138,7 +140,7 @@
 
     ;; Responses
     :handle-conflict (ring-response {:status 409})
-    :handle-created (fn [ctx] (user-rep/auth-response (:user ctx) :email))) ; respond w/ JWToken and location
+    :handle-created (fn [ctx] (user-rep/auth-response (:new-user ctx) :email))) ; respond w/ JWToken and location
 
 ;; A resource for operations on a particular user
 (defresource user [conn user-id]
@@ -187,16 +189,17 @@
       :options true
       :get (fn [ctx] (= user-id (-> ctx :user :user-id)))})
 
-  :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))]
-                      {:existing-user user}
+  :exists? (fn [ctx] (if-let* [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))
+                               admin-teams (user-res/admin-of conn (:user-id user))]
+                      {:existing-user (assoc user :admin admin-teams)}
                       false))
 
   :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
 
-                        ;; Email token
-                        "email" (user-rep/auth-response (:existing-user ctx) :email) ; respond w/ JWToken and location
+                        ;; Email token - respond w/ JWToken and location
+                        "email" (user-rep/auth-response (:existing-user ctx) :email)
 
-                        ;; Slack token
+                        ;; Slack token - defer to Slack API handler
                         "slack" (slack-api/refresh-token conn (:existing-user ctx)
                                                               (-> ctx :user :slack-id)
                                                               (-> ctx :user :slack-token))
