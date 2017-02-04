@@ -58,7 +58,7 @@
     c/liberator-trace (wrap-trace :header :ui)
     true              (wrap-cors #".*")
     true              (wrap-authentication (backends/basic {:realm "oc-auth"
-                                                           :authfn (partial users-api/email-basic-auth sys)}))
+                                                            :authfn (partial users-api/email-basic-auth sys)}))
     c/hot-reload      wrap-reload
     c/dsn             (sentry-mw/wrap-sentry c/dsn)))
 
