@@ -2,6 +2,7 @@
   "User stored in RethinkDB."
   (:require [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
+            [defun.core :refer (defun)]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
             [buddy.hashers :as hashers]
@@ -33,6 +34,8 @@
   :avatar-url (schema/maybe schema/Str)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
+
+(def UserRep (merge User {(schema/optional-key :admin) schema/Bool}))
 
 ;; ----- Metadata -----
 
@@ -205,17 +208,29 @@
 
 ;; ----- Collection of users -----
 
-(defn list-users
-  "Given an optional team-id, return a list of users."
-  ([conn]
-  {:pre [(db-common/conn? conn)]}
-  (db-common/read-resources conn table-name [:user-id :email :status :first-name :last-name :avatar-url :teams]))
+(defun list-users
+  "
+  Given an optional team-id, return a list of users.
 
-  ([conn team-id]
+  Additional fields can be optionally specified."
+  ([conn] (list-users conn []))
+  
+  ([conn additional-keys :guard sequential?]
   {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/UniqueID team-id)]}  
+         (sequential? additional-keys)
+         (every? #(or (string? %) (keyword? %)) additional-keys)]}    
+  (db-common/read-resources conn table-name
+    (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams])))
+
+  ([conn team-id] (list-users conn team-id []))
+
+  ([conn team-id additional-keys]
+  {:pre [(db-common/conn? conn)
+         (schema/validate lib-schema/UniqueID team-id)
+         (sequential? additional-keys)
+         (every? #(or (string? %) (keyword? %)) additional-keys)]}
   (db-common/read-resources-in-order conn table-name :teams team-id
-    [:user-id :email :status :first-name :last-name :avatar-url :teams])))
+    (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams]))))
 
 ;; ----- Armageddon -----
 

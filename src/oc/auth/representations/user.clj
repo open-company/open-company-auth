@@ -2,12 +2,15 @@
   "Resource representations for OpenCompany users."
   (:require [clojure.string :as s]
             [defun.core :refer (defun defun-)]
+            [schema.core :as schema]
+            [oc.lib.schema :as lib-schema]
             [cheshire.core :as json]
             [oc.lib.hateoas :as hateoas]
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
-            [oc.auth.representations.media-types :as mt]))
+            [oc.auth.representations.media-types :as mt]
+            [oc.auth.resources.user :as user-res]))
 
 (def representation-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
@@ -32,7 +35,7 @@
 
 (defn- remove-link [user-id] (hateoas/remove-link (url user-id) {} {:ref mt/user-media-type}))
 
-(defn refresh-link [user-id] (hateoas/link-map "refresh" 
+(defn- refresh-link [user-id] (hateoas/link-map "refresh" 
                                 hateoas/GET
                                 (str (url user-id) "/refresh-token")
                                 {:accept jwt/media-type}))
@@ -78,9 +81,8 @@
   ([first-name :guard s/blank? last-name] last-name)
   ([first-name last-name] (str first-name " " last-name)))
 
-(def jwt-slack-props [:slack-id :slack-token :slack-bots])
-
-(defn jwt-props-for [user source]
+(schema/defn ^:always-validate jwt-props-for
+  [user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-props (zipmap jwt-props (map user jwt-props))
         slack? (:slack-id user)
         slack-bots? (:slack-bots user)
@@ -96,24 +98,24 @@
       (assoc :name (name-for user))
       (assoc :auth-source source))))
 
-(defn auth-response
+(schema/defn ^:always-validate auth-response
   "Return a JWToken for the user, or and a Location header."
-  [user source]
+  [user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-user (jwt-props-for user source)
         headers {"Location" (url (:user-id user))}]
     (api-common/text-response (jwt/generate jwt-user config/passphrase) 201 headers)))
 
-(defn render-user-for-collection
+(schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
-  [team-id user]
+  [team-id :- lib-schema/UniqueID user :- user-res/UserRep]
   (let [user-id (:user-id user)]
     (-> user
       (select-keys (concat representation-props [:admin :status]))
       (user-collection-links team-id))))
 
-(defn render-user
+(schema/defn ^:always-validate render-user :- schema/Str
   "Create a JSON representation of the user for the REST API"
-  [user]
+  [user :- user-res/UserRep]
   (json/generate-string
     (-> user
       (select-keys representation-props)

@@ -167,7 +167,7 @@
 
   ;; Responses
   :handle-ok (fn [ctx] (let [admins (set (-> ctx :existing-team :admins))
-                             users (user-res/list-users conn team-id) ; users in the team
+                             users (user-res/list-users conn team-id [:created-at :updated-at]) ; users in the team
                              user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
                              user-reps (map #(user-rep/render-user-for-collection team-id %) user-admins)
                              team (assoc (:existing-team ctx) :users user-reps)

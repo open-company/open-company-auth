@@ -157,11 +157,11 @@
   ([conn]
   (list-teams conn []))
 
-  ([conn additional-fields]
+  ([conn additional-keys]
   {:pre [(db-common/conn? conn)
-        (sequential? additional-fields)
-        (every? #(or (string? %) (keyword? %)) additional-fields)]}
-  (db-common/read-resources conn table-name (concat [:team-id :name] additional-fields))))
+        (sequential? additional-keys)
+        (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  (db-common/read-resources conn table-name (concat [:team-id :name] additional-keys))))
 
 (defn get-teams
   "
@@ -172,12 +172,12 @@
   ([conn team-ids]
   (get-teams conn team-ids []))
 
-  ([conn team-ids additional-fields]
+  ([conn team-ids additional-keys]
   {:pre [(db-common/conn? conn)
          (schema/validate [lib-schema/UniqueID] team-ids)
-         (sequential? additional-fields)
-         (every? #(or (string? %) (keyword? %)) additional-fields)]}
-  (db-common/read-resources-by-primary-keys conn table-name team-ids (concat [:team-id :name] additional-fields))))
+         (sequential? additional-keys)
+         (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  (db-common/read-resources-by-primary-keys conn table-name team-ids (concat [:team-id :name] additional-keys))))
 
 (defn get-teams-by-index
   "

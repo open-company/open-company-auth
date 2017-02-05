@@ -84,11 +84,11 @@
   ([conn]
   (list-slack-orgs conn []))
 
-  ([conn additional-fields]
+  ([conn additional-keys]
   {:pre [(db-common/conn? conn)
-        (sequential? additional-fields)
-        (every? #(or (string? %) (keyword? %)) additional-fields)]}
-  (db-common/read-resources conn table-name (concat [:slack-org-id :name] additional-fields))))
+        (sequential? additional-keys)
+        (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  (db-common/read-resources conn table-name (concat [:slack-org-id :name] additional-keys))))
 
 (defn get-slack-orgs
   "
@@ -99,12 +99,12 @@
   ([conn slack-org-ids]
   (get-slack-orgs conn slack-org-ids []))
 
-  ([conn slack-org-ids additional-fields]
+  ([conn slack-org-ids additional-keys]
   {:pre [(db-common/conn? conn)
          (schema/validate [lib-schema/NonBlankStr] slack-org-ids)
-         (sequential? additional-fields)
-        (every? #(or (string? %) (keyword? %)) additional-fields)]}
-  (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :name] additional-fields))))
+         (sequential? additional-keys)
+        (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :name] additional-keys))))
 
 ;; ----- Armageddon -----
 
