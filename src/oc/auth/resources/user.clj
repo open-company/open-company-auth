@@ -35,7 +35,8 @@
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 
-(def UserRep (merge User {(schema/optional-key :admin) schema/Bool}))
+(def UserRep (merge User {
+    (schema/optional-key :admin) (schema/conditional sequential? [lib-schema/UniqueID] :else schema/Bool)}))
 
 ;; ----- Metadata -----
 
