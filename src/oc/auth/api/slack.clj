@@ -3,7 +3,7 @@
   (:require [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
-            [oc.lib.rethinkdb.pool :as pool]
+            [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.lib.jwt :as jwt]
             [oc.auth.lib.slack :as slack]

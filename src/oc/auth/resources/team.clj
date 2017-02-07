@@ -2,7 +2,7 @@
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (when-let*)]
-            [oc.lib.rethinkdb.common :as db-common]
+            [oc.lib.db.common :as db-common]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]))
 

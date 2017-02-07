@@ -3,7 +3,7 @@
             [clojure.tools.namespace.repl :as ctnrepl]
             [oc.auth.config :as c]
             [oc.auth.app :as app]
-            [oc.lib.rethinkdb.pool :as pool]
+            [oc.lib.db.pool :as pool]
             [oc.auth.components :as components]))
 
 (def system nil)

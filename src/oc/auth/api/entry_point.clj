@@ -3,7 +3,7 @@
   (:require [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [liberator.core :refer (defresource)]
             [cheshire.core :as json]
-            [oc.lib.rethinkdb.pool :as pool]
+            [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.representations.user :as user-rep]

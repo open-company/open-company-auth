@@ -1,6 +1,6 @@
 (ns oc.auth.db.migrations.create-users
   (:require [rethinkdb.query :as r]
-            [oc.lib.rethinkdb.migrations :as m]
+            [oc.lib.db.migrations :as m]
             [oc.auth.config :as config]
             [oc.auth.resources.user :as u]))
 

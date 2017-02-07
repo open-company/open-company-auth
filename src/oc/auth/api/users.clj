@@ -8,7 +8,7 @@
             [liberator.representation :refer (ring-response)]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
-            [oc.lib.rethinkdb.pool :as pool]
+            [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
@@ -178,7 +178,11 @@
 
 ;; A resource for refreshing JWTokens
 (defresource token [conn user-id]
-  (api-common/open-company-authenticated-resource config/passphrase)
+
+  ;; Get the JWToken and ensure it checks, but don't check if it's valid (might be expired or old schema, and that's OK)
+  :initialize-context (fn [ctx] (let [token (api-common/get-token (get-in ctx [:request :headers]))]
+                                  (when (jwt/check-token token config/passphrase)
+                                      {:jwtoken token :user (:claims (jwt/decode token))})))
   
   :allowed-methods [:options :get]
 
@@ -187,7 +191,7 @@
 
   :allowed? (by-method {
       :options true
-      :get (fn [ctx] (= user-id (-> ctx :user :user-id)))})
+      :get (fn [ctx] (= (-> ctx :user :user-id) user-id))}) ; refreshing their own JWToken
 
   :exists? (fn [ctx] (if-let* [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))
                                admin-teams (user-res/admin-of conn (:user-id user))]

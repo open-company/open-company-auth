@@ -5,7 +5,7 @@
             [clj-slack.core :as slack]
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
-            [oc.lib.rethinkdb.common :as db-common]
+            [oc.lib.db.common :as db-common]
             [oc.auth.config :as config]))
 
 (def ^:private slack-endpoint "https://slack.com/api")

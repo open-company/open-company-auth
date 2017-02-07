@@ -1,7 +1,7 @@
 ;; productive set of development namespaces
 (require '[schema.core :as schema])
 (require '[oc.lib.jwt :as jwt] :reload)
-(require '[oc.lib.rethinkdb.common :as common] :reload)
+(require '[oc.lib.db.common :as common] :reload)
 (require '[oc.lib.api.common :as api-common] :reload)
 (require '[oc.auth.app :as app] :reload)
 (require '[oc.auth.slack-auth :as slack] :reload)

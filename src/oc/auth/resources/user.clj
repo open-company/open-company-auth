@@ -6,7 +6,7 @@
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
             [buddy.hashers :as hashers]
-            [oc.lib.rethinkdb.common :as db-common]
+            [oc.lib.db.common :as db-common]
             [oc.lib.schema :as lib-schema]
             [oc.auth.resources.team :as team]))
 

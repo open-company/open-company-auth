@@ -1,7 +1,7 @@
 (ns oc.auth.resources.slack-org
   "Slack org stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
-            [oc.lib.rethinkdb.common :as db-common]
+            [oc.lib.db.common :as db-common]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]))
 

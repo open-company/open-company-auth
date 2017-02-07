@@ -7,7 +7,7 @@
             [compojure.core :as compojure :refer (defroutes OPTIONS GET POST PUT PATCH DELETE)]
             [liberator.core :refer (defresource by-method)]
             [oc.lib.schema :as lib-schema]
-            [oc.lib.rethinkdb.pool :as pool]
+            [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]
