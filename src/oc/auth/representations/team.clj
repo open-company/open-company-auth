@@ -92,7 +92,7 @@
     {:collection {:version hateoas/json-collection-version
                   :href "/teams"
                   :links [(hateoas/self-link "/teams" {:accept mt/team-collection-media-type})]
-                  :teams (->> teams
-                          (map #(if ((set (:admins %)) user-id) (team-links % "item") %))
-                          (map #(dissoc % :admins)))}}
+                  :items (->> teams
+                            (map #(if ((set (:admins %)) user-id) (team-links % "item") %))
+                            (map #(dissoc % :admins)))}}
     {:pretty true}))
