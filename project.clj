@@ -13,32 +13,33 @@
 
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha14"] ; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/core.async "0.2.395"] ; Async programming and communication https://github.com/clojure/core.async
-    [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
-    [defun "0.3.0-RC1"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
+    [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
+    [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
     [ring/ring-devel "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
+    [ring-logger-timbre "0.7.5"] ; Ring logging https://github.com/nberger/ring-logger-timbre
     [compojure "1.6.0-beta3"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
-    [liberator "0.14.1"] ; WebMachine (REST API server) port to Clojure https://github.com/clojure-liberator/liberator
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
-    [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
-    [com.stuartsierra/component "0.3.2"] ; Component Lifecycle
-    [prismatic/schema "1.1.3"] ; Data validation https://github.com/Prismatic/schema
-    [cheshire "5.7.0"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
-    [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
-    [raven-clj "1.5.0"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
     [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
-    [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
-    [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.8.0"] ; Logging https://github.com/ptaoussanis/timbre
-    [ring-logger-timbre "0.7.5"] ; Ring logging https://github.com/nberger/ring-logger-timbre
-    [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
-    [amazonica "0.3.86"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
+
     [open-company/lib "0.6.2-de649bd"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    ; In addition to common functions, brings in the following common dependencies used by this project:
+    ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
+    ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
+    ; Component - Component Lifecycle https://github.com/stuartsierra/component
+    ; Liberator - WebMachine (REST API server) port to Clojure https://github.com/clojure-liberator/liberator
+    ; RethinkDB - RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
+    ; Schema - Data validation https://github.com/Prismatic/schema
+    ; Timbre - Pure Clojure/Script logging library https://github.com/ptaoussanis/timbre
+    ; Amazonica - A comprehensive Clojure client for the AWS API. https://github.com/mcohen01/amazonica
+    ; Raven - Interface to Sentry error reporting https://github.com/sethtrain/raven-clj
+    ; Cheshire - JSON encoding / decoding https://github.com/dakrone/cheshire
+    ; clj-jwt - A Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
+    ; clj-time - Date and time lib https://github.com/clj-time/clj-time
   ]
 
   :plugins [
