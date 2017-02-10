@@ -35,7 +35,7 @@
 
 (defn- remove-link [user-id] (hateoas/remove-link (url user-id) {} {:ref mt/user-media-type}))
 
-(def refresh-link (hateoas/link-map "refresh" hateoas/GET "/refresh-token" {:accept jwt/media-type}))
+(def refresh-link (hateoas/link-map "refresh" hateoas/GET "/users/refresh" {:accept jwt/media-type}))
 
 (def teams-link (hateoas/collection-link "/teams" {:accept mt/team-collection-media-type}))
 
