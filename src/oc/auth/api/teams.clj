@@ -158,6 +158,7 @@
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
+  ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         {:existing-team team}
                         false))
@@ -193,6 +194,7 @@
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id)) ; team admins only
 
+  ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         (let [user (user-res/get-user-by-email conn (-> ctx :data :email))
                               member? (when (and team user) (if ((set (:teams user)) (:team-id team)) true false))
@@ -240,6 +242,7 @@
   ;; Auhorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
+  ;; Existentialism
   :put-to-existing? true
   :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
                                user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))
@@ -281,6 +284,7 @@
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
+  ;; Existentialism
   :exists? (by-method {
     :post (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
                         {:existing-team true :existing-domain ((set (:email-domains team)) (:data ctx))}
@@ -319,6 +323,7 @@
   ;; Authorization
   :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
 
+  ;; Existentialism
   :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
                                has-org? ((set (:slack-orgs team)) slack-org-id)]
                         {:has-org? true}

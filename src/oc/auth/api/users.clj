@@ -94,13 +94,16 @@
 
   :allowed-methods [:options :get]
 
+  ;; Media type client accepts
   :available-media-types [jwt/media-type]
   :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
+  ;; Authorization
   :authorized? (by-method {:options true
                            :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
                                               (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
 
+  ;; Responses
   :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or
                                                                             (-> ctx :request :identity) ; Basic HTTP Auth
                                                                             (:email ctx))) ; one time use token auth
@@ -120,9 +123,7 @@
     ;; Media type client sends
     :known-content-type? (by-method {
       :options true
-      :get (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
-
-    :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
+      :post (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
     ;; Validations
     :processable? (by-method {
@@ -131,6 +132,9 @@
                            (lib-schema/valid-password? (-> ctx :data :password))
                            (string? (-> ctx :data :first-name))
                            (string? (-> ctx :data :last-name))))})
+
+    ;; Existentialism
+    :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
 
     ;; Actions
     :post-to-existing? false
@@ -148,30 +152,37 @@
 
   :allowed-methods [:options :get :patch :delete]
 
+  ;; Media type client accepts
   :available-media-types [mt/user-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
   
+  ;; Media type client sends
   :known-content-type? (by-method {
                           :options true
                           :get true
                           :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))
                           :delete true})
 
+  ;; Authorization
   :allowed? (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
 
+  ;; Validations
   :processable? (by-method {
     :get true
     :options true
     :patch (fn [ctx] (processable-patch-req? conn ctx user-id))
     :delete true})
 
+  ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))]
                         {:existing-user user}
                         false))
 
+  ;; Acctions
   :patch! (fn [ctx] (update-user conn ctx user-id))
   :delete! (fn [_] (user-res/delete-user! conn user-id))
 
+  ;; Responses
   :handle-ok (by-method {
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))}))
@@ -186,18 +197,23 @@
   
   :allowed-methods [:options :get]
 
+  ;; Media type client accepts
   :available-media-types [jwt/media-type]
   :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
+  ;; Authorization
   :allowed? (by-method {
       :options true
       :get (fn [ctx] (:user ctx))})
 
+  ;; Existentialism
   :exists? (fn [ctx] (if-let* [user (user-res/get-user conn (-> ctx :user :user-id))
                                admin-teams (user-res/admin-of conn (:user-id user))]
                         {:existing-user (assoc user :admin admin-teams)}
                         false))
 
+  ;; Responses
+  :handle-not-found (api-common/unauthorized-response)
   :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
 
                         ;; Email token - respond w/ JWToken and location
