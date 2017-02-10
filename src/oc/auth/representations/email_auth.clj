@@ -16,7 +16,7 @@
                                   :content-type mt/user-media-type}
                                  {:auth-source "email"}))
 
-(def reset-link (hateoas/link-map "reset-password"
+(def reset-link (hateoas/link-map "reset"
                                   hateoas/POST
                                   "/users/reset"
                                   {:content-type "text/x-email"}

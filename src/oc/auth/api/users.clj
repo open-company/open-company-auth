@@ -177,7 +177,7 @@
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))}))
 
 ;; A resource for refreshing JWTokens
-(defresource token [conn user-id]
+(defresource token [conn]
 
   ;; Get the JWToken and ensure it checks, but don't check if it's valid (might be expired or old schema, and that's OK)
   :initialize-context (fn [ctx] (let [token (api-common/get-token (get-in ctx [:request :headers]))]
@@ -191,12 +191,12 @@
 
   :allowed? (by-method {
       :options true
-      :get (fn [ctx] (= (-> ctx :user :user-id) user-id))}) ; refreshing their own JWToken
+      :get (fn [ctx] (:user ctx))})
 
-  :exists? (fn [ctx] (if-let* [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))
+  :exists? (fn [ctx] (if-let* [user (user-res/get-user conn (-> ctx :user :user-id))
                                admin-teams (user-res/admin-of conn (:user-id user))]
-                      {:existing-user (assoc user :admin admin-teams)}
-                      false))
+                        {:existing-user (assoc user :admin admin-teams)}
+                        false))
 
   :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
 
@@ -231,13 +231,13 @@
       ; (OPTIONS "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn)))
       ; (POST "/users/reset" [] (pool/with-pool [conn db-pool] (password-reset conn)))
       ; (POST "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn))))
+      ;; token refresh request
+      (OPTIONS "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
+      (OPTIONS "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
+      (GET "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
+      (GET "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
       ;; user operations
       (OPTIONS "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (GET "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (PATCH "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (DELETE "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      ;; token refresh request
-      (OPTIONS "/users/:user-id/refresh-token" [user-id] (pool/with-pool [conn db-pool] (token conn user-id)))
-      (OPTIONS "/users/:user-id/refresh-token/" [user-id] (pool/with-pool [conn db-pool] (token conn user-id)))
-      (GET "/users/:user-id/refresh-token" [user-id] (pool/with-pool [conn db-pool] (token conn user-id)))
-      (GET "/users/:user-id/refresh-token/" [user-id] (pool/with-pool [conn db-pool] (token conn user-id))))))
+      (DELETE "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))

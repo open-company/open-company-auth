@@ -24,6 +24,7 @@
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
+    [zprint "0.2.15"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
 
     [open-company/lib "0.6.2-de649bd"] ; Library for OC projects https://github.com/open-company/open-company-lib
