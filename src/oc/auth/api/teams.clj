@@ -221,9 +221,9 @@
   ;; Responses
   :respond-with-entity? true
   :handle-created (fn [ctx] (if-let [updated-user (:updated-user ctx)]
-                              (api-common/json-response (user-rep/render-user updated-user)
-                                                         201
-                                                         {"Location" (user-rep/url updated-user)})
+                              (api-common/location-response (user-rep/url updated-user) 
+                                                            (user-rep/render-user updated-user)
+                                                            mt/user-media-type)
                               (api-common/missing-response))))
 
 ;; A resource for the admins of a particular team

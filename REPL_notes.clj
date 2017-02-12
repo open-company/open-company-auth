@@ -16,3 +16,13 @@
 
 ;; print last exception
 (print-stack-trace *e)
+
+;; Direct RethinkDB usage
+(def conn2 [:host "127.0.0.1" :port 28015 :db "open_company_auth"])
+
+;; Update the name of a Team
+(with-open [c (apply r/connect conn2)]
+  (-> (r/table "teams")
+      (r/get "f725-4791-80ac")
+      (r/update {:name "GreenLabs"})
+      (r/run c)))

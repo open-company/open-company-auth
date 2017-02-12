@@ -99,8 +99,8 @@
   "Return a JWToken for the user, or and a Location header."
   [user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-user (jwt-props-for user source)
-        headers {"Location" (url (:user-id user))}]
-    (api-common/text-response (jwt/generate jwt-user config/passphrase) 201 headers)))
+        location (url (:user-id user))]
+    (api-common/location-response location (jwt/generate jwt-user config/passphrase) jwt/media-type)))
 
 (schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
