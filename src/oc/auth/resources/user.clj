@@ -7,6 +7,7 @@
             [schema.core :as schema]
             [buddy.hashers :as hashers]
             [oc.lib.db.common :as db-common]
+            [oc.lib.jwt :as jwt]
             [oc.lib.schema :as lib-schema]
             [oc.auth.resources.team :as team]))
 
@@ -17,26 +18,41 @@
 
 ;; ----- Schema -----
 
-; pending - awaiting invite response or email verification, can't login
-; unverified - awaiting email verification, but can login
-; active - Slack auth'd or verified email or invite
-(def statuses #{:pending :unverified :active})
+(def statuses 
+  "
+  Possible user statuses:
 
-(def User {
+  pending - awaiting invite response or email verification, can't login
+  unverified - awaiting email verification, but can login
+  active - Slack auth'd or verified email or invite
+  "
+  #{:pending :unverified :active})
+
+(def ^:private UserCommon {
   :user-id lib-schema/UniqueID
   :teams [lib-schema/UniqueID]
   (schema/optional-key :one-time-token) lib-schema/UUIDStr
   :email (schema/maybe lib-schema/EmailAddress)
   (schema/optional-key :password-hash) schema/Str
-  :status (schema/pred #(statuses (keyword %)))
   :first-name schema/Str
   :last-name schema/Str
-  :avatar-url (schema/maybe schema/Str)
-  :created-at lib-schema/ISO8601
-  :updated-at lib-schema/ISO8601})
+  :avatar-url (schema/maybe schema/Str)})
 
-(def UserRep (merge User {
-    (schema/optional-key :admin) (schema/conditional sequential? [lib-schema/UniqueID] :else schema/Bool)}))
+(def User "User resource as stored in the DB."
+  (merge UserCommon {
+    :status (schema/pred #(statuses (keyword %)))
+    :created-at lib-schema/ISO8601
+    :updated-at lib-schema/ISO8601}))
+
+(def UserRep "A representation of the user, suitable for creating a JWToken."
+  (merge UserCommon {
+    :admin (schema/conditional sequential? [lib-schema/UniqueID] :else schema/Bool)
+    (schema/optional-key :status) (schema/pred #(statuses (keyword %)))
+    (schema/optional-key :slack-id) schema/Str
+    (schema/optional-key :slack-token) schema/Str
+    (schema/optional-key :slack-bots) jwt/SlackBots
+    (schema/optional-key :created-at) lib-schema/ISO8601
+    (schema/optional-key :updated-at) lib-schema/ISO8601}))
 
 ;; ----- Metadata -----
 

@@ -104,7 +104,7 @@
 
 (schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
-  [team-id :- lib-schema/UniqueID user :- user-res/UserRep]
+  [team-id :- lib-schema/UniqueID user :- user-res/User]
   (let [user-id (:user-id user)]
     (-> user
       (select-keys (concat representation-props [:admin :status]))
@@ -112,7 +112,7 @@
 
 (schema/defn ^:always-validate render-user :- schema/Str
   "Create a JSON representation of the user for the REST API"
-  [user :- user-res/UserRep]
+  [user :- user-res/User]
   (json/generate-string
     (-> user
       (select-keys representation-props)
