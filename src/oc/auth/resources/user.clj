@@ -60,6 +60,10 @@
   [user]
   (apply dissoc user ignored-properties))
 
+(defn- additional-keys? [additional-keys]
+  (and (sequential? additional-keys)
+       (every? #(or (string? %) (keyword? %)) additional-keys)))
+
 ;; ----- Password based authentication -----
 
 (def ^:private crypto-algo "bcrypt+sha512$")
@@ -216,20 +220,16 @@
   Additional fields can be optionally specified."
   ([conn] (list-users conn []))
   
-  ([conn additional-keys :guard sequential?]
-  {:pre [(db-common/conn? conn)
-         (sequential? additional-keys)
-         (every? #(or (string? %) (keyword? %)) additional-keys)]}    
+  ([conn :guard db-common/conn? 
+    additional-keys :guard additional-keys?]
   (db-common/read-resources conn table-name
     (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams])))
 
   ([conn team-id] (list-users conn team-id []))
 
-  ([conn team-id additional-keys]
-  {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/UniqueID team-id)
-         (sequential? additional-keys)
-         (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  ([conn :guard db-common/conn?
+    team-id :guard #(schema/validate lib-schema/UniqueID %)
+    additional-keys :guard additional-keys?]
   (db-common/read-resources-in-order conn table-name :teams team-id
     (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams]))))
 
