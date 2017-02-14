@@ -53,14 +53,14 @@
 ;; Ring app definition
 (defn app [sys]
   (cond-> (routes sys)
+    c/dsn             (sentry-mw/wrap-sentry c/dsn) ; important that this is first
     true              wrap-with-logger
     true              wrap-params
     c/liberator-trace (wrap-trace :header :ui)
     true              (wrap-cors #".*")
     true              (wrap-authentication (backends/basic {:realm "oc-auth"
                                                             :authfn (partial users-api/email-basic-auth sys)}))
-    c/hot-reload      wrap-reload
-    c/dsn             (sentry-mw/wrap-sentry c/dsn)))
+    c/hot-reload      wrap-reload))
 
 (defn start
   "Start a development server"
