@@ -191,11 +191,12 @@
 (defresource token [conn]
 
   ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
-  :initialize-context (fn [ctx] (let [token (api-common/get-token (get-in ctx [:request :headers]))
-                                      claims (:claims (jwt/decode token))]
-                                  (when (and (jwt/check-token token config/passphrase) ; we signed it
-                                             (nil? (schema/check jwt/Claims claims))) ; claims are valid
-                                      {:jwtoken token :user claims})))
+  :initialize-context (by-method {
+    :get (fn [ctx] (if-let* [token (api-common/get-token (get-in ctx [:request :headers]))
+                             claims (:claims (jwt/decode token))]
+                      (when (and (jwt/check-token token config/passphrase) ; we signed it
+                            (nil? (schema/check jwt/Claims claims))) ; claims are valid
+                        {:jwtoken token :user claims})))})
   
   :allowed-methods [:options :get]
 
