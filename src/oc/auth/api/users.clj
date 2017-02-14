@@ -190,9 +190,10 @@
 ;; A resource for refreshing JWTokens
 (defresource token [conn]
 
-  ;; Get the JWToken and ensure it checks, but don't check if it's valid (might be expired or old schema, and that's OK)
+  ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
   :initialize-context (fn [ctx] (let [token (api-common/get-token (get-in ctx [:request :headers]))]
-                                  (when (jwt/check-token token config/passphrase)
+                                  (when (and (jwt/check-token token config/passphrase) ; we signed it
+                                             (nil? (schema/check jwt/Claims (jwt/decode token)))) ; claims are valid
                                       {:jwtoken token :user (:claims (jwt/decode token))})))
   
   :allowed-methods [:options :get]
@@ -201,14 +202,10 @@
   :available-media-types [jwt/media-type]
   :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
-  ;; Authorization
-  :allowed? (by-method {
-      :options true
-      :get (fn [ctx] (:user ctx))})
-
   ;; Existentialism
-  :exists? (fn [ctx] (if-let* [user (user-res/get-user conn (-> ctx :user :user-id))
-                               admin-teams (user-res/admin-of conn (:user-id user))]
+  :exists? (fn [ctx] (if-let* [user-id (-> ctx :user :user-id)
+                               user (user-res/get-user conn user-id)
+                               admin-teams (user-res/admin-of conn user-id)]
                         {:existing-user (assoc user :admin admin-teams)}
                         false))
 

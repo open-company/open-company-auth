@@ -54,7 +54,7 @@
 (defn app [sys]
   (cond-> (routes sys)
     c/dsn             (sentry-mw/wrap-sentry c/dsn) ; important that this is first
-    true              wrap-with-logger
+    c/prod?           wrap-with-logger
     true              wrap-params
     c/liberator-trace (wrap-trace :header :ui)
     true              (wrap-cors #".*")
