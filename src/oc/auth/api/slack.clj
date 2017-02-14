@@ -55,7 +55,7 @@
 
   ([conn slack-user existing-user teams]
   (let [updated-user (merge existing-user (dissoc (clean-slack-user slack-user) :user-id))]
-    (timbre/info "Updating user " (:user-id updated-user))
+    (timbre/info "Updating user:" (:user-id updated-user))
     (user-res/update-user! conn (:user-id updated-user) updated-user))))
 
 ;; ----- Slack Request Handling Functions -----
