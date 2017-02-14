@@ -93,7 +93,8 @@
                     slack-props)]
     (-> bot-props
       (assoc :name (name-for user))
-      (assoc :auth-source source))))
+      (assoc :auth-source source)
+      (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
 
 (schema/defn ^:always-validate auth-response
   "Return a JWToken for the user, or and a Location header."
