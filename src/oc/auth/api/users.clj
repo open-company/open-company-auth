@@ -99,9 +99,10 @@
   :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
   ;; Authorization
-  :authorized? (by-method {:options true
-                           :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
-                                              (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
+  :authorized? (by-method {
+    :options true
+    :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
+                       (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
 
   ;; Responses
   :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or
@@ -164,7 +165,11 @@
                           :delete true})
 
   ;; Authorization
-  :allowed? (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
+  :allowed? (by-method {
+    :options true
+    :get (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
+    :patch (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
+    :delete (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))})
 
   ;; Validations
   :processable? (by-method {

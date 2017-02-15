@@ -40,7 +40,7 @@
 (def teams-link (hateoas/collection-link "/teams" {:accept mt/team-collection-media-type}))
 
 (defn authed-settings [user-id] {:links [(user-link user-id)
-                                         (refresh-link user-id)
+                                         refresh-link
                                          teams-link]})
 
 (defn- admin-action-link
@@ -105,7 +105,9 @@
 
 (schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
-  [team-id :- lib-schema/UniqueID user :- user-res/User]
+  [team-id :- lib-schema/UniqueID user]
+  {:pre [(map? user)
+         (schema/validate user-res/User (dissoc user :admin))]}
   (let [user-id (:user-id user)]
     (-> user
       (select-keys (concat representation-props [:admin :status]))

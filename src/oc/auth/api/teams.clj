@@ -156,7 +156,10 @@
   :handle-not-acceptable (api-common/only-accept 406 mt/team-media-type)
   
   ;; Authorization
-  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+  :allowed? (by-method {
+    :options true
+    :get (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -192,7 +195,9 @@
     :post (fn [ctx] (api-common/known-content-type? ctx mt/invite-media-type))})
 
   ;; Authorization
-  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id)) ; team admins only
+  :allowed? (by-method {
+    :options true 
+    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))}) ; team admins only
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -240,7 +245,10 @@
   :malformed? false ; no check, this media type is blank
   
   ;; Auhorization
-  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+  :allowed? (by-method {
+    :options true
+    :put (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
   ;; Existentialism
   :put-to-existing? true
@@ -282,7 +290,10 @@
     :delete true})
 
   ;; Authorization
-  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+  :allowed? (by-method {
+    :options true
+    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
   ;; Existentialism
   :exists? (by-method {
@@ -321,7 +332,9 @@
   :handle-not-acceptable (api-common/only-accept 406 mt/slack-org-media-type)
 
   ;; Authorization
-  :allowed? (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+  :allowed? (by-method {
+    :options true
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
