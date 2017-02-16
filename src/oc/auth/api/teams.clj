@@ -4,7 +4,7 @@
             [if-let.core :refer (if-let* when-let*)]
             [defun.core :refer (defun-)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes ANY)]
+            [compojure.core :as compojure :refer (ANY)]
             [liberator.core :refer (defresource by-method)]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
@@ -161,12 +161,9 @@
   :allowed-methods [:options :get]
 
   ;; Media type client accepts
-  :available-charsets [api-common/UTF8]
   :available-media-types [mt/team-collection-media-type]
-
-  ;; Media type client sends
   :handle-not-acceptable (api-common/only-accept 406 mt/team-collection-media-type)
-
+  
   ;; Responses
   :handle-ok (fn [ctx] (let [user-id (-> ctx :user :user-id)]
                         (team-rep/render-team-list (teams-for-user conn user-id) user-id))))

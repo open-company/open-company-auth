@@ -55,12 +55,12 @@
 
 (defn send!
   [type msg]
-  (timbre/info "Request to send" (:type msg) "to" (:to msg))
+  (timbre/info "Request to send:" (:type msg) "to:" (:to msg))
   (schema/validate type msg)
-  (timbre/info "Sending...")
+  (timbre/info "Sending:" (:type msg) "to:" (:to msg))
   (sqs/send-message
     {:access-key config/aws-access-key-id
      :secret-key config/aws-secret-access-key}
     config/aws-sqs-email-queue
     msg)
-  (timbre/info "Sent"))
+  (timbre/info "Sent:" (:type msg) "to:" (:to msg)))
