@@ -15,6 +15,9 @@
 
 (defn- self-link [team-id] (hateoas/self-link (url team-id) {:accept mt/team-media-type}))
 
+(defn- partial-update-link [team-id] (hateoas/partial-update-link (url team-id) {:content-type mt/team-media-type
+                                                                 :accept mt/team-media-type}))
+
 (defn- delete-link [team-id] (hateoas/delete-link (url team-id) {:ref mt/team-media-type}))
 
 (defn- add-email-domain-link [team-id]
@@ -46,6 +49,7 @@
       (if self-name 
         (hateoas/link-map self-name hateoas/GET (url team-id) {:accept mt/team-media-type})
         (self-link team-id))
+      (partial-update-link team-id)
       (invite-user-link team-id)
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)

@@ -18,22 +18,6 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.user :as user-rep]))
 
-;; ----- Actions -----
-
-(defn- create-user [conn {email :email password :password :as user-props}]
-  (timbre/info "Creating user" email)
-  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
-            admin-teams (user-res/admin-of conn (:user-id created-user))]
-    (do (timbre/info "Created user" email)
-      {:new-user (assoc created-user :admin admin-teams)})
-    (do (timbre/error "Failed creating user" email)
-      false)))
-
-(defn- update-user [conn {data :data} user-id]
-  (if-let [updated-user (user-res/update-user! conn user-id data)]
-    {:updated-user updated-user}
-    false))
-
 ;; ----- Validations -----
 
 (defn token-auth [conn headers]
@@ -43,7 +27,7 @@
     (if-let [user (and (lib-schema/valid? lib-schema/UUIDStr token) ; it's a valid UUID
                        (user-res/get-user-by-token conn token))] ; and a user has it as their token
       (let [user-id (:user-id user)]
-        (timbre/info "Auth'd user" user-id "by token" token)
+        (timbre/info "Auth'd user:" user-id "by token:" token)
         (user-res/update-user! conn user-id (assoc user :status :active)) ; mark user active
         (user-res/remove-token conn user-id) ; remove the used token
         {:email (:email user)})
@@ -77,15 +61,42 @@
       (some #((set (:admins %)) accessing-user-id) teams)
       false)))
 
-(defn- processable-patch-req? [conn {data :data} user-id]
+(defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
-    (try
-      (schema/validate user-res/User (merge user (user-res/ignore-props data)))
-      true
-      (catch clojure.lang.ExceptionInfo e
-        (timbre/error e "Validation failure of user PATCH request.")
-        false))
-    true)) ; No user for this user-id, so this will 404 after :exists? decision
+    (let [updated-user (merge user (user-res/ignore-props user-props))]
+      (if (lib-schema/valid? user-res/User updated-user)
+        {:existing-user user :updated-user updated-user}
+        [false, {:updated-user updated-user}])) ; invalid update
+    true)) ; No user for this user-id, so this will fail existence check later
+
+;; ----- Actions -----
+
+(defn- create-user [conn {email :email password :password :as user-props}]
+  (timbre/info "Creating user:" email)
+  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
+            admin-teams (user-res/admin-of conn (:user-id created-user))]
+    (do
+      (timbre/info "Created user:" email)
+      {:new-user (assoc created-user :admin admin-teams)})
+    
+    (do
+      (timbre/error "Failed creating user:" email) false)))
+
+(defn- update-user [conn ctx user-id]
+  (timbre/info "Updating user:" user-id)
+  (if-let* [updated-user (:updated-user ctx)
+            update-result (user-res/update-user! conn user-id updated-user)]
+    (do
+      (timbre/info "Updated user:" user-id)
+      {:updated-user update-result})
+
+    (do (timbre/error "Failed updating user:" user-id) false)))
+
+(defn- delete-user [conn user-id]
+  (timbre/info "Deleting user:" user-id)
+  (if (user-res/delete-user! conn user-id)
+    (do (timbre/info "Deleted user:" user-id) true)
+    (do (timbre/error "Failed deleting user:" user-id) false)))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
@@ -175,7 +186,7 @@
   :processable? (by-method {
     :get true
     :options true
-    :patch (fn [ctx] (processable-patch-req? conn ctx user-id))
+    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))
     :delete true})
 
   ;; Existentialism
@@ -185,12 +196,14 @@
 
   ;; Acctions
   :patch! (fn [ctx] (update-user conn ctx user-id))
-  :delete! (fn [_] (user-res/delete-user! conn user-id))
+  :delete! (fn [_] (delete-user conn user-id))
 
   ;; Responses
   :handle-ok (by-method {
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
-    :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))}))
+    :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
+  :handle-unprocessable-entity (fn [ctx]
+    (api-common/unprocessable-entity-response (schema/check user-res/User (:updated-user ctx)))))
 
 ;; A resource for refreshing JWTokens
 (defresource token [conn]

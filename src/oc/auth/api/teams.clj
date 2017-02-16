@@ -4,8 +4,9 @@
             [if-let.core :refer (if-let* when-let*)]
             [defun.core :refer (defun-)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes OPTIONS GET POST PUT PATCH DELETE)]
+            [compojure.core :as compojure :refer (defroutes ANY)]
             [liberator.core :refer (defresource by-method)]
+            [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
@@ -22,6 +23,36 @@
 
 (defn- token-link [type token]
   (s/join "/" [config/ui-server-url (str (name type) "?token=" token)]))
+
+;; ----- Validations -----
+
+(defn malformed-email-domain?
+  "Read in the body param from the request and make sure it's a non-blank string
+  that corresponds to an email domain. Otherwise just indicate it's malformed."
+  [ctx]
+  (try
+    (if-let* [domain (slurp (get-in ctx [:request :body]))
+              valid? (lib-schema/valid-email-domain? domain)]
+      [false {:data domain}]
+      true)
+    (catch Exception e
+      (do (timbre/warn "Request body not processable as an email domain: " e)
+        true))))
+
+(defn allow-team-admins
+  "Return true if the JWToken user is an admin of the specified team."
+  [conn {user-id :user-id} team-id]
+  (if-let [team (team-res/get-team conn team-id)]
+    ((set (:admins team)) user-id)
+    false))
+
+(defn- valid-team-update? [conn team-id team-props]
+  (if-let [team (team-res/get-team conn team-id)]
+    (let [updated-team (merge team (team-res/clean team-props))]
+      (if (lib-schema/valid? team-res/Team updated-team)
+        {:existing-team team :updated-team updated-team}
+        [false, {:updated-team updated-team}])) ; invalid update
+    true)) ; No team for this team-id, so this will fail existence check later
 
 ;; ----- Actions -----
 
@@ -53,51 +84,51 @@
   ([conn sender team nil member? admin? invite]
   (let [team-id (:team-id team)
         email (:email invite)]
-    (timbre/info "Creating user" email "for team" team-id)
+    (timbre/info "Creating user:" email "for team:" team-id)
     (if-let [new-user (user-res/create-user! conn
                         (user-res/->user (-> invite
                           (dissoc :admin :org-name :logo-url)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
-      (do (timbre/error "Add user" email "failed.") false))))
+      (do (timbre/error "Failed adding user:" email) false))))
   
   ;; User exists, but not a team member yet
   ([conn sender team user member? :guard not admin? invite]
   (let [team-id (:team-id team)
         user-id (:user-id user)
         status (:status user)]
-    (timbre/info "Adding user" user-id "to team" team-id)
+    (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (if (= status "active")
         user ; TODO need to send a welcome to the team email
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
-      (do (timbre/error "Add team" team-id "to user" user-id "failed.") false))))
+      (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
   ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
   ([conn sender team user true _admin? :guard not invite :guard :admin]
   (let [team-id (:team-id team)
         user-id (:user-id user)]
-    (timbre/info "Making user" user-id "an admin of team" team-id)
+    (timbre/info "Making user:" user-id "an admin of team:" team-id)
     (if-let [updated-team (team-res/add-admin conn team-id user-id)]
       (handle-invite conn sender team user true true invite) ; recurse
-      (do (timbre/error "Add admin" user-id "to team" team-id "failed.") false))))
+      (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; Non-active team member without a token, needs a token
   ([conn sender team user :guard #(and (not= "active" (:status %))
                                 (not (:one-time-token %))) true admin? invite]
   (let [user-id (:user-id user)]
-    (timbre/info "Adding token to" user-id)
+    (timbre/info "Adding token to user:" user-id)
     (if-let [updated-user (user-res/add-token conn user-id)]
       (handle-invite conn sender team updated-user true admin? invite)) ; recurse
-      (do (timbre/error "Add token to user" user-id "failed.") false)))
+      (do (timbre/error "Failed adding token to user:" user-id) false)))
 
   ;; Non-active team member with a token, needs an email invite
   ([_conn sender _team user :guard #(not= "active" (:status %)) true _admin? invite]
   (let [user-id (:user-id user)
         email (:email user)
         one-time-token (:one-time-token user)]
-    (timbre/info "Sending email inviting to user" user-id "at" email)
+    (timbre/info "Sending email invitation to user:" user-id "at:" email)
     (sqs/send! sqs/EmailInvite
       (sqs/->invite
         (merge invite {:token-link (token-link :invite one-time-token)})
@@ -105,27 +136,22 @@
         (:email sender)))
     user)))
 
-;; ----- Validations -----
+(defn- update-team [conn ctx team-id]
+  (timbre/info "Updating team:" team-id)
+  (if-let* [updated-team (:updated-team ctx)
+            update-result (team-res/update-team! conn team-id updated-team)]
+    (do
+      (timbre/info "Updated team:" team-id)
+      {:updated-team update-result})
 
-(defn malformed-email-domain?
-  "Read in the body param from the request and make sure it's a non-blank string
-  that corresponds to an email domain. Otherwise just indicate it's malformed."
-  [ctx]
-  (try
-    (if-let* [domain (slurp (get-in ctx [:request :body]))
-              valid? (lib-schema/valid-email-domain? domain)]
-      [false {:data domain}]
-      true)
-    (catch Exception e
-      (do (timbre/warn "Request body not processable as an email domain: " e)
-        true))))
+    (do (timbre/error "Failed updating team:" team-id) false)))
 
-(defn allow-team-admins
-  "Return true if the JWToken user is an admin of the specified team."
-  [conn {user-id :user-id} team-id]
-  (if-let [team (team-res/get-team conn team-id)]
-    ((set (:admins team)) user-id)
-    false))
+
+(defn- delete-team [conn team-id]
+  (timbre/info "Deleting team:" team-id)
+  (if (team-res/delete-team! conn team-id)
+    (do (timbre/info "Deleted team:" team-id) true)
+    (do (timbre/error "Failed deleting team:" team-id) false)))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
@@ -149,17 +175,32 @@
 (defresource team [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
-  :allowed-methods [:options :get :delete] ; TODO PATCH
+  :allowed-methods [:options :get :patch :delete]
 
   ;; Media type client accepts
   :available-media-types [mt/team-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/team-media-type)
+
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :get true
+    :patch (fn [ctx] (api-common/known-content-type? ctx mt/team-media-type))
+    :delete true})
   
   ;; Authorization
   :allowed? (by-method {
     :options true
     :get (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :patch (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+
+  ;; Validations
+  :processable? (by-method {
+    :options true
+    :get true
+    :patch (fn [ctx] (valid-team-update? conn team-id (:data ctx)))
+    :delete true})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -167,17 +208,22 @@
                         false))
 
   ;; Actions
-  :delete! (fn [_] (team-res/delete-team! conn team-id))
+  :patch! (fn [ctx] (update-team conn ctx team-id))
+  :delete! (fn [_] (delete-team conn team-id))
 
   ;; Responses
-  :handle-ok (fn [ctx] (let [admins (set (-> ctx :existing-team :admins))
+  :handle-ok (fn [ctx] (let [team (or (:updated-team ctx) (:existing-team ctx))
+                             admins (set (:admins team))
                              users (user-res/list-users conn team-id [:created-at :updated-at]) ; users in the team
                              user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
                              user-reps (map #(user-rep/render-user-for-collection team-id %) user-admins)
-                             team (assoc (:existing-team ctx) :users user-reps)
+                             team-users (assoc team :users user-reps)
                              slack-org-ids (:slack-orgs team)
                              slack-orgs (if (empty? slack-org-ids) [] (slack-org-res/get-slack-orgs conn slack-org-ids [:bot-user-id :bot-token]))]
-                          (team-rep/render-team (assoc team :slack-orgs slack-orgs)))))
+                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs))))
+  :handle-unprocessable-entity (fn [ctx]
+    (api-common/unprocessable-entity-response (schema/check team-res/Team (:updated-team ctx)))))
+
 
 ;; A resource for user invitations to a particular team
 (defresource invite [conn team-id]
@@ -355,41 +401,30 @@
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
       ;; Team listing
-      (OPTIONS "/teams" [] (pool/with-pool [conn db-pool] (team-list conn)))
-      (OPTIONS "/teams/" [] (pool/with-pool [conn db-pool] (team-list conn)))
-      (GET "/teams" [] (pool/with-pool [conn db-pool] (team-list conn)))
-      (GET "/teams/" [] (pool/with-pool [conn db-pool] (team-list conn)))
+      (ANY "/teams" [] (pool/with-pool [conn db-pool] (team-list conn)))
+      (ANY "/teams/" [] (pool/with-pool [conn db-pool] (team-list conn)))
       ;; Team operations
-      (OPTIONS "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
-      (GET "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
-      (DELETE "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
+      (ANY "/teams/:team-id" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
+      (ANY "/teams/:team-id/" [team-id] (pool/with-pool [conn db-pool] (team conn team-id)))
       ;; Invite user to team
-      (OPTIONS "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
-      (OPTIONS "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
-      (POST "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
-      (POST "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      (ANY "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      (ANY "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       ;; Team admin operations
-      (OPTIONS "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
-                                                                    (admin conn team-id user-id)))
-      (PUT "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
-                                                                    (admin conn team-id user-id)))
-      (DELETE "/teams/:team-id/admins/:user-id" [team-id user-id] (pool/with-pool [conn db-pool]
-                                                                    (admin conn team-id user-id)))
+      (ANY "/teams/:team-id/admins/:user-id" [team-id user-id]
+        (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
+      (ANY "/teams/:team-id/admins/:user-id/" [team-id user-id]
+        (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
       ;; Email domain operations
-      (OPTIONS "/teams/:team-id/email-domains/" [team-id] (pool/with-pool [conn db-pool]
-                                                                    (email-domain conn team-id nil)))
-      (OPTIONS "/teams/:team-id/email-domains" [team-id] (pool/with-pool [conn db-pool]
-                                                                    (email-domain conn team-id nil)))
-      (POST "/teams/:team-id/email-domains/" [team-id] (pool/with-pool [conn db-pool]
-                                                                    (email-domain conn team-id nil)))
-      (POST "/teams/:team-id/email-domains" [team-id] (pool/with-pool [conn db-pool]
-                                                                    (email-domain conn team-id nil)))
-      (OPTIONS "/teams/:team-id/email-domains/:domain" [team-id domain] (pool/with-pool [conn db-pool]
-                                                                    (email-domain conn team-id domain)))
-      (DELETE "/teams/:team-id/email-domains/:domain" [team-id domain] (pool/with-pool [conn db-pool]
-                                                                    (email-domain conn team-id domain)))
+      (ANY "/teams/:team-id/email-domains" [team-id]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
+      (ANY "/teams/:team-id/email-domains/" [team-id]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
+      (ANY "/teams/:team-id/email-domains/:domain" [team-id domain]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id domain)))
+      (ANY "/teams/:team-id/email-domains/:domain/" [team-id domain]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id domain)))
       ;; Slack org operations
-      (OPTIONS "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id] (pool/with-pool [conn db-pool]
-                                                                    (slack-org conn team-id slack-org-id)))
-      (DELETE "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id] (pool/with-pool [conn db-pool]
-                                                                    (slack-org conn team-id slack-org-id))))))
+      (ANY "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id]
+        (pool/with-pool [conn db-pool] (slack-org conn team-id slack-org-id)))
+      (ANY "/teams/:team-id/slack-orgs/:slack-org-id/" [team-id slack-org-id]
+        (pool/with-pool [conn db-pool] (slack-org conn team-id slack-org-id))))))

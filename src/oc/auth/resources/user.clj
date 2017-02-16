@@ -72,7 +72,7 @@
   (apply dissoc user reserved-properties))
 
 (defn ignore-props
-  "Remove any reserved properties from the user."
+  "Remove any ignored properties from the user."
   [user]
   (apply dissoc user ignored-properties))
 
@@ -145,7 +145,7 @@
 
 (schema/defn ^:always-validate update-user! :- User
   "
-  Given an updated user property map, update the user and return the update user on success.
+  Given an updated user property map, update the user and return the updated user on success.
 
   Throws a runtime exception if the merge of the prior user and the updated user property map doesn't conform
   to the User schema.

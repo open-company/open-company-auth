@@ -38,7 +38,7 @@
 
 ;; ----- Utility functions -----
 
-(defn- clean
+(defn clean
   "Remove any reserved properties from the user."
   [team]
   (apply dissoc team reserved-properties))
@@ -78,11 +78,30 @@
   {:pre [(db-common/conn? conn)]}
   (db-common/read-resource conn table-name team-id))
 
-(defn delete-team!
-  "Given the team-id of the team, delete it and return `true` on success."
-  [conn team-id]
+(schema/defn ^:always-validate update-team! :- Team
+  "
+  Given an updated team property map, update the team and return the updated team on success.
+
+  Throws a runtime exception if the merge of the prior team and the updated team property map doesn't conform
+  to the Team schema.
+  
+  NOTE: doesn't update admins, see: `add-admin`, `remove-admin`
+  NOTE: doesn't update email domains, see: `add-email-domain`, `remove-email-domain`
+  NOTE: doesn't update Slack orgs, see: `add-slack-org`, `remove-slack-org`
+  NOTE: doesn't handle case of team-id change.
+  "
+  [conn team-id :- lib-schema/UniqueID team]
   {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/UniqueID team-id)]}
+         (map? team)]}
+  (if-let [original-team (get-team conn team-id)]
+    (let [updated-team (merge original-team (clean team))]
+      (schema/validate Team updated-team)
+      (db-common/update-resource conn table-name primary-key original-team updated-team))))
+
+(schema/defn ^:always-validate delete-team!
+  "Given the team-id of the team, delete it and return `true` on success."
+  [conn team-id :- lib-schema/UniqueID]
+  {:pre [(db-common/conn? conn)]}
   ;; TODO remove team from users
   (try
     (db-common/delete-resource conn table-name team-id)
