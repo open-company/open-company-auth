@@ -27,8 +27,8 @@
   (hateoas/remove-link (s/join "/" [(url team-id) "email-domains" domain]) {} {:ref mt/email-domain-media-type}))
 
 (defn- invite-user-link [team-id]
-  (hateoas/add-link hateoas/POST (str (url team-id) "/users/") {:accept mt/user-media-type
-                                                                :content-type mt/invite-media-type}))
+  (hateoas/add-link hateoas/POST (str (url team-id) "/users/") {:content-type mt/invite-media-type
+                                                                :accept mt/user-media-type}))
 
 (defn add-slack-org-link [team-id]
   (slack/auth-link "authenticate" team-id))

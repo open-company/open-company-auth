@@ -4,7 +4,7 @@
             [if-let.core :refer (if-let* when-let*)]
             [defun.core :refer (defun-)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (ANY)]
+            [compojure.core :as compojure :refer (ANY OPTIONS POST DELETE)]
             [liberator.core :refer (defresource by-method)]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
@@ -412,13 +412,21 @@
       (ANY "/teams/:team-id/admins/:user-id/" [team-id user-id]
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
       ;; Email domain operations
-      (ANY "/teams/:team-id/email-domains" [team-id]
+      (OPTIONS "/teams/:team-id/email-domains" [team-id]
         (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
-      (ANY "/teams/:team-id/email-domains/" [team-id]
+      (OPTIONS "/teams/:team-id/email-domains/" [team-id]
         (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
-      (ANY "/teams/:team-id/email-domains/:domain" [team-id domain]
+      (POST "/teams/:team-id/email-domains" [team-id]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
+      (POST "/teams/:team-id/email-domains/" [team-id]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
+      (OPTIONS "/teams/:team-id/email-domains/:domain" [team-id domain]
         (pool/with-pool [conn db-pool] (email-domain conn team-id domain)))
-      (ANY "/teams/:team-id/email-domains/:domain/" [team-id domain]
+      (OPTIONS "/teams/:team-id/email-domains/:domain/" [team-id domain]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id domain)))
+      (DELETE "/teams/:team-id/email-domains/:domain" [team-id domain]
+        (pool/with-pool [conn db-pool] (email-domain conn team-id domain)))
+      (DELETE "/teams/:team-id/email-domains/:domain/" [team-id domain]
         (pool/with-pool [conn db-pool] (email-domain conn team-id domain)))
       ;; Slack org operations
       (ANY "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id]
