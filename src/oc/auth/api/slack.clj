@@ -18,7 +18,7 @@
 (defn- clean-slack-user
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
-  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id))
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :org-slug))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -62,9 +62,9 @@
 
 (defn- redirect-to-web-ui
   "Send them back to a UI page with a JWT token or a reason they don't have one."
-  [team-id success? param-value]
-  (let [page (if team-id (str "/" team-id "/settings/user-management") "/login")
-        param (if (and (not team-id) success?) "jwt" "access")
+  [org-slug success? param-value]
+  (let [page (if org-slug (str "/" org-slug "/settings/team-management") "/login")
+        param (if (and (not org-slug) success?) "jwt" "access")
         url (str config/ui-server-url page "?" param "=" param-value)]
     (response/redirect url)))
 
@@ -72,7 +72,8 @@
   "Redirect browser to web UI after callback from Slack."
   [conn params]
   (let [slack-response (slack/oauth-callback params) ; process the response from Slack
-        team-id (:team-id slack-response) ; team-id in the response?
+        team-id (:team-id slack-response) ; a team-id is in the response if this is being added to existing team
+        org-slug (:org-slug slack-response) ; an org slug is in the response if this is being added to existing team
         slack-org-only? (when team-id true)] ; a team-id means we are just adding a Slack org to an existing team
     (if-let [slack-user (when-not (:error slack-response) slack-response)]
       ;; got an auth'd user back from Slack
@@ -106,10 +107,10 @@
         (when (and team-id slack-org)
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
         ;; All done, send them back to the OC Web UI
-        (redirect-to-web-ui team-id true redirect-arg))
+        (redirect-to-web-ui org-slug true redirect-arg))
 
       ;; Error came back from Slack, send them back to the OC Web UI
-      (redirect-to-web-ui team-id false "failed"))))
+      (redirect-to-web-ui org-slug false "failed"))))
 
 (defn refresh-token
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."

@@ -65,7 +65,8 @@
   If the swap works, then test the access token to get user information."
   [slack-code slack-state]
   (let [split-state   (s/split slack-state #":")
-        team-id       (when (= (count split-state) 2) (last split-state)) ; team-id from state
+        team-id       (when (= (count split-state) 3) (second split-state)) ; team-id from state
+        org-slug      (when (= (count split-state) 3) (last split-state)) ; org slug from state
         response      (slack-oauth/access slack-connection
                                         config/slack-client-id
                                         config/slack-client-secret
@@ -89,7 +90,7 @@
                     (coerce-to-user user-profile)
                     (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
-        (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id}))
+        (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id :org-slug org-slug}))
 
       ;; invalid response or access token
       (do
