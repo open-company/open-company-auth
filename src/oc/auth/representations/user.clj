@@ -107,10 +107,10 @@
   "Create a map of the user for use in a collection in the REST API"
   [team-id :- lib-schema/UniqueID user]
   {:pre [(map? user)
-         (schema/validate user-res/User (dissoc user :admin))]}
+         (schema/validate user-res/User (dissoc user :admin?))]}
   (let [user-id (:user-id user)]
     (-> user
-      (select-keys (concat representation-props [:admin :status]))
+      (select-keys (concat representation-props [:admin? :status]))
       (user-collection-links team-id))))
 
 (schema/defn ^:always-validate render-user :- schema/Str

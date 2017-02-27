@@ -212,7 +212,7 @@
   :handle-ok (fn [ctx] (let [team (or (:updated-team ctx) (:existing-team ctx))
                              admins (set (:admins team))
                              users (user-res/list-users conn team-id [:created-at :updated-at]) ; users in the team
-                             user-admins (map #(if (admins (:user-id %)) (assoc % :admin true) %) users)
+                             user-admins (map #(if (admins (:user-id %)) (assoc % :admin? true) %) users)
                              user-reps (map #(user-rep/render-user-for-collection team-id %) user-admins)
                              team-users (assoc team :users user-reps)
                              slack-org-ids (:slack-orgs team)
