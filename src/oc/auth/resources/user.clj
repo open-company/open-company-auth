@@ -224,7 +224,7 @@
   "Given the user-id of the user, return a sequence of team-ids for the teams the user is an admin of."
   [conn user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (let [teams (team/get-teams-by-index conn :admins user-id)]
+  (let [teams (team/list-teams-by-index conn :admins user-id)]
     (vec (map :team-id teams))))
 
 ;; ----- Collection of users -----

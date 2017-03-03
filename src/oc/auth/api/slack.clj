@@ -9,8 +9,8 @@
             [oc.auth.lib.slack :as slack]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
-            [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
+            [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.representations.user :as user-rep]))
 
 ;; ----- Utility Functions -----
@@ -24,6 +24,28 @@
   "Remove properties from a user that are not needed for a JWToken."
   [user]
   (dissoc user :created-at :updated-at :status))
+
+(defn- bot-for
+  "
+  Given a Slack org resource, return the bot properties suitable for use in a JWToken, or nil if there's no bot
+  for the Slack org.
+  "
+  [{slack-org :slack-org-id id :bot-user-id token :bot-token}]
+  (when (and id token)
+    {:slack-org slack-org :id id :token token}))
+
+(defn bots-for
+  "Given a user, return a map of configured bots for each of the user's teams, keyed by team-id."
+  [conn {team-ids :teams}]
+  (let [teams (team-res/list-teams-by-ids conn team-ids [:slack-orgs])
+        teams-with-slack (remove #(empty? (:slack-orgs %)) teams)
+        slack-org-ids (distinct (flatten (map :slack-orgs teams-with-slack)))
+        slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids [:bot-user-id :bot-token])
+        bots (remove nil? (map bot-for slack-orgs))
+        bots-by-slack-org (zipmap (map :slack-org bots) bots)]
+    (println teams-with-slack)
+    (println bots-by-slack-org)
+    {}))
 
 ;; ----- Actions -----
 
@@ -85,9 +107,9 @@
               (user-res/->user (clean-slack-user slack-user))) ; create a new user map
             teams (if team-id
                      ;; The team this Slack org is being added to
-                     (team-res/get-teams conn [team-id])
+                     (team-res/list-teams-by-ids conn [team-id])
                     ;; Do team(s) already exist for this Slack org?
-                    (team-res/get-teams-by-index conn :slack-orgs (:slack-org-id slack-user)))
+                    (team-res/list-teams-by-index conn :slack-orgs (:slack-org-id slack-user)))
             new-team (when (and (not slack-org-only?)
                                 (empty? teams))
                       (create-team-for conn slack-user (or (:user-id user) (:user-id new-user)))) ; create a new team
@@ -102,7 +124,9 @@
                                                     (assoc :admin (user-res/admin-of conn (:user-id updated-user)))
                                                     (assoc :slack-id (:slack-id slack-user))
                                                     (assoc :slack-token (:slack-token slack-user))) :slack))
-            redirect-arg (if slack-org-only? "true" (jwt/generate jwt-user config/passphrase))]
+            redirect-arg (if slack-org-only?
+                            "true"
+                            (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase))]
         ;; Add the Slack org to the existing team if needed
         (when (and team-id slack-org)
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
@@ -125,7 +149,8 @@
                                   (clean-user)
                                   (assoc :admin (:admin user))
                                   (assoc :slack-id (:slack-id slack-user))
-                                  (assoc :slack-token slack-token))
+                                  (assoc :slack-token slack-token)
+                                  (assoc :slack-bots (bots-for conn updated-user)))
           :slack)))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)

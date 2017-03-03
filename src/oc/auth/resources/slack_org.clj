@@ -98,7 +98,9 @@
   ([conn :- lib-schema/Conn slack-org-ids :- [lib-schema/NonBlankStr] additional-keys]
   {:pre [(sequential? additional-keys)
          (every? #(or (string? %) (keyword? %)) additional-keys)]}
-  (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :name] additional-keys))))
+  (if (empty? slack-org-ids)
+    []
+    (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :name] additional-keys)))))
 
 ;; ----- Armageddon -----
 

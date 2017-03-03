@@ -13,6 +13,7 @@
 (require '[oc.auth.representations.team :as team-rep] :reload)
 (require '[oc.auth.api.teams :as team-api] :reload)
 (require '[oc.auth.api.users :as user-api] :reload)
+(require '[oc.auth.api.slack :as slack-api] :reload)
 
 ;; print last exception
 (print-stack-trace *e)

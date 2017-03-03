@@ -57,7 +57,7 @@
 
     ;; check if the accessing user is an admin of any of the accessed user's teams
     (if-let* [accessed-user (user-res/get-user conn accessed-user-id)
-              teams (team-res/get-teams conn (:teams accessed-user) [:admins])]
+              teams (team-res/list-teams-by-ids conn (:teams accessed-user) [:admins])]
       (some #((set (:admins %)) accessing-user-id) teams)
       false)))
 
@@ -120,7 +120,11 @@
                                                                             (-> ctx :request :identity) ; Basic HTTP Auth
                                                                             (:email ctx))) ; one time use token auth
                                    admin-teams (user-res/admin-of conn (:user-id user))]
-                        (user-rep/auth-response (assoc user :admin admin-teams) :email)))) ; respond w/ JWToken and location
+                        (user-rep/auth-response 
+                          (-> user
+                            (assoc :admin admin-teams)
+                            (assoc :slack-bots (slack-api/bots-for conn user)))
+                          :email)))) ; respond w/ JWToken and location
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
@@ -156,7 +160,12 @@
 
     ;; Responses
     :handle-conflict (ring-response {:status 409})
-    :handle-created (fn [ctx] (user-rep/auth-response (:new-user ctx) :email))) ; respond w/ JWToken and location
+    :handle-created (fn [ctx] (let [user (:new-user ctx)]
+                                ;; respond w/ JWToken and location
+                                (user-rep/auth-response
+                                  (assoc user :slack-bots (slack-api/bots-for conn user))
+                                  :email))))
+
 
 ;; A resource for operations on a particular user
 (defresource user [conn user-id]
@@ -234,7 +243,10 @@
   :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
 
                         ;; Email token - respond w/ JWToken and location
-                        "email" (user-rep/auth-response (:existing-user ctx) :email)
+                        "email" (let [user (:existing-user ctx)]
+                                  (user-rep/auth-response  
+                                    (assoc user :slack-bots (slack-api/bots-for conn user))
+                                    :email))
 
                         ;; Slack token - defer to Slack API handler
                         "slack" (slack-api/refresh-token conn (:existing-user ctx)
