@@ -216,7 +216,10 @@
                              user-reps (map #(user-rep/render-user-for-collection team-id %) user-admins)
                              team-users (assoc team :users user-reps)
                              slack-org-ids (:slack-orgs team)
-                             slack-orgs (if (empty? slack-org-ids) [] (slack-org-res/get-slack-orgs conn slack-org-ids [:bot-user-id :bot-token]))]
+                             slack-orgs (if (empty? slack-org-ids)
+                                          []
+                                          (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
+                                            [:bot-user-id :bot-token]))]
                           (team-rep/render-team (assoc team-users :slack-orgs slack-orgs))))
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-response (schema/check team-res/Team (:updated-team ctx)))))

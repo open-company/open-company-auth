@@ -31,6 +31,7 @@
 (defn- clean
   "Remove any reserved properties from the user."
   [slack-org]
+  {:pre [(map? slack-org)]}
   (apply dissoc slack-org reserved-properties))
 
 ;; ----- Slack Org CRUD -----
@@ -58,58 +59,50 @@
 
 (schema/defn ^:always-validate create-slack-org!
   "Create a Slack org in the system. Throws a runtime exception if user doesn't conform to the Team schema."
-  [conn slack-org :- SlackOrg]
-  {:pre [(db-common/conn? conn)]}
+  [conn :- lib-schema/Conn slack-org :- SlackOrg]
   (db-common/create-resource conn table-name slack-org (db-common/current-timestamp)))
 
 (schema/defn ^:always-validate get-slack-org :- (schema/maybe SlackOrg)
   "Given the slack-org-id of the Slack org, retrieve it, or return nil if it don't exist."
-  [conn slack-org-id :- lib-schema/NonBlankStr]
-  {:pre [(db-common/conn? conn)]}
+  [conn :- lib-schema/Conn slack-org-id :- lib-schema/NonBlankStr]
   (db-common/read-resource conn table-name slack-org-id))
 
-(defn delete-slack-org!
+(schema/defn ^:always-validate delete-slack-org!
   "Given the slack-org-id of the Slack org, delete it and return `true` on success."
-  [conn slack-org-id]
-  {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/NonBlankStr slack-org-id)]}
+  [conn :- lib-schema/Conn slack-org-id :- lib-schema/NonBlankStr]
   (try
     (db-common/delete-resource conn table-name slack-org-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no Slack org to delete
 
 ;; ----- Collection of Slack orgs -----
 
-(defn list-slack-orgs
+(schema/defn ^:always-validate list-slack-orgs
   "List all Slack orgs, returning `slack-org-id` and `name`. Additional fields can be optionally specified."
   ([conn]
   (list-slack-orgs conn []))
 
-  ([conn additional-keys]
-  {:pre [(db-common/conn? conn)
-        (sequential? additional-keys)
-        (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  ([conn :- lib-schema/Conn additional-keys]
+  {:pre [(sequential? additional-keys)
+         (every? #(or (string? %) (keyword? %)) additional-keys)]}
   (db-common/read-resources conn table-name (concat [:slack-org-id :name] additional-keys))))
 
-(defn get-slack-orgs
+(schema/defn ^:always-validate list-slack-orgs-by-ids
   "
   Get Slack orgs by a sequence of slack-org-id's, returning `slack-org-id` and `name`. 
   
   Additional fields can be optionally specified.
   "
   ([conn slack-org-ids]
-  (get-slack-orgs conn slack-org-ids []))
+  (list-slack-orgs-by-ids conn slack-org-ids []))
 
-  ([conn slack-org-ids additional-keys]
-  {:pre [(db-common/conn? conn)
-         (schema/validate [lib-schema/NonBlankStr] slack-org-ids)
-         (sequential? additional-keys)
-        (every? #(or (string? %) (keyword? %)) additional-keys)]}
+  ([conn :- lib-schema/Conn slack-org-ids :- [lib-schema/NonBlankStr] additional-keys]
+  {:pre [(sequential? additional-keys)
+         (every? #(or (string? %) (keyword? %)) additional-keys)]}
   (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :name] additional-keys))))
 
 ;; ----- Armageddon -----
 
-(defn delete-all-slack-orgs!
+(schema/defn ^:always-validate delete-all-slack-orgs!
   "Use with caution! Failure can result in partial deletes. Returns `true` if successful."
-  [conn]
-  {:pre [(db-common/conn? conn)]}
+  [conn :- lib-schema/Conn]
   (db-common/delete-all-resources! conn table-name))
