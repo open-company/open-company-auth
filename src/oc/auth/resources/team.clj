@@ -67,7 +67,7 @@
         (assoc :updated-at ts)))))
 
 (schema/defn ^:always-validate create-team!
-  "Create a team in the system. Throws a runtime exception if user doesn't conform to the Team schema."
+  "Create a team in the system. Throws a runtime exception if the team doesn't conform to the Team schema."
   [conn team :- Team]
   {:pre [(db-common/conn? conn)]}
   (db-common/create-resource conn table-name team (db-common/current-timestamp)))

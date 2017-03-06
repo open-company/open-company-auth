@@ -19,7 +19,7 @@
 (defn- clean-slack-user
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
-  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :org-slug))
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :redirect))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -73,6 +73,13 @@
   (slack-org-res/create-slack-org! conn 
     (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :bot]))))
 
+(defn- update-slack-org-for
+  "Update the existing Slack org for the specified Slack user."
+  [conn slack-user {slack-org-id :slack-org-id :as existing-slack-org}]
+  (timbre/info "Updating Slack org:" slack-org-id)
+  (let [updated-slack-org (merge existing-slack-org (select-keys slack-user [:slack-org-name :bot]))]
+    (slack-org-res/update-slack-org! conn slack-org-id updated-slack-org)))
+
 (defn- create-team-for
   "Create a new team for the specified Slack user."
   [conn {slack-org-id :slack-org-id team-name :slack-org-name} admin-id]
@@ -101,25 +108,28 @@
 
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
-  ([org-slug access] (redirect-to-web-ui org-slug access nil))
+  ([redirect access] (redirect-to-web-ui redirect access nil))
   
-  ([org-slug access jwtoken]
-  (let [page (if org-slug (str "/" org-slug "/settings/team-management") "/login")
+  ([redirect access jwtoken]
+  (let [page (or redirect "/login")
         jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
-        url (str config/ui-server-url page "?access=" (name access) jwt-param)]
-    (response/redirect url))))
+        url (str config/ui-server-url page "?access=" (name access))]
+    (timbre/info "Redirecting request to:" url)
+    (response/redirect (str url jwt-param)))))
 
 (defn- slack-callback
   "Redirect browser to web UI after callback from Slack."
   [conn params]
   (let [slack-response (slack/oauth-callback params) ; process the response from Slack
         team-id (:team-id slack-response) ; a team-id is in the response if this is being added to existing team
-        org-slug (:org-slug slack-response) ; an org slug is in the response if this is being added to existing team
+        redirect (:redirect slack-response) ; where we redirect the browser back to
         slack-org-only? (when team-id true)] ; a team-id means we are just adding a Slack org to an existing team
     (if-let [slack-user (when-not (:error slack-response) slack-response)]
       ;; got an auth'd user back from Slack
       (let [existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
-            slack-org (or existing-slack-org (create-slack-org-for conn slack-user)) ; create new Slack org
+            slack-org (if existing-slack-org
+                          (update-slack-org-for conn slack-user existing-slack-org) ; update the Slack org
+                          (create-slack-org-for conn slack-user)) ; create new Slack org
             user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
             new-user (when-not (or slack-org-only? user)
               (user-res/->user (clean-slack-user slack-user))) ; create a new user map
@@ -146,11 +156,11 @@
         (when (and team-id slack-org)
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
         ;; All done, send them back to the OC Web UI with a JWToken
-        (redirect-to-web-ui org-slug redirect-arg
+        (redirect-to-web-ui redirect redirect-arg
           (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))
 
       ;; Error came back from Slack, send them back to the OC Web UI
-      (redirect-to-web-ui org-slug :failed))))
+      (redirect-to-web-ui redirect :failed))))
 
 (defn refresh-token
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
