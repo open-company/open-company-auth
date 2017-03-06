@@ -1,6 +1,7 @@
 (ns oc.auth.api.slack
   "Liberator API for Slack callback to auth service."
-  (:require [taoensso.timbre :as timbre]
+  (:require [defun.core :refer (defun-)]
+            [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
             [oc.lib.db.pool :as pool]
@@ -25,27 +26,42 @@
   [user]
   (dissoc user :created-at :updated-at :status))
 
-(defn- bot-for
+(defun- bot-for
   "
   Given a Slack org resource, return the bot properties suitable for use in a JWToken, or nil if there's no bot
   for the Slack org.
+
+  Or, given a map of Slack orgs to their bots, and a sequence of Slack orgs, return a sequence of bots.
   "
-  [{slack-org :slack-org-id id :bot-user-id token :bot-token}]
-  (when (and id token)
-    {:slack-org slack-org :id id :token token}))
+  ;; Single Slack org case
+  ([slack-org]
+  (when (and (:bot-user-id slack-org) (:bot-token slack-org))
+    ;; Extract and rename the keys for JWToken use
+    (select-keys
+      (clojure.set/rename-keys slack-org {:bot-user-id :id :bot-token :token :slack-org-id :slack-org})
+      [:slack-org :id :token])))
+
+  ;; Empty case, no more Slack orgs
+  ([_bots _slack-orgs :guard empty? results] results)
+
+  ;; Many Slack orgs case, recursively get the bot for each org one by one
+  ([bots slack-orgs results]
+  (bot-for bots (rest slack-orgs) (conj results (get bots (first slack-orgs))))))
 
 (defn bots-for
   "Given a user, return a map of configured bots for each of the user's teams, keyed by team-id."
   [conn {team-ids :teams}]
-  (let [teams (team-res/list-teams-by-ids conn team-ids [:slack-orgs])
-        teams-with-slack (remove #(empty? (:slack-orgs %)) teams)
-        slack-org-ids (distinct (flatten (map :slack-orgs teams-with-slack)))
-        slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids [:bot-user-id :bot-token])
-        bots (remove nil? (map bot-for slack-orgs))
-        bots-by-slack-org (zipmap (map :slack-org bots) bots)]
-    (println teams-with-slack)
-    (println bots-by-slack-org)
-    {}))
+  (let [teams (team-res/list-teams-by-ids conn team-ids [:slack-orgs]) ; teams the user is a member of
+        teams-with-slack (remove #(empty? (:slack-orgs %)) teams) ; teams with a Slack org
+        slack-org-ids (distinct (flatten (map :slack-orgs teams-with-slack))) ; distinct Slack orgs
+        slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids [:bot-user-id :bot-token]) ; bot lookup
+        bots (remove nil? (map bot-for slack-orgs)) ; remove slack orgs with no bots
+        slack-org-to-bot (zipmap (map :slack-org bots) bots) ; map of slack org to its bot
+        team-to-slack-orgs (zipmap (map :team-id teams-with-slack)
+                                   (map :slack-orgs teams-with-slack))] ; map of team to its Slack org(s)
+    ;; map of team to its bot(s)
+    (zipmap (keys team-to-slack-orgs)
+            (map #(bot-for slack-org-to-bot % []) (vals team-to-slack-orgs)))))
 
 ;; ----- Actions -----
 
