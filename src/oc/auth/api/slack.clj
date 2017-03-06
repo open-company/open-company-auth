@@ -42,7 +42,8 @@
       [:slack-org :id :token])))
 
   ;; Empty case, no more Slack orgs
-  ([_bots _slack-orgs :guard empty? results] results)
+  ([_bots _slack-orgs :guard empty? results :guard empty?] nil)
+  ([_bots _slack-orgs :guard empty? results] (remove nil? results))
 
   ;; Many Slack orgs case, recursively get the bot for each org one by one
   ([bots slack-orgs results]
@@ -58,10 +59,10 @@
         bots (remove nil? (map bot-for slack-orgs)) ; remove slack orgs with no bots
         slack-org-to-bot (zipmap (map :slack-org bots) bots) ; map of slack org to its bot
         team-to-slack-orgs (zipmap (map :team-id teams-with-slack)
-                                   (map :slack-orgs teams-with-slack))] ; map of team to its Slack org(s)
-    ;; map of team to its bot(s)
-    (zipmap (keys team-to-slack-orgs)
-            (map #(bot-for slack-org-to-bot % []) (vals team-to-slack-orgs)))))
+                                   (map :slack-orgs teams-with-slack)) ; map of team to its Slack org(s)
+        team-to-bots (zipmap (keys team-to-slack-orgs)
+                             (map #(bot-for slack-org-to-bot % []) (vals team-to-slack-orgs)))] ; map of team to bot(s)
+    (into {} (remove (comp empty? second) team-to-bots)))) ; remove any team with no bots
 
 ;; ----- Actions -----
 
@@ -99,12 +100,14 @@
 ;; ----- Slack Request Handling Functions -----
 
 (defn- redirect-to-web-ui
-  "Send them back to a UI page with a JWT token or a reason they don't have one."
-  [org-slug success? param-value]
+  "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
+  ([org-slug access] (redirect-to-web-ui org-slug access nil))
+  
+  ([org-slug access jwtoken]
   (let [page (if org-slug (str "/" org-slug "/settings/team-management") "/login")
-        param (if (and (not org-slug) success?) "jwt" "access")
-        url (str config/ui-server-url page "?" param "=" param-value)]
-    (response/redirect url)))
+        jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
+        url (str config/ui-server-url page "?access=" (name access) jwt-param)]
+    (response/redirect url))))
 
 (defn- slack-callback
   "Redirect browser to web UI after callback from Slack."
@@ -140,17 +143,17 @@
                                                     (assoc :admin (user-res/admin-of conn (:user-id updated-user)))
                                                     (assoc :slack-id (:slack-id slack-user))
                                                     (assoc :slack-token (:slack-token slack-user))) :slack))
-            redirect-arg (if slack-org-only?
-                            "true"
-                            (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase))]
+            redirect-arg (if slack-org-only? :bot :team)]
         ;; Add the Slack org to the existing team if needed
         (when (and team-id slack-org)
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
-        ;; All done, send them back to the OC Web UI
-        (redirect-to-web-ui org-slug true redirect-arg))
+        ;; All done, send them back to the OC Web UI with a JWToken
+        (println (bots-for conn jwt-user))
+        (redirect-to-web-ui org-slug redirect-arg
+          (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))
 
       ;; Error came back from Slack, send them back to the OC Web UI
-      (redirect-to-web-ui org-slug false "failed"))))
+      (redirect-to-web-ui org-slug :failed))))
 
 (defn refresh-token
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
