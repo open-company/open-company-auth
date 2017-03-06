@@ -120,8 +120,7 @@
       ;; got an auth'd user back from Slack
       (let [existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
             slack-org (or existing-slack-org (create-slack-org-for conn slack-user)) ; create new Slack org
-            user (when-not slack-org-only?
-              (user-res/get-user-by-email conn (:email slack-user))) ; user already exists?
+            user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
             new-user (when-not (or slack-org-only? user)
               (user-res/->user (clean-slack-user slack-user))) ; create a new user map
             teams (if team-id
@@ -137,18 +136,16 @@
                             (if user
                               (update-user conn slack-user user user-teams) ; update user's teams
                               (create-user-for conn new-user user-teams))) ; create new user
-            jwt-user (when-not slack-org-only? (user-rep/jwt-props-for
-                                                  (-> updated-user
-                                                    (clean-user)
-                                                    (assoc :admin (user-res/admin-of conn (:user-id updated-user)))
-                                                    (assoc :slack-id (:slack-id slack-user))
-                                                    (assoc :slack-token (:slack-token slack-user))) :slack))
+            jwt-user (user-rep/jwt-props-for (-> (or updated-user user)
+                                                (clean-user)
+                                                (assoc :admin (user-res/admin-of conn (:user-id (or updated-user user))))
+                                                (assoc :slack-id (:slack-id slack-user))
+                                                (assoc :slack-token (:slack-token slack-user))) :slack)
             redirect-arg (if slack-org-only? :bot :team)]
         ;; Add the Slack org to the existing team if needed
         (when (and team-id slack-org)
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
         ;; All done, send them back to the OC Web UI with a JWToken
-        (println (bots-for conn jwt-user))
         (redirect-to-web-ui org-slug redirect-arg
           (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))
 
