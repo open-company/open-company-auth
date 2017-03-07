@@ -290,6 +290,9 @@
 
   :allowed-methods [:options :post]
 
+  ;; Media type client accepts
+  :available-media-types ["*/*"]
+  
   ;; Media type client sends
   :malformed? (by-method {
     :options false
