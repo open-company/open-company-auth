@@ -3,7 +3,7 @@
   (:require [clojure.string :as s]
             [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes OPTIONS GET PATCH POST DELETE)]
+            [compojure.core :as compojure :refer (defroutes ANY)]
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
             [schema.core :as schema]
@@ -12,6 +12,7 @@
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
+            [oc.auth.lib.sqs :as sqs]
             [oc.auth.api.slack :as slack-api]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
@@ -69,6 +70,19 @@
         [false, {:updated-user updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later
 
+(defn malformed-email?
+  "Read in the body param from the request and make sure it's a non-blank string
+  that corresponds to an email address. Otherwise just indicate it's malformed."
+  [ctx]
+  (try
+    (if-let* [email (slurp (get-in ctx [:request :body]))
+              valid? (lib-schema/valid-email-address? email)]
+      [false {:data email}]
+      true)
+    (catch Exception e
+      (do (timbre/warn "Request body not processable as an email address: " e)
+        true))))
+
 ;; ----- Actions -----
 
 (defn- create-user [conn {email :email password :password :as user-props}]
@@ -97,6 +111,20 @@
   (if (user-res/delete-user! conn user-id)
     (do (timbre/info "Deleted user:" user-id) true)
     (do (timbre/error "Failed deleting user:" user-id) false)))
+
+(defn password-reset-request [conn email]
+  (timbre/info "Password reset request for:" email)
+  (if-let [user (user-res/get-user-by-email conn email)]
+
+    (let [user-id (:user-id user)
+          one-time-token (str (java.util.UUID/randomUUID))]
+      (timbre/info "Adding one-time-token for:" user-id "(" email ")")
+      (user-res/update-user! conn user-id {:one-time-token one-time-token})
+      (timbre/info "Sending Password reset request for:" user-id "(" email ")")
+      (sqs/send! sqs/PasswordReset (sqs/->reset {:email email :token one-time-token}))
+      (timbre/info "Sending Password reset request for:" user-id "(" email ")"))
+
+    (timbre/warn "Password reset request, no user for:" email)))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
@@ -128,43 +156,43 @@
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
-  (api-common/open-company-anonymous-resource config/passphrase) ; verify validity and presence of required JWToken
+  (api-common/open-company-anonymous-resource config/passphrase) ; verify validity of JWToken if it's provided
 
-    :allowed-methods [:options :post]
+  :allowed-methods [:options :post]
 
-    ;; Media type client accepts
-    :available-media-types [jwt/media-type]
-    :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
+  ;; Media type client accepts
+  :available-media-types [jwt/media-type]
+  :handle-not-acceptable (api-common/only-accept 406 jwt/media-type)
 
-    ;; Media type client sends
-    :known-content-type? (by-method {
-      :options true
-      :post (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :post (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
-    ;; Validations
-    :processable? (by-method {
-      :options true
-      :post (fn [ctx] (and (lib-schema/valid-email-address? (-> ctx :data :email))
-                           (lib-schema/valid-password? (-> ctx :data :password))
-                           (string? (-> ctx :data :first-name))
-                           (string? (-> ctx :data :last-name))))})
+  ;; Validations
+  :processable? (by-method {
+    :options true
+    :post (fn [ctx] (and (lib-schema/valid-email-address? (-> ctx :data :email))
+                         (lib-schema/valid-password? (-> ctx :data :password))
+                         (string? (-> ctx :data :first-name))
+                         (string? (-> ctx :data :last-name))))})
 
-    ;; Existentialism
-    :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
+  ;; Existentialism
+  :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
 
-    ;; Actions
-    :post-to-existing? false
-    :put-to-existing? true ; needed for a 409 conflict
-    :conflict? :existing-user
-    :put! (fn [ctx] (create-user conn (:data ctx))) ; POST ends up handled here so we can have a 409 conflict
+  ;; Actions
+  :post-to-existing? false
+  :put-to-existing? true ; needed for a 409 conflict
+  :conflict? :existing-user
+  :put! (fn [ctx] (create-user conn (:data ctx))) ; POST ends up handled here so we can have a 409 conflict
 
-    ;; Responses
-    :handle-conflict (ring-response {:status 409})
-    :handle-created (fn [ctx] (let [user (:new-user ctx)]
-                                ;; respond w/ JWToken and location
-                                (user-rep/auth-response
-                                  (assoc user :slack-bots (slack-api/bots-for conn user))
-                                  :email))))
+  ;; Responses
+  :handle-conflict (ring-response {:status 409})
+  :handle-created (fn [ctx] (let [user (:new-user ctx)]
+                              ;; respond w/ JWToken and location
+                              (user-rep/auth-response
+                                (assoc user :slack-bots (slack-api/bots-for conn user))
+                                :email))))
 
 
 ;; A resource for operations on a particular user
@@ -256,33 +284,43 @@
                         ;; What token is this?
                         (api-common/unauthorized-response))))
 
+;; A resource for requesting a password reset
+(defresource password-reset [conn]
+  (api-common/open-company-anonymous-resource config/passphrase) ; verify validity of JWToken if it's provided
+
+  :allowed-methods [:options :post]
+
+  ;; Media type client sends
+  :malformed? (by-method {
+    :options false
+    :post (fn [ctx] (malformed-email? ctx))
+    :delete false})  
+  :known-content-type? (by-method {
+    :options true
+    :post (fn [ctx] (api-common/known-content-type? ctx "text/x-email"))})
+
+  ;; Actions
+  :post! (fn [ctx] (password-reset-request conn (-> ctx :data)))
+
+  ;; Responses
+  :handle-created (api-common/blank-response))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
       ;; new email user creation
-      (OPTIONS "/users" [] (pool/with-pool [conn db-pool] (user-create conn)))
-      (OPTIONS "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
-      (POST "/users" [] (pool/with-pool [conn db-pool] (user-create conn)))
-      (POST "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
+      (ANY "/users" [] (pool/with-pool [conn db-pool] (user-create conn)))
+      (ANY "/users/" [] (pool/with-pool [conn db-pool] (user-create conn)))
       ;; email / token user authentication
-      (OPTIONS "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
-      (OPTIONS "/users/auth/" [] (pool/with-pool [conn db-pool] (user-auth conn)))
-      (GET "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
-      (GET "/users/auth/" [] (pool/with-pool [conn db-pool] (user-auth conn)))
+      (ANY "/users/auth" [] (pool/with-pool [conn db-pool] (user-auth conn)))
+      (ANY "/users/auth/" [] (pool/with-pool [conn db-pool] (user-auth conn)))
       ;; password reset request
-      ; (OPTIONS "/users/reset" [] (pool/with-pool [conn db-pool] (password-reset conn)))
-      ; (OPTIONS "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn)))
-      ; (POST "/users/reset" [] (pool/with-pool [conn db-pool] (password-reset conn)))
-      ; (POST "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn))))
+      (ANY "/users/reset" [] (pool/with-pool [conn db-pool] (password-reset conn)))
+      (ANY "/users/reset/" [] (pool/with-pool [conn db-pool] (password-reset conn)))
       ;; token refresh request
-      (OPTIONS "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
-      (OPTIONS "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
-      (GET "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
-      (GET "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
+      (ANY "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
+      (ANY "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
       ;; user operations
-      (OPTIONS "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (GET "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (PATCH "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (DELETE "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
+      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))

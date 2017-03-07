@@ -1,14 +1,23 @@
 (ns oc.auth.lib.sqs
-  (:require [schema.core :as schema]
+  (:require [clojure.string :as s]
+            [schema.core :as schema]
             [amazonica.aws.sqs :as sqs]
             [taoensso.timbre :as timbre]
             [oc.lib.schema :as lib-schema]
             [oc.auth.config :as config]))
 
+(def invite "invite")
+(def reset "reset")
+
+;; ----- Utility Functions -----
+
+(defn- token-link [type token]
+  (s/join "/" [config/ui-server-url (str (name type) "?token=" token)]))
+
 ;; ----- SQS Message Schemas -----
 
 (def EmailInvite
-  {:type (schema/pred #(= "invite" %))
+  {:type (schema/pred #(= invite %))
    :from schema/Str
    :reply-to schema/Str
    :to lib-schema/EmailAddress
@@ -18,7 +27,7 @@
    :token-link lib-schema/NonBlankStr})
 
 (def PasswordReset
-  {:type (schema/pred #(= "reset" %))
+  {:type (schema/pred #(= reset %))
    :to lib-schema/EmailAddress
    :token-link lib-schema/NonBlankStr})
 
@@ -27,28 +36,28 @@
 (defn ->invite [payload from reply-to]
   {:pre [(map? payload)
          (string? (:email payload))
-         (string? (:token-link payload))
+         (string? (:token payload))
          (or (nil? from) (string? from))
          (or (nil? reply-to) (string? reply-to))]}
   {
-    :type "invite"
+    :type invite
     :to (:email payload)
     :from (or from "")
     :reply-to (or reply-to "")
     :first-name (or (:first-name payload) "")
     :org-name (or (:org-name payload) "")
     :logo-url (or (:logo-url payload) "")
-    :token-link (:token-link payload)
+    :token-link (token-link invite (:token payload))
   })
 
 (defn ->reset [payload]
   {:pre [(map? payload)
          (string? (:email payload))
-         (string? (:token-link payload))]}
+         (string? (:token payload))]}
   {
     :type "reset"
     :to (:email payload)
-    :token-link (:token-link payload)
+    :token-link (token-link reset (:token payload))
   })
 
 ;; ----- SQS Message Functions -----

@@ -19,11 +19,6 @@
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]))
 
-;; ----- Utility Functions -----
-
-(defn- token-link [type token]
-  (s/join "/" [config/ui-server-url (str (name type) "?token=" token)]))
-
 ;; ----- Validations -----
 
 (defn malformed-email-domain?
@@ -131,7 +126,7 @@
     (timbre/info "Sending email invitation to user:" user-id "at:" email)
     (sqs/send! sqs/EmailInvite
       (sqs/->invite
-        (merge invite {:token-link (token-link :invite one-time-token)})
+        (merge invite {:token one-time-token})
         (:name sender)
         (:email sender)))
     user)))
