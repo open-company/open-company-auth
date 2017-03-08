@@ -67,7 +67,7 @@
   (timbre/info "Processing Slack response code with Slack state:" slack-state)
   (let [split-state   (s/split slack-state #":")
         team-id       (when (= (count split-state) 4) (second split-state)) ; team-id from state
-        user-id       (when (= (count split-state) 4) (nth 2 split-state)) ; user-id from state
+        user-id       (when (= (count split-state) 4) (nth split-state 2)) ; user-id from state
         redirect      (when (= (count split-state) 4) (last split-state)) ; redirect URL fragment from state
         response      (slack-oauth/access slack-connection
                                         config/slack-client-id
