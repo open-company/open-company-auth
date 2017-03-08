@@ -121,7 +121,8 @@
   "Redirect browser to web UI after callback from Slack."
   [conn params]
   (let [slack-response (slack/oauth-callback params) ; process the response from Slack
-        team-id (:team-id slack-response) ; a team-id is in the response if this is being added to existing team
+        team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
+        user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
         redirect (:redirect slack-response) ; where we redirect the browser back to
         slack-org-only? (when team-id true)] ; a team-id means we are just adding a Slack org to an existing team
     (if-let [slack-user (when-not (:error slack-response) slack-response)]
@@ -130,7 +131,9 @@
             slack-org (if existing-slack-org
                           (update-slack-org-for conn slack-user existing-slack-org) ; update the Slack org
                           (create-slack-org-for conn slack-user)) ; create new Slack org
-            user (user-res/get-user-by-email conn (:email slack-user)) ; user already exists?
+            user (if user-id
+                  (user-res/get-user conn user-id)
+                  (user-res/get-user-by-email conn (:email slack-user))) ; user already exists?
             new-user (when-not (or slack-org-only? user)
               (user-res/->user (clean-slack-user slack-user))) ; create a new user map
             teams (if team-id

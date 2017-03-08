@@ -64,10 +64,11 @@
   "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
   If the swap works, then test the access token to get user information."
   [slack-code slack-state]
-  (println slack-state)
+  (timbre/info "Processing Slack response code with Slack state:" slack-state)
   (let [split-state   (s/split slack-state #":")
-        team-id       (when (= (count split-state) 3) (second split-state)) ; team-id from state
-        redirect      (when (= (count split-state) 3) (last split-state)) ; redirect URL fragment from state
+        team-id       (when (= (count split-state) 4) (second split-state)) ; team-id from state
+        user-id       (when (= (count split-state) 4) (nth 2 split-state)) ; user-id from state
+        redirect      (when (= (count split-state) 4) (last split-state)) ; redirect URL fragment from state
         response      (slack-oauth/access slack-connection
                                         config/slack-client-id
                                         config/slack-client-secret
@@ -91,7 +92,8 @@
                     (coerce-to-user user-profile)
                     (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
-        (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id :redirect redirect}))
+        (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id
+                               :user-id user-id :redirect redirect}))
 
       ;; invalid response or access token
       (do
