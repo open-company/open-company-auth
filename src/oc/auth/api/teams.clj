@@ -45,8 +45,8 @@
   (if-let [team (team-res/get-team conn team-id)]
     (let [updated-team (merge team (team-res/clean team-props))]
       (if (lib-schema/valid? team-res/Team updated-team)
-        {:existing-team team :updated-team updated-team}
-        [false, {:updated-team updated-team}])) ; invalid update
+        {:existing-team team :team-update updated-team}
+        [false, {:team-update updated-team}])) ; invalid update
     true)) ; No team for this team-id, so this will fail existence check later
 
 ;; ----- Actions -----
@@ -133,7 +133,7 @@
 
 (defn- update-team [conn ctx team-id]
   (timbre/info "Updating team:" team-id)
-  (if-let* [updated-team (:updated-team ctx)
+  (if-let* [updated-team (:team-update ctx)
             update-result (team-res/update-team! conn team-id updated-team)]
     (do
       (timbre/info "Updated team:" team-id)
@@ -217,7 +217,7 @@
                                             [:bot-user-id :bot-token]))]
                           (team-rep/render-team (assoc team-users :slack-orgs slack-orgs))))
   :handle-unprocessable-entity (fn [ctx]
-    (api-common/unprocessable-entity-response (schema/check team-res/Team (:updated-team ctx)))))
+    (api-common/unprocessable-entity-response (schema/check team-res/Team (:team-update ctx)))))
 
 
 ;; A resource for user invitations to a particular team

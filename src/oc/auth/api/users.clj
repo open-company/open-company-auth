@@ -64,10 +64,11 @@
 
 (defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
-    (let [updated-user (merge user (user-res/ignore-props user-props))]
+    (let [new-password (:password user-props)
+          updated-user (merge user (user-res/ignore-props user-props))]
       (if (lib-schema/valid? user-res/User updated-user)
-        {:existing-user user :updated-user updated-user}
-        [false, {:updated-user updated-user}])) ; invalid update
+        {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) user-props)}
+        [false, {:user-update updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later
 
 (defn malformed-email?
@@ -98,7 +99,7 @@
 
 (defn- update-user [conn ctx user-id]
   (timbre/info "Updating user:" user-id)
-  (if-let* [updated-user (:updated-user ctx)
+  (if-let* [updated-user (:user-update ctx)
             update-result (user-res/update-user! conn user-id updated-user)]
     (do
       (timbre/info "Updated user:" user-id)
@@ -240,7 +241,7 @@
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
   :handle-unprocessable-entity (fn [ctx]
-    (api-common/unprocessable-entity-response (schema/check user-res/User (:updated-user ctx)))))
+    (api-common/unprocessable-entity-response (schema/check user-res/User (:user-update ctx)))))
 
 ;; A resource for refreshing JWTokens
 (defresource token [conn]
