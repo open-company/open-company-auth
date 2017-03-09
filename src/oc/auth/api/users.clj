@@ -198,10 +198,13 @@
   ;; Responses
   :handle-conflict (ring-response {:status 409})
   :handle-created (fn [ctx] (let [user (:new-user ctx)]
-                              ;; respond w/ JWToken and location
-                              (user-rep/auth-response
-                                (assoc user :slack-bots (slack-api/bots-for conn user))
-                                :email))))
+                              (if (= (:status user) "pending")
+                                ;; they need to verify their email, so no love
+                                (api-common/blank-response)
+                                ;; respond w/ JWToken and location
+                                (user-rep/auth-response
+                                  (assoc user :slack-bots (slack-api/bots-for conn user))
+                                  :email)))))
 
 
 ;; A resource for operations on a particular user
