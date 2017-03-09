@@ -1,18 +1,20 @@
 (ns oc.auth.lib.sqs
   (:require [clojure.string :as s]
-            [schema.core :as schema]
             [amazonica.aws.sqs :as sqs]
             [taoensso.timbre :as timbre]
+            [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [oc.auth.config :as config]))
 
+;; SQS message types
 (def invite "invite")
 (def reset "reset")
+(def verify "verify")
 
 ;; ----- Utility Functions -----
 
-(defn- token-link [type token]
-  (s/join "/" [config/ui-server-url (str (name type) "?token=" token)]))
+(defn- token-link [token-type token]
+  (s/join "/" [config/ui-server-url (str (name token-type) "?token=" token)]))
 
 ;; ----- SQS Message Schemas -----
 
@@ -26,19 +28,18 @@
    :logo-url schema/Str
    :token-link lib-schema/NonBlankStr})
 
-(def PasswordReset
-  {:type (schema/pred #(= reset %))
+(def TokenAuth
+  {:type (schema/enum reset verify)
    :to lib-schema/EmailAddress
    :token-link lib-schema/NonBlankStr})
 
 ;; ----- SQS Message Creation -----
 
-(defn ->invite [payload from reply-to]
+(schema/defn ^:always-validate ->invite [payload from :- (schema/maybe lib-schema/EmailAddress)
+                                                 reply-to :- (schema/maybe lib-schema/EmailAddress)]
   {:pre [(map? payload)
-         (string? (:email payload))
-         (string? (:token payload))
-         (or (nil? from) (string? from))
-         (or (nil? reply-to) (string? reply-to))]}
+         (lib-schema/valid-email-address? (:email payload))
+         (lib-schema/uuid-string? (:token payload))]}
   {
     :type invite
     :to (:email payload)
@@ -50,14 +51,14 @@
     :token-link (token-link invite (:token payload))
   })
 
-(defn ->reset [payload]
+(defn ->token-auth [payload]
   {:pre [(map? payload)
-         (string? (:email payload))
-         (string? (:token payload))]}
+         (lib-schema/valid-email-address? (:email payload))
+         (lib-schema/uuid-string? (:token payload))]}
   {
-    :type "reset"
+    :type (name (:type payload))
     :to (:email payload)
-    :token-link (token-link reset (:token payload))
+    :token-link (token-link (:type payload) (:token payload))
   })
 
 ;; ----- SQS Message Functions -----

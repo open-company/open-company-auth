@@ -89,9 +89,13 @@
 (defn- create-user [conn {email :email password :password :as user-props}]
   (timbre/info "Creating user:" email)
   (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
-            admin-teams (user-res/admin-of conn (:user-id created-user))]
+            user-id (:user-id created-user)
+            admin-teams (user-res/admin-of conn user-id)]
     (do
       (timbre/info "Created user:" email)
+      (timbre/info "Sending email verification request for:" user-id "(" email ")")
+      (sqs/send! sqs/TokenAuth (sqs/->token-auth {:type :verify :email email :token (:one-time-token created-user)}))
+      (timbre/info "Sent email verification for:" user-id "(" email ")")
       {:new-user (assoc created-user :admin admin-teams)})
     
     (do
@@ -121,9 +125,9 @@
           one-time-token (str (java.util.UUID/randomUUID))]
       (timbre/info "Adding one-time-token for:" user-id "(" email ")")
       (user-res/update-user! conn user-id {:one-time-token one-time-token})
-      (timbre/info "Sending Password reset request for:" user-id "(" email ")")
-      (sqs/send! sqs/PasswordReset (sqs/->reset {:email email :token one-time-token}))
-      (timbre/info "Sending Password reset request for:" user-id "(" email ")"))
+      (timbre/info "Sending password reset request for:" user-id "(" email ")")
+      (sqs/send! sqs/TokenAuth (sqs/->token-auth {:type :reset :email email :token one-time-token}))
+      (timbre/info "Sent password reset request for:" user-id "(" email ")"))
 
     (timbre/warn "Password reset request, no user for:" email)))
 

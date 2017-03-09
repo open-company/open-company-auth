@@ -100,7 +100,11 @@
 
 (schema/defn ^:always-validate ->user :- User
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
-  ([user-props password :- lib-schema/NonBlankStr] (assoc (->user user-props) :password-hash (password-hash password)))
+  ([user-props password :- lib-schema/NonBlankStr]
+    (-> (->user user-props)
+      (assoc :password-hash (password-hash password)) ; add hashed password
+      (assoc :one-time-token (str (java.util.UUID/randomUUID))))) ; add one-time-token for email verification 
+      
   ([user-props]
   {:pre [(map? user-props)]}
   (let [ts (db-common/current-timestamp)]
