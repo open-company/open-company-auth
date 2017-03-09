@@ -126,32 +126,27 @@
         redirect (:redirect slack-response)] ; where we redirect the browser back to
     (if-let [slack-user (when-not (:error slack-response) slack-response)]
       ;; got an auth'd user back from Slack
-      (let [existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
+      (let [existing-user (if user-id
+                            (user-res/get-user conn user-id)
+                            (user-res/get-user-by-email conn (:email slack-user))) ; user already exists?
+            new-user (when-not existing-user (user-res/->user (clean-slack-user slack-user))) ; create a new user map
             existing-team (when team-id (team-res/get-team conn team-id))
+            existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
             slack-org (if existing-slack-org
                           (update-slack-org-for conn slack-user existing-slack-org) ; update the Slack org
                           (create-slack-org-for conn slack-user)) ; create new Slack org
-            user (if user-id
-                  (user-res/get-user conn user-id)
-                  (user-res/get-user-by-email conn (:email slack-user))) ; user already exists?
-            new-user (when-not (or existing-slack-org user)
-              (user-res/->user (clean-slack-user slack-user))) ; create a new user map
             teams (if team-id
-                    ;; The team this Slack org is being added to
+                    ;; The team this Slack org or Slack bot is being added to
                     (team-res/list-teams-by-ids conn [team-id])
                     ;; Do team(s) already exist for this Slack org?
                     (team-res/list-teams-by-index conn :slack-orgs (:slack-org-id slack-user)))
-            new-team (when (and (not existing-slack-org)
-                                (empty? teams))
-                      (create-team-for conn slack-user (or (:user-id user) (:user-id new-user)))) ; create a new team
+            new-team (when (and new-user (empty? teams))
+                      (create-team-for conn slack-user (:user-id new-user))) ; create a new team
             user-teams (if (empty? teams) [new-team] teams)
-            updated-user (when-not existing-slack-org
-                            (if user
-                              (update-user conn slack-user user user-teams) ; update user's teams
-                              (create-user-for conn new-user user-teams))) ; create new user
-            jwt-user (user-rep/jwt-props-for (-> (or updated-user user)
+            user (or existing-user (create-user-for conn new-user user-teams)) ; create new user
+            jwt-user (user-rep/jwt-props-for (-> user
                                                 (clean-user)
-                                                (assoc :admin (user-res/admin-of conn (:user-id (or updated-user user))))
+                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
                                                 (assoc :slack-id (:slack-id slack-user))
                                                 (assoc :slack-token (:slack-token slack-user))) :slack)
             bot-only? (and existing-team ((set (:slack-orgs existing-team)) (:slack-org-id slack-org)))
