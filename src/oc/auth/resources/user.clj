@@ -9,7 +9,7 @@
             [oc.lib.db.common :as db-common]
             [oc.lib.jwt :as jwt]
             [oc.lib.schema :as lib-schema]
-            [oc.auth.resources.team :as team]))
+            [oc.auth.resources.team :as team-res]))
 
 ;; ----- RethinkDB metadata -----
 
@@ -125,9 +125,18 @@
   "Create a user in the system. Throws a runtime exception if user doesn't conform to the User schema."
   [conn user :- User]
   {:pre [(db-common/conn? conn)]}
-  (let [new-team (when (empty? (:teams user)) (team/create-team! conn (team/->team {} (:user-id user))))
-        teams (if (empty? (:teams user)) [(:team-id new-team)] (:teams user))]
-    (db-common/create-resource conn table-name (assoc user :teams teams) (db-common/current-timestamp))))
+  (let [email (:email user)
+        email-domain (last (s/split email #"\@"))
+        email-teams (map :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
+        existing-teams (concat email-teams (:teams user))
+        new-team (when (empty? existing-teams)
+                    (team-res/create-team! conn (team-res/->team {} (:user-id user))))
+        teams (if new-team [(:team-id new-team)] existing-teams)
+        user-with-teams (assoc user :teams teams)
+        user-with-status (if new-team
+                            (assoc user-with-teams :status "unverified") ; new team, so no need to pre-verify
+                            user-with-teams)]
+    (db-common/create-resource conn table-name user-with-status (db-common/current-timestamp))))
 
 (schema/defn ^:always-validate get-user :- (schema/maybe User)
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."
@@ -211,7 +220,7 @@
   [conn user-id :- lib-schema/UniqueID team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
   (if-let* [user (get-user conn user-id)
-            team (team/get-team conn team-id)]
+            team (team-res/get-team conn team-id)]
     (db-common/add-to-set conn table-name user-id "teams" team-id)))
 
 (schema/defn ^:always-validate remove-team :- (schema/maybe User)
@@ -228,7 +237,7 @@
   "Given the user-id of the user, return a sequence of team-ids for the teams the user is an admin of."
   [conn user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (let [teams (team/list-teams-by-index conn :admins user-id)]
+  (let [teams (team-res/list-teams-by-index conn :admins user-id)]
     (vec (map :team-id teams))))
 
 ;; ----- Collection of users -----
