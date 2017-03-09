@@ -153,11 +153,15 @@
                                                                             (-> ctx :request :identity) ; Basic HTTP Auth
                                                                             (:email ctx))) ; one time use token auth
                                    admin-teams (user-res/admin-of conn (:user-id user))]
-                        (user-rep/auth-response 
-                          (-> user
-                            (assoc :admin admin-teams)
-                            (assoc :slack-bots (slack-api/bots-for conn user)))
-                          :email)))) ; respond w/ JWToken and location
+                        (if (= (:status user) "pending")
+                          ;; they need to verify their email, so no love
+                          (api-common/blank-response)
+                          ;; respond w/ JWToken and location
+                          (user-rep/auth-response 
+                            (-> user
+                              (assoc :admin admin-teams)
+                              (assoc :slack-bots (slack-api/bots-for conn user)))
+                            :email)))))
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
