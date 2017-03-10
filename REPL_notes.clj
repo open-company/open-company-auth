@@ -11,6 +11,7 @@
 (require '[oc.auth.resources.slack-org :as slack-org] :reload)
 (require '[oc.auth.representations.user :as user-rep] :reload)
 (require '[oc.auth.representations.team :as team-rep] :reload)
+(require '[oc.auth.representations.slack-org :as slack-org-rep] :reload)
 (require '[oc.auth.api.teams :as team-api] :reload)
 (require '[oc.auth.api.users :as user-api] :reload)
 (require '[oc.auth.api.slack :as slack-api] :reload)

@@ -42,6 +42,9 @@
 (defn roster-link [team-id]
   (hateoas/link-map "roster" hateoas/GET (str (url team-id) "/roster") {:accept mt/user-collection-media-type}))
 
+(defn channels-link [team-id]
+  (hateoas/link-map "channels" hateoas/GET (str (url team-id) "/channels") {:accept mt/slack-channel-collection-media-type}))
+
 (defn- admin-links
   "HATEOAS links for a team resource for a team admin."
   ([team] (admin-links team nil))
@@ -58,12 +61,14 @@
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)
       (delete-link team-id)
-      (roster-link team-id)]))))
+      (roster-link team-id)
+      (channels-link team-id)]))))
 
 (defn- member-links
   "HATEOAS links for a team resource for a regular team member."
   [{team-id :team-id :as team}]
-  (assoc team :links [(roster-link team-id)]))
+  (assoc team :links [(roster-link team-id)
+                      (channels-link team-id)]))
 
 (defn- email-domain
   "Item entry for an email domain for the team."

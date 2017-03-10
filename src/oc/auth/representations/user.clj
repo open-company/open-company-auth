@@ -10,6 +10,7 @@
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
+            [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.resources.user :as user-res]))
 
@@ -126,11 +127,9 @@
     {:pretty true}))
 
 (defn render-user-list
-  "
-  Given a team-id and a sequence of user maps, create a JSON representation of a list of users for the REST API.
-  "
+  "Given a team-id and a sequence of user maps, create a JSON representation of a list of users for the REST API."
   [team-id users]
-  (let [url (str "/teams/" team-id "/roster")]
+  (let [url (str (team-rep/url team-id) "/roster")]
     (json/generate-string
       {:team-id team-id
        :collection {:version hateoas/json-collection-version

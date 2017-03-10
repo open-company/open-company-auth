@@ -11,13 +11,15 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
+            [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
-            [oc.auth.representations.user :as user-rep]))
+            [oc.auth.representations.user :as user-rep]
+            [oc.auth.representations.slack-org :as slack-org-rep]))
 
 ;; ----- Validations -----
 
@@ -421,6 +423,34 @@
   :handle-ok (fn [ctx] (let [users (user-res/list-users conn team-id [:created-at :updated-at])]
                           (user-rep/render-user-list team-id users))))
 
+;; A resource for Slack channels for a particular team
+(defresource channels [conn team-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :get]
+
+  ;; Media type client accepts
+  :available-media-types [mt/slack-channel-collection-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/slack-channel-collection-media-type)
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true
+    :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+                        {:existing-team team}
+                        false))
+
+  ;; Responses
+  :handle-ok (fn [ctx] (let [team (:existing-team ctx)
+                             slack-org-ids (:slack-orgs team)
+                             slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
+                                            [:bot-user-id :bot-token])
+                             channels (slack/channels-for slack-orgs)]
+                          (slack-org-rep/render-channel-list team-id channels))))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -464,4 +494,7 @@
         (pool/with-pool [conn db-pool] (slack-org conn team-id slack-org-id)))
       ;; Team roster
       (ANY "/teams/:team-id/roster" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id)))
-      (ANY "/teams/:team-id/roster/" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id))))))
+      (ANY "/teams/:team-id/roster/" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id)))
+      ;; Team's Slack channels
+      (ANY "/teams/:team-id/channels" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id)))
+      (ANY "/teams/:team-id/channels/" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id))))))

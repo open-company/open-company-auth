@@ -10,3 +10,5 @@
 
 (def user-media-type "application/vnd.open-company.user.v1+json")
 (def user-collection-media-type "application/vnd.collection+vnd.open-company.user+json;version=1")
+
+(def slack-channel-collection-media-type "application/vnd.collection+vnd.open-company.slack-channels+json;version=1")

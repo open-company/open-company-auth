@@ -1,5 +1,6 @@
 (ns oc.auth.lib.slack
-  (:require [clojure.string :as s]
+  (:require [defun.core :refer (defun)]
+            [clojure.string :as s]
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
             [clj-slack.core :as slack]
@@ -121,3 +122,21 @@
       (do (timbre/warn "Channel list could not be retrieved."
                        {:response channels :bot-token bot-token})
           false))))
+
+(defun channels-for
+  "Given a sequence of Slack orgs, retrieve the channel list of those that have a bot."
+
+  ;; Initial case
+  ([slack-orgs] (channels-for slack-orgs []))
+
+  ;; All done case
+  ([slack-orgs :guard empty? channels] (vec channels))
+
+  ;; No bot for this Slack org
+  ([slack-orgs :guard #(nil? (:bot-token (first %))) channels] (channels-for (rest slack-orgs) channels))
+
+  ;; Retrieve channel for this Slack org
+  ([slack-orgs channels]
+  (let [slack-org (first slack-orgs)
+        bot-token (:bot-token slack-org)]
+    (channels-for (rest slack-orgs) (conj channels (assoc slack-org :channels (channel-list bot-token)))))))
