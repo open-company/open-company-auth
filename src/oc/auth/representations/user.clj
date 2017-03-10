@@ -10,6 +10,7 @@
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
+            [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.resources.user :as user-res]))
 
 (def representation-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
@@ -41,7 +42,8 @@
 
 (defn authed-settings [user-id] {:links [(user-link user-id)
                                          refresh-link
-                                         teams-link]})
+                                         teams-link
+                                         email-rep/auth-link]}) ; auth-link used for email verification w/ token
 
 (defn- admin-action-link
   "If a user is an admin, a link to remove them, if not, a link to add them"
