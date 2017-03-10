@@ -39,9 +39,12 @@
 (defn add-slack-bot-link [team-id]
   (slack/bot-link team-id))
 
-(defn- team-links
-  "HATEOAS links for a team resource."
-  ([team] (team-links team nil))
+(defn roster-link [team-id]
+  (hateoas/link-map "roster" hateoas/GET (str (url team-id) "/roster") {:accept mt/user-collection-media-type}))
+
+(defn- admin-links
+  "HATEOAS links for a team resource for a team admin."
+  ([team] (admin-links team nil))
   
   ([team self-name]
   (let [team-id (:team-id team)]
@@ -54,7 +57,13 @@
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)
-      (delete-link team-id)]))))
+      (delete-link team-id)
+      (roster-link team-id)]))))
+
+(defn- member-links
+  "HATEOAS links for a team resource for a regular team member."
+  [{team-id :team-id :as team}]
+  (assoc team :links [(roster-link team-id)]))
 
 (defn- email-domain
   "Item entry for an email domain for the team."
@@ -82,7 +91,7 @@
         (select-keys representation-props)
         (assoc :email-domains (map #(email-domain team-id %) (:email-domains team)))
         (assoc :slack-orgs (map #(slack-org team-id %) (:slack-orgs team)))
-        (team-links))
+        (admin-links))
       {:pretty true})))
 
 (defn render-team-list
@@ -97,6 +106,8 @@
                   :href "/teams"
                   :links [(hateoas/self-link "/teams" {:accept mt/team-collection-media-type})]
                   :items (->> teams
-                            (map #(if ((set (:admins %)) user-id) (team-links % "item") %))
+                            (map #(if ((set (:admins %)) user-id) 
+                                    (admin-links % "item")
+                                    (member-links %)))
                             (map #(dissoc % :admins)))}}
     {:pretty true}))

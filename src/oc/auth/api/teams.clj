@@ -34,6 +34,13 @@
       (do (timbre/warn "Request body not processable as an email domain: " e)
         true))))
 
+(defn allow-team-members
+  "Return true if the JWToken user is a member of the specified team."
+  [conn {user-id :user-id} team-id]
+  (if-let [user (user-res/get-user conn user-id)]
+    ((set (:teams user)) team-id)
+    false))
+
 (defn allow-team-admins
   "Return true if the JWToken user is an admin of the specified team."
   [conn {user-id :user-id} team-id]
@@ -390,6 +397,30 @@
   :respond-with-entity? false
   :handle-no-content (fn [ctx] (when-not (:has-org? ctx) (api-common/missing-response))))
 
+;; A resource for roster of team users for a particular team
+(defresource roster [conn team-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :get]
+
+  ;; Media type client accepts
+  :available-media-types [mt/user-collection-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-collection-media-type)
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true
+    :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+                        {:existing-team team}
+                        false))
+
+  ;; Responses
+  :handle-ok (fn [ctx] (let [users (user-res/list-users conn team-id [:created-at :updated-at])]
+                          (user-rep/render-user-list team-id users))))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -430,4 +461,7 @@
       (ANY "/teams/:team-id/slack-orgs/:slack-org-id" [team-id slack-org-id]
         (pool/with-pool [conn db-pool] (slack-org conn team-id slack-org-id)))
       (ANY "/teams/:team-id/slack-orgs/:slack-org-id/" [team-id slack-org-id]
-        (pool/with-pool [conn db-pool] (slack-org conn team-id slack-org-id))))))
+        (pool/with-pool [conn db-pool] (slack-org conn team-id slack-org-id)))
+      ;; Team roster
+      (ANY "/teams/:team-id/roster" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id)))
+      (ANY "/teams/:team-id/roster/" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id))))))
