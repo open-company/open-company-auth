@@ -29,7 +29,7 @@
                        (user-res/get-user-by-token conn token))] ; and a user has it as their token
       (let [user-id (:user-id user)]
         (timbre/info "Auth'd user:" user-id "by token:" token)
-        (user-res/update-user! conn user-id (assoc user :status :active)) ; mark user active
+        (user-res/activate! conn user-id) ; mark user active
         (user-res/remove-token conn user-id) ; remove the used token
         {:email (:email user)})
     

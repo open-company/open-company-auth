@@ -168,9 +168,8 @@
   NOTE: doesn't handle case of user-id change.
   NOTE: doesn't handle case of status change, see: `activate!`, `unverify!`
   "
-  [conn user-id :- lib-schema/UniqueID user]
-  {:pre [(db-common/conn? conn)
-         (map? user)]}
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID user]
+  {:pre [(map? user)]}
   (if-let [original-user (get-user conn user-id)]
     (let [updated-password (:password user)
           hashed-password (when-not (s/blank? updated-password) (password-hash updated-password))
@@ -179,11 +178,16 @@
       (schema/validate User final-user)
       (db-common/update-resource conn table-name primary-key original-user final-user))))
 
-(defn delete-user!
+(schema/defn ^:always-validate activate!
+  "Update the user's status to 'active'. Returns the updated user."
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
+  (if-let [original-user (get-user conn user-id)]
+    (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active))
+    false))
+
+(schema/defn ^:always-validate  delete-user!
   "Given the user-id of the user, delete it and return `true` on success."
-  [conn user-id]
-  {:pre [(db-common/conn? conn)
-         (schema/validate lib-schema/UniqueID user-id)]}
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (try
     (db-common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
@@ -195,8 +199,7 @@
   "
   ([conn user-id :- lib-schema/UniqueID] (add-token conn user-id (str (java.util.UUID/randomUUID))))
 
-  ([conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
-  {:pre [(db-common/conn? conn)]}
+  ([conn :- lib-schema/Conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   (if-let [user (get-user conn user-id)]
     (db-common/update-resource conn table-name primary-key user (assoc user :one-time-token token)))))
 
@@ -205,8 +208,7 @@
   Given the user-id of the user, and a one-time use token, remove the token from the user if they exist.
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
-  [conn user-id :- lib-schema/UniqueID]
-  {:pre [(db-common/conn? conn)]}
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (if-let [user (get-user conn user-id)]
     (db-common/remove-property conn table-name user-id "one-time-token")))
 
