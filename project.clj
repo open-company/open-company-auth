@@ -25,9 +25,8 @@
     [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.2.16"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
-
-    [open-company/lib "0.6.13-a59242c"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    
+    [open-company/lib "0.6.14-22f40e5"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -41,6 +40,7 @@
     ; Cheshire - JSON encoding / decoding https://github.com/dakrone/cheshire
     ; clj-jwt - A Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
     ; clj-time - Date and time lib https://github.com/clj-time/clj-time
+    ; environ - Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
   :plugins [
