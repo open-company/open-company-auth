@@ -315,7 +315,7 @@
     :post (fn [ctx] (api-common/known-content-type? ctx "text/x-email"))})
 
   ;; Actions
-  :post! (fn [ctx] (password-reset-request conn (-> ctx :data)))
+  :post! (fn [ctx] (password-reset-request conn (:data ctx)))
 
   ;; Responses
   :handle-created (api-common/blank-response))

@@ -1,7 +1,6 @@
 (ns oc.auth.representations.slack-org
   "Resource representations for Slack orgs."
-  (:require [clojure.string :as s]
-            [cheshire.core :as json]
+  (:require [cheshire.core :as json]
             [oc.lib.hateoas :as hateoas]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]))

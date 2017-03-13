@@ -1,7 +1,6 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
-  (:require [clojure.string :as s]
-            [if-let.core :refer (if-let* when-let*)]
+  (:require [if-let.core :refer (if-let* when-let*)]
             [defun.core :refer (defun-)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (ANY OPTIONS POST DELETE)]
