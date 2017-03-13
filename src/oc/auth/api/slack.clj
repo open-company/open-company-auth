@@ -38,8 +38,8 @@
   (when (and (:bot-user-id slack-org) (:bot-token slack-org))
     ;; Extract and rename the keys for JWToken use
     (select-keys
-      (clojure.set/rename-keys slack-org {:bot-user-id :id :bot-token :token :slack-org-id :slack-org})
-      [:slack-org :id :token])))
+      (clojure.set/rename-keys slack-org {:bot-user-id :id :bot-token :token})
+      [:slack-org-id :id :token])))
 
   ;; Empty case, no more Slack orgs
   ([_bots _slack-orgs :guard empty? results :guard empty?] nil)
@@ -57,7 +57,7 @@
         slack-org-ids (distinct (flatten (map :slack-orgs teams-with-slack))) ; distinct Slack orgs
         slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids [:bot-user-id :bot-token]) ; bot lookup
         bots (remove nil? (map bot-for slack-orgs)) ; remove slack orgs with no bots
-        slack-org-to-bot (zipmap (map :slack-org bots) bots) ; map of slack org to its bot
+        slack-org-to-bot (zipmap (map :slack-org-id bots) bots) ; map of slack org to its bot
         team-to-slack-orgs (zipmap (map :team-id teams-with-slack)
                                    (map :slack-orgs teams-with-slack)) ; map of team to its Slack org(s)
         team-to-bots (zipmap (keys team-to-slack-orgs)
