@@ -35,7 +35,7 @@
 
 ;; ----- SQS Message Creation -----
 
-(schema/defn ^:always-validate ->invite [payload from :- (schema/maybe lib-schema/EmailAddress)
+(schema/defn ^:always-validate ->invite [payload from :- (schema/maybe schema/Str)
                                                  reply-to :- (schema/maybe lib-schema/EmailAddress)]
   {:pre [(map? payload)
          (lib-schema/valid-email-address? (:email payload))
