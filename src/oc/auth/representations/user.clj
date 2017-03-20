@@ -15,7 +15,7 @@
             [oc.auth.resources.user :as user-res]))
 
 (def representation-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :slack-id :slack-token])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))

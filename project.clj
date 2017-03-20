@@ -12,7 +12,7 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha14"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha15"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
     [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
     [ring/ring-devel "1.6.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
@@ -26,7 +26,7 @@
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.2.16"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.6.16-2255897"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.6.17-3987d6e"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let

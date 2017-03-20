@@ -173,7 +173,7 @@
         (user-rep/auth-response (-> updated-user
                                   (clean-user)
                                   (assoc :admin (:admin user))
-                                  (assoc :slack-id (:slack-id slack-user))
+                                  (assoc :slack-id slack-id)
                                   (assoc :slack-token slack-token)
                                   (assoc :slack-bots (bots-for conn updated-user)))
           :slack)))
