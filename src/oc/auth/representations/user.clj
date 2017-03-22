@@ -15,7 +15,7 @@
             [oc.auth.resources.user :as user-res]))
 
 (def representation-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :slack-id :slack-token])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
@@ -92,7 +92,7 @@
                         (assoc :slack-token (:slack-token user)))
                       jwt-props)
         bot-props (if slack-bots?
-                    (assoc jwt-props :slack-bots (:slack-bots user))
+                    (assoc slack-props :slack-bots (:slack-bots user))
                     slack-props)]
     (-> bot-props
       (assoc :name (name-for user))
