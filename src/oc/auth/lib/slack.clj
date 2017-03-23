@@ -123,6 +123,17 @@
                        {:response channels :bot-token bot-token})
           false))))
 
+(defn user-list
+  "Given a Slack bot token, list the user roster for the Slack org."
+  [bot-token]
+  (let [conn      (merge slack-connection {:token bot-token})
+        users  (slack/slack-request conn "users.list")]
+    (if (:ok users)
+      users
+      (do (timbre/warn "User list could not be retrieved."
+                       {:response users :bot-token bot-token})
+          false))))
+
 (defun channels-for
   "Given a sequence of Slack orgs, retrieve the channel list of those that have a bot."
 
