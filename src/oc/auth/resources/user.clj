@@ -88,7 +88,9 @@
   (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
 
 (defn- password-match? [password password-hash]
-  (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512}))
+  (if (s/blank? password-hash)
+    false
+    (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512})))
 
 (declare get-user-by-email)
 (defn authenticate? [conn email password]
