@@ -2,6 +2,7 @@
   "Resource representations for Slack orgs."
   (:require [cheshire.core :as json]
             [oc.lib.hateoas :as hateoas]
+            [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]))
 
@@ -24,4 +25,4 @@
                     :href url
                     :links [(hateoas/self-link url {:accept mt/slack-channel-collection-media-type})]
                     :items (map slack-org-for-collection slack-orgs)}}
-      {:pretty true})))
+      {:pretty config/pretty?})))

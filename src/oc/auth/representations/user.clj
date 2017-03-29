@@ -124,7 +124,7 @@
       (select-keys representation-props)
       (assoc :password "")
       (user-links))
-    {:pretty true}))
+    {:pretty config/pretty?}))
 
 (defn render-user-list
   "Given a team-id and a sequence of user maps, create a JSON representation of a list of users for the REST API."
@@ -136,4 +136,4 @@
                     :href url
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
                     :items (map #(select-keys % representation-props) users)}}
-      {:pretty true})))
+      {:pretty config/pretty?})))

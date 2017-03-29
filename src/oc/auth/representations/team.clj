@@ -4,6 +4,7 @@
             [defun.core :refer (defun)]
             [cheshire.core :as json]
             [oc.lib.hateoas :as hateoas]
+            [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.slack-auth :as slack]))
 
@@ -97,7 +98,7 @@
         (assoc :email-domains (map #(email-domain team-id %) (:email-domains team)))
         (assoc :slack-orgs (map #(slack-org team-id %) (:slack-orgs team)))
         (admin-links))
-      {:pretty true})))
+      {:pretty config/pretty?})))
 
 (defn render-team-list
   "
@@ -115,4 +116,4 @@
                                     (admin-links % "item")
                                     (member-links %)))
                             (map #(dissoc % :admins)))}}
-    {:pretty true}))
+    {:pretty config/pretty?}))

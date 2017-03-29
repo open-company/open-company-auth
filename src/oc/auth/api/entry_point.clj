@@ -19,14 +19,14 @@
     ;; auth'd settings
     (json/generate-string
       (user-rep/authed-settings (:user-id user))
-      {:pretty true})
+      {:pretty config/pretty?})
     
     ;; not auth'd, give them both email and Slack settings
     (json/generate-string
       {:links (conj (concat email-auth/auth-settings
                             slack-auth/auth-settings)
                     user-rep/refresh-link)}
-      {:pretty true})))
+      {:pretty config/pretty?})))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
