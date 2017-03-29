@@ -1,14 +1,11 @@
 {
-  :user-id "slack-1960-01-04"
-  :org-id "slack-98765"
-  :name "camus"
+  :user-id "325d-43ec-ae5d"
+  :teams ["4bf7-4090-9a8c"]
+  :name "Albert Camus"
   :first-name "Albert"
   :last-name "Camus"
-  :real-name "Albert Camus"
-  :avatar "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
+  :avatar-url "http://www.brentonholmes.com/wp-content/uploads/2010/05/albert-camus1.jpg"
   :email "albert@combat.org"
-  :owner true
-  :admin true
-  :bot {:id "abc" :token "xyz"}
+  :bot {"4bf7-4090-9a8c": {:id "abc" :token "xyz"}}
   :auth-source "slack"
 }

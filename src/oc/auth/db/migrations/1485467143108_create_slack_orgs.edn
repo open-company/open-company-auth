@@ -1,0 +1,11 @@
+(ns oc.auth.db.migrations.create-slack-orgs
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.config :as config]
+            [oc.auth.resources.slack-org :as slack-org]))
+
+(defn up [conn]
+  (println "Creating table: " slack-org/table-name)
+  (println (m/create-table conn config/db-name slack-org/table-name slack-org/primary-key))
+  (println (m/create-index conn slack-org/table-name "name"))
+  true) ; return true on success

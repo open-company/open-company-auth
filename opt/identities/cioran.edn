@@ -1,11 +1,10 @@
 {
-  :user-id "email-2345-6789"
-  :org-id "email-r2d2-c3p0"
-  :name "Emil"
+  :user-id "cb8a-45bf-9495"
+  :teams ["d0a6-4d51-bf42"]
+  :name "Emil Cioran"
   :first-name "Emil"
   :last-name "Cioran"
-  :real-name "Emil Cioran"
-  :avatar "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Cioran_in_Romania.jpg/220px-Cioran_in_Romania.jpg"
+  :avatar-url "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Cioran_in_Romania.jpg/220px-Cioran_in_Romania.jpg"
   :email "e.cioran@fu-berlin.de"
   :auth-source "email"
 }

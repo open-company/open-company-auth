@@ -1,5 +1,5 @@
-(defproject open-company-auth "0.0.1-SNAPSHOT"
-  :description "Handles auth calls and callbacks"
+(defproject open-company-auth "0.2.0-SNAPSHOT"
+  :description "OpenCompany Auth Service"
   :url "https://opencompany.com/"
   :license {
     :name "Mozilla Public License v2.0"
@@ -12,37 +12,39 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha14"] ; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/core.async "0.2.395"] ; Async programming and communication https://github.com/clojure/core.async
-    [lockedon/if-let "0.1.0"] ; More than one binding for if/when macros https://github.com/LockedOn/if-let
-    [defun "0.3.0-RC1"] ; Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
-    [ring/ring-devel "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.6.0-beta7"] ; Web application library https://github.com/ring-clojure/ring
+    [org.clojure/clojure "1.9.0-alpha15"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
+    [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
+    [ring/ring-devel "1.6.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.6.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
+    [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
+    [ring-logger-timbre "0.7.5"] ; Ring logging https://github.com/nberger/ring-logger-timbre
     [compojure "1.6.0-beta3"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
-    [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
-    [com.stuartsierra/component "0.3.2"] ; Component Lifecycle
-    [prismatic/schema "1.1.3"] ; Data validation https://github.com/Prismatic/schema
-    [cheshire "5.6.3"] ; JSON encoder/decoder https://github.com/dakrone/cheshire
-    [com.apa512/rethinkdb "0.15.26"] ; RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
-    [raven-clj "1.5.0"] ; Clojure interface to Sentry error reporting https://github.com/sethtrain/raven-clj
-    [buddy "1.2.0"] ; Security library https://github.com/funcool/buddy
-    [buddy/buddy-auth "1.3.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
-    [environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
-    [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
-    [clj-jwt "0.1.1"] ; Clojure library for JSON Web Token (JWT) https://github.com/liquidz/clj-jwt
-    [org.clojure/tools.cli "0.3.5"] ; command-line parsing https://github.com/clojure/tools.cli
-    [com.taoensso/timbre "4.8.0"] ; logging https://github.com/ptaoussanis/timbre
-    [alandipert/enduro "1.2.0"] ; Durable atoms https://github.com/alandipert/enduro
-    [clj-time "0.13.0"] ; JodaTime wrapper https://github.com/clj-time/clj-time
-    [com.taoensso/truss "1.3.6"] ; Assertions w/ great errors https://github.com/ptaoussanis/truss
-    [open-company/lib "0.0.11-deee910"] ; Library for OC projects https://github.com/open-company/open-company-lib
-    [amazonica "0.3.83"] ; A comprehensive Clojure client for the entire Amazon AWS api https://github.com/mcohen01/amazonica
+    [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
+    [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
+    [zprint "0.2.16"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
+    
+    [open-company/lib "0.6.17-3987d6e"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    ; In addition to common functions, brings in the following common dependencies used by this project:
+    ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
+    ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
+    ; Component - Component Lifecycle https://github.com/stuartsierra/component
+    ; Liberator - WebMachine (REST API server) port to Clojure https://github.com/clojure-liberator/liberator
+    ; RethinkDB - RethinkDB client for Clojure https://github.com/apa512/clj-rethinkdb
+    ; Schema - Data validation https://github.com/Prismatic/schema
+    ; Timbre - Pure Clojure/Script logging library https://github.com/ptaoussanis/timbre
+    ; Amazonica - A comprehensive Clojure client for the AWS API. https://github.com/mcohen01/amazonica
+    ; Raven - Interface to Sentry error reporting https://github.com/sethtrain/raven-clj
+    ; Cheshire - JSON encoding / decoding https://github.com/dakrone/cheshire
+    ; clj-jwt - A Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
+    ; clj-time - Date and time lib https://github.com/clj-time/clj-time
+    ; environ - Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
   :plugins [
-    [lein-ring "0.10.0"]
+    [lein-ring "0.11.0"]
     [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
@@ -69,6 +71,7 @@
     :dev [:qa {
       :env ^:replace {
         :db-name "open_company_auth_dev"
+        :liberator-trace "true" ; liberator debug data in HTTP response headers
         :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
         :hot-reload "true" ; reload code when changed on the file system
         :open-company-slack-client-id "CHANGE-ME"
@@ -87,6 +90,7 @@
         [lein-spell "0.1.0"] ; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-deps-tree "0.1.2"] ; Print a tree of project dependencies https://github.com/the-kenny/lein-deps-tree
         [venantius/yagni "0.1.4"] ; Dead code finder https://github.com/venantius/yagni
+        [lein-zprint "0.1.16"] ; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint        
       ]
     }]
     :repl-config [:dev {
@@ -102,10 +106,13 @@
                  '[clj-time.format :as format]
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
+                 '[schema.core :as schema]
+                 '[oc.lib.schema :as lib-schema]
+                 '[oc.lib.jwt :as jwt]
                  '[oc.auth.config :as config]
-                 '[oc.auth.email :as email]
-                 '[oc.auth.slack :as slack]
-                 '[oc.auth.user :as u])
+                 '[oc.auth.resources.user :as u]
+                 '[oc.auth.resources.team :as team]
+                 '[oc.auth.resources.slack-org :as slack-org])
       ]
     }]
 

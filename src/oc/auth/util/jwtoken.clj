@@ -5,7 +5,7 @@
             [clj-time.format :as format]
             [clojure.tools.cli :refer (parse-opts)]
             [oc.auth.config :as config]
-            [oc.auth.lib.jwt :as jwt])
+            [oc.lib.jwt :as jwt])
   (:gen-class))
 
 (def cli-options
@@ -43,7 +43,7 @@
     (try
       (let [payload (assoc (read-string (slurp (first arguments)))
                       :expire (format/unparse (format/formatters :date-time) (t/plus (t/now) (t/years 20))))
-            token (jwt/generate payload)]
+            token (jwt/generate payload config/passphrase)]
         (println "\nPassphrase:" config/passphrase)
         (println "\nIdentity:" payload)
         (println "\nJWToken:" token)

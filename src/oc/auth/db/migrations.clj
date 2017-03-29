@@ -1,7 +1,7 @@
 (ns oc.auth.db.migrations
   "Lein main to migrate RethinkDB data."
   (:require [oc.auth.config :as c]
-            [oc.lib.rethinkdb.migrations :as m])
+            [oc.lib.db.migrations :as m])
   (:gen-class))
 
 (defn -main

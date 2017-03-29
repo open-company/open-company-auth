@@ -30,6 +30,8 @@ To get started, head to: [OpenCompany](https://opencompany.com/)
 
 The OpenCompany Authentication Service handles authenticating users against Slack and email/pass, and creates a [JSON Web Token](https://jwt.io/) for them, which can then be used with the other OpenCompany services to assert the users identity.
 
+In addition, the Authentication Service handles team management and membership.
+
 
 ## Local Setup
 
@@ -196,13 +198,13 @@ Users of the [OpenCompany](https://opencompany.com/) platform should get started
 
 **Make sure you've updated `project.clj` as described above.**
 
-To start a production Auth server:
+To start a production instance:
 
 ```console
 lein start!
 ```
 
-Or to start a development Auth server:
+Or to start a development instance:
 
 ```console
 lein start
@@ -795,25 +797,31 @@ In the case of as email user, there are no `owner` and `admin` properties, but t
 }
 ```
 
-#### JWTokens
+#### JWTokens (application/jwt)
 
-JSON Web Tokens are created as authorization tokens for authorized users. They consist of the user storage data
-(see above) as well as an expiration timestamp (in milliseconds since the epoch) for the token.
+THe media type `application/jwt` is for [JSON Web Tokens](https://jwt.io/) or JWTokens.
+
+JWTokens are created as authorization tokens for authorized users. They are encrypted using public
+key cryptography, meaning anyone can decrypt them, but only services that know the private secret can
+create them and/or verify that they were created by a service that knows the private secret.
+
+Once decrypted, they consist of the user data (see above) as well as an expiration timestamp
+(in milliseconds since the epoch) for the token.
+
+In addition to being returned from some authorization API calls, they are expected to be included
+in the `Authorization` header of all authenticated API calls to any OpenCompany HTTP service.
 
 An example JWToken payload for a Slack user:
 
 ```json
 {
-  "user-id": "slack:U06SCTYJR",
-  "org-id": "slack:T07SBMH80",
-  "name": "camus",
-  "real-name": "Albert Camus",
+  "user-id": "325d-43ec-ae5d",
+  "teams": "slack:T07SBMH80",
+  "name": "Albert Camus",
   "first-name": "Albert",
   "last-name": "Camus",
-  "avatar": "http://...",
+  "avatar-url": "http://...",
   "email": "albert@combat.org",
-  "owner": "false",
-  "admin": "true",
   "expire": 1474975206974,
   "auth-source": "slack"
 }
@@ -823,18 +831,18 @@ and for an email user:
 
 ```json
 {
-  "user-id": "email:4567-a8f6",
+  "user-id": "325d-43ec-ae5d",
   "org-id": "email:bb92-67ga",
-  "name": "camus",
-  "real-name": "Albert Camus",
+  "name": "Albert Camus",
   "first-name": "Albert",
   "last-name": "Camus",
-  "avatar": "http://...",
+  "avatar-url": "http://...",
   "email": "albert@combat.org",
   "expire": 1474975206974,
   "auth-source": "email"
 }
 ```
+
 ## Testing
 
 Tests are run in continuous integration of the `master` and `mainline` branches on [Travis CI](https://travis-ci.org/open-company/open-company-auth):
