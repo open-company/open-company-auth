@@ -87,7 +87,7 @@
 (defn- password-hash [password]
   (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
 
-(defn- password-match? [password password-hash]
+(defn password-match? [password password-hash]
   (if (s/blank? password-hash)
     false
     (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512})))
