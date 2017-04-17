@@ -14,7 +14,7 @@
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha15"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
-    [http-kit "2.3.0-alpha1"] ; Web server http://http-kit.org/
+    [http-kit "2.3.0-alpha1"] ; Web client/server http://http-kit.org/
     [ring/ring-devel "1.6.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.0-RC1"] ; Web application library https://github.com/ring-clojure/ring
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
