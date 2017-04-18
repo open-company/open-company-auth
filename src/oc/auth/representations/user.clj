@@ -13,8 +13,9 @@
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.resources.user :as user-res]))
-
-(def representation-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
+(def slack-props [:name :slack-id])
+(def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
+(def representation-props (concat slack-props oc-props))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
 (defun url
@@ -135,5 +136,5 @@
        :collection {:version hateoas/json-collection-version
                     :href url
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
-                    :items (map #(select-keys % representation-props) users)}}
+                    :items (map #(select-keys % (conj representation-props :status)) users)}}
       {:pretty config/pretty?})))

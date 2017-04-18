@@ -17,7 +17,7 @@
    :state        "open-company-auth"})
 
 (defn- coerce-to-user
-  "Coerce the given map to a user, return nil if any important attributes are missing"
+  "Coerce the given map to a user."
   [user-data]
   (let [user-name (or (:real_name_normalized user-data)
                       (:real_name user-data)
@@ -27,19 +27,26 @@
         splittable-name? (= name-size 2)]
     {:user-id (db-common/unique-id)
      :slack-id (:id user-data)
-     :name user-name
+     :name (:name user-data)
      :first-name (cond
                     (= name-size 1) user-name
                     splittable-name? (first split-name)
                     :else "")
      :last-name (if splittable-name? (last split-name) "")
-     :avatar-url (or (:image_192 user-data)
+     :avatar-url (or (:image_512 user-data)
+                     (:image_192 user-data)
                      (:image_72 user-data)
                      (:image_48 user-data)
-                     (:image_512 user-data)
                      (:image_32 user-data)
-                     (:image_24 user-data))
-     :email (:email user-data)}))
+                     (:image_24 user-data)
+                     (get-in user-data [:profile :image_512])
+                     (get-in user-data [:profile :image_192])
+                     (get-in user-data [:profile :image_72])
+                     (get-in user-data [:profile :image_48])
+                     (get-in user-data [:profile :image_32])
+                     (get-in user-data [:profile :image_24]))
+     :email (or (:email user-data)
+                (get-in user-data [:profile :email]))}))
 
 (defn get-user-info
   [access-token scope slack-id]
@@ -124,12 +131,18 @@
           false))))
 
 (defn user-list
-  "Given a Slack bot token, list the user roster for the Slack org."
+  "Given a Slack bot token, list the user roster for the Slack org, excluding restricted, deleted and bots users."
   [bot-token]
   (let [conn (merge slack-connection {:token bot-token})
         users (slack/slack-request conn "users.list")]
     (if (:ok users)
-      users
+      (let [members (:members users)
+            current-users (filter #(not (or (:deleted %)
+                                            (:is_bot %)
+                                            (:is_restricted %)
+                                            (:is_ultra_restricted %)
+                                            (= (:name %) "slackbot"))) members)] ; slackbot is_bot is false
+        (map #(dissoc % :user-id) (map coerce-to-user current-users)))
       (do (timbre/warn "User list could not be retrieved."
                        {:response users :bot-token bot-token})
           false))))
