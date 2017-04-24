@@ -23,7 +23,8 @@
   :updated-at lib-schema/ISO8601})
 
 (def Invite {
-  :email lib-schema/EmailAddress
+  (schema/optional-key :email) lib-schema/EmailAddress
+  (schema/optional-key :slack-id) lib-schema/NonBlankStr
   :admin schema/Bool
   (schema/optional-key :org-name) (schema/maybe schema/Str)
   (schema/optional-key :logo-url) (schema/maybe schema/Str)
