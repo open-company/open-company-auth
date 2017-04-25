@@ -35,7 +35,9 @@
   :slack-org-id lib-schema/NonBlankStr
   :admin schema/Bool
   (schema/optional-key :org-name) (schema/maybe schema/Str)
-  (schema/optional-key :logo-url) (schema/maybe schema/Str)})
+  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :first-name) (schema/maybe schema/Str)
+  (schema/optional-key :last-name) (schema/maybe schema/Str)})
 
 ;; ----- Metadata -----
 
