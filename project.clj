@@ -24,7 +24,7 @@
     [org.julienxx/clj-slack "0.5.4"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
     [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
-    [zprint "0.3.1"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
+    [zprint "0.3.2"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
     [open-company/lib "0.8.2-df1018e"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
@@ -90,7 +90,7 @@
         [lein-spell "0.1.0"] ; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-deps-tree "0.1.2"] ; Print a tree of project dependencies https://github.com/the-kenny/lein-deps-tree
         [venantius/yagni "0.1.4"] ; Dead code finder https://github.com/venantius/yagni
-        [lein-zprint "0.2.1"] ; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint        
+        [lein-zprint "0.2.2"] ; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint        
       ]
     }]
     :repl-config [:dev {
