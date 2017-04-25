@@ -72,8 +72,10 @@
   This may involve one or more of the following:
   Creating the user
   Adding the user to the team
-  Creating a one-time token for the invitee to auth with
-  Sending an email with the token to invite them"
+  Creating a one-time token for the invitee to auth with (email only)
+  Sending an email with the token to invite them (email only)
+  Sending a Slack message to invite them (Slack only)
+  "
 
   ;; No team to invite to!
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
@@ -83,8 +85,8 @@
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   true)
   
-  ;; No user yet
-  ([conn sender team nil member? admin? invite]
+  ;; No user yet, email invite
+  ([conn sender team nil member? admin? invite :guard :email]
   (let [team-id (:team-id team)
         email (:email invite)]
     (timbre/info "Creating user:" email "for team:" team-id)
@@ -95,6 +97,18 @@
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
+
+  ;; No user yet, Slack invite
+  ([conn sender team nil member? admin? invite :guard :slack-id]
+  (let [team-id (:team-id team)
+        slack-id (:slack-id invite)]
+    (timbre/info "Creating user:" slack-id "for team:" team-id)
+    ))
+    ; (if-let* [bot-token (:bot-token team)
+    ;           slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
+    ;           new-user (user-res/create-user! conn (assoc :teams slack-user [team-id]))]
+    ;   (handle-invite conn sender team new-user true admin? invite) ; recurse
+    ;   (do (timbre/error "Failed adding user:" slack-id) false))))
   
   ;; User exists, but not a team member yet
   ([conn sender team user member? :guard not admin? invite]
@@ -250,7 +264,8 @@
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
-                        (let [user (user-res/get-user-by-email conn (-> ctx :data :email))
+                        (let [email (-> ctx :data :email)
+                              user (when email (user-res/get-user-by-email conn email))
                               member? (when (and team user) (if ((set (:teams user)) (:team-id team)) true false))
                               admin? (when (and team user) (if ((set (:admins team)) (:user-id user)) true false))]
                           {:existing-team team :existing-user user :member? member? :admin? admin?})
@@ -259,7 +274,8 @@
   ;; Validations
   :processable? (by-method {
     :options true
-    :post (fn [ctx] (lib-schema/valid? team-res/Invite (:data ctx)))})
+    :post (fn [ctx] (or (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
+                        (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
 
   ;; Actions
   :post! (fn [ctx] {:updated-user 

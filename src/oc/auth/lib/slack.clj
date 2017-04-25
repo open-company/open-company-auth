@@ -27,6 +27,7 @@
         splittable-name? (= name-size 2)]
     {:user-id (db-common/unique-id)
      :slack-id (:id user-data)
+     :slack-org-id (:team_id user-data)
      :name (:name user-data)
      :first-name (cond
                     (= name-size 1) user-name
@@ -153,7 +154,7 @@
   (let [conn (merge slack-connection {:token bot-token :user slack-id})
         info (slack/slack-request conn "users.info")]
     (if (:ok info)
-      info
+      (coerce-to-user info)
       (do (timbre/warn "User info could not be retrieved."
                        {:response info :bot-token bot-token})
           false))))
