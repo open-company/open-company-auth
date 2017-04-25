@@ -101,14 +101,18 @@
   ;; No user yet, Slack invite
   ([conn sender team nil member? admin? invite :guard :slack-id]
   (let [team-id (:team-id team)
-        slack-id (:slack-id invite)]
+        slack-id (:slack-id invite)
+        slack-org-id (:slack-org-id invite)]
     (timbre/info "Creating user:" slack-id "for team:" team-id)
-    ))
-    ; (if-let* [bot-token (:bot-token team)
-    ;           slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
-    ;           new-user (user-res/create-user! conn (assoc :teams slack-user [team-id]))]
-    ;   (handle-invite conn sender team new-user true admin? invite) ; recurse
-    ;   (do (timbre/error "Failed adding user:" slack-id) false))))
+    (if-let* [slack-org (slack-org-res/get-slack-org conn slack-org-id)
+              bot-token (:bot-token slack-org)
+              slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
+              oc-user (user-res/->user (-> slack-user
+                                          (assoc :teams [team-id])
+                                          (dissoc :slack-id :slack-org-id :name)))
+              new-user (user-res/create-user! conn oc-user)]
+      (handle-invite conn sender team new-user true admin? invite) ; recurse
+      (do (timbre/error "Failed adding user:" slack-id) false))))
   
   ;; User exists, but not a team member yet
   ([conn sender team user member? :guard not admin? invite]
@@ -130,6 +134,13 @@
     (if-let [updated-team (team-res/add-admin conn team-id user-id)]
       (handle-invite conn sender team user true true invite) ; recurse
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
+
+  ;; Non-active team member, needs a Slack invite
+  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id]
+    (let [user-id (:user-id user)
+          slack-id (:slack-id invite)]
+      (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
+      user))
 
   ;; Non-active team member without a token, needs a token
   ([conn sender team user :guard #(and (not= "active" (:status %))
