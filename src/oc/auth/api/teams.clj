@@ -111,7 +111,7 @@
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (handle-invite conn sender team new-user true admin? invite) ; recurse
+      (handle-invite conn sender team new-user true admin? invite bot-token) ; recurse
       (do (timbre/error "Failed adding user:" slack-id) false))))
   
   ;; User exists, but not a team member yet
@@ -136,11 +136,15 @@
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; Non-active team member, needs a Slack invite
-  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id]
-    (let [user-id (:user-id user)
-          slack-id (:slack-id invite)]
-      (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
-      user))
+  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id bot-token]
+  (let [user-id (:user-id user)
+        slack-id (:slack-id invite)]
+    (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
+    (sqs/send! sqs/SlackInvite
+      (sqs/->slack-invite (merge invite {:bot-token bot-token :first-name (:first-name user)})
+        (:name sender))
+      config/aws-sqs-bot-queue)
+    user))
 
   ;; Non-active team member without a token, needs a token
   ([conn sender team user :guard #(and (not= "active" (:status %))
@@ -158,10 +162,11 @@
         one-time-token (:one-time-token user)]
     (timbre/info "Sending email invitation to user:" user-id "at:" email)
     (sqs/send! sqs/EmailInvite
-      (sqs/->invite
-        (merge invite {:token one-time-token})
+      (sqs/->email-invite
+        (merge invite {:token one-time-token :first-name (:first-name user)})
         (:name sender)
-        (:email sender)))
+        (:email sender))
+      config/aws-sqs-email-queue)
     user)))
 
 (defn- update-team [conn ctx team-id]
