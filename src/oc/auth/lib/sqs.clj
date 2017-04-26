@@ -44,10 +44,12 @@
   {
     :script {
       :id (schema/pred #(= invite %))
-      :from schema/Str ; inviter's name
-      :first-name schema/Str ; invitee's first name
-      :org-name schema/Str
-    } 
+      :params {
+        :from schema/Str ; inviter's name
+        :first-name schema/Str ; invitee's first name
+        :org-name schema/Str
+      }
+    }
     :receiver {:id lib-schema/NonBlankStr ; invitee's slack-id 
                :type (schema/pred #(= receiver %))}
     :bot {:token lib-schema/NonBlankStr}
@@ -78,9 +80,10 @@
          (schema/validate lib-schema/NonBlankStr (:bot-token payload))]}
   {
     :script {:id invite
-             :from (or from "")
-             :org-name (or (:org-name payload) "")
-             :first-name (or (:first-name payload) "")}
+             :params {
+                :from (or from "")
+                :org-name (or (:org-name payload) "")
+                :first-name (or (:first-name payload) "")}}
     :receiver {:id (:slack-id payload) :type receiver}
     :bot {:token (:bot-token payload)}
   })
