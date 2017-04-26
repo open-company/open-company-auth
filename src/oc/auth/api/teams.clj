@@ -109,7 +109,7 @@
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
-                                          (dissoc :slack-id :slack-org-id :name)))
+                                          (dissoc :slack-id :slack-org-id :logo-url :name)))
               new-user (user-res/create-user! conn oc-user)]
       (handle-invite conn sender team new-user true admin? invite bot-token) ; recurse
       (do (timbre/error "Failed adding user:" slack-id) false))))
