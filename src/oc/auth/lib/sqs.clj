@@ -7,7 +7,7 @@
             [oc.auth.config :as config]))
 
 ;; SQS message types
-(def invite "invite")
+(def invite :invite)
 (def reset "reset")
 (def verify "verify")
 
