@@ -23,7 +23,7 @@
 
 (def EmailInvite
   {
-    :type (schema/pred #(= invite %))
+    :type (schema/pred #(= (name invite) %))
     :from schema/Str ; inviter's name
     :reply-to schema/Str ; inviter's email address
     :to lib-schema/EmailAddress ; invitee's email address
@@ -65,7 +65,7 @@
          (lib-schema/valid-email-address? (:email payload))
          (lib-schema/uuid-string? (:token payload))]}
   {
-    :type invite
+    :type (name invite)
     :to (:email payload)
     :from (or from "")
     :reply-to (or reply-to "")
