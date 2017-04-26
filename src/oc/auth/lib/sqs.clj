@@ -11,6 +11,9 @@
 (def reset "reset")
 (def verify "verify")
 
+;; Bot receiver type
+(def receiver :user)
+
 ;; ----- Utility Functions -----
 
 (defn- token-link [token-type token]
@@ -19,28 +22,36 @@
 ;; ----- SQS Message Schemas -----
 
 (def EmailInvite
-  {:type (schema/pred #(= invite %))
-   :from schema/Str ; inviter's name
-   :reply-to schema/Str ; inviter's email address
-   :to lib-schema/EmailAddress ; invitee's email address
-   :first-name schema/Str ; invitee's first name
-   :org-name schema/Str
-   :logo-url schema/Str
-   :token-link lib-schema/NonBlankStr})
+  {
+    :type (schema/pred #(= invite %))
+    :from schema/Str ; inviter's name
+    :reply-to schema/Str ; inviter's email address
+    :to lib-schema/EmailAddress ; invitee's email address
+    :first-name schema/Str ; invitee's first name
+    :org-name schema/Str
+    :logo-url schema/Str
+    :token-link lib-schema/NonBlankStr
+  })
 
 (def TokenAuth
-  {:type (schema/enum reset verify)
-   :to lib-schema/EmailAddress
-   :token-link lib-schema/NonBlankStr})
+  {
+    :type (schema/enum reset verify)
+    :to lib-schema/EmailAddress
+    :token-link lib-schema/NonBlankStr
+   })
 
 (def SlackInvite
-  {:type (schema/pred #(= invite %))
-   :from schema/Str ; inviter's name
-   :to lib-schema/NonBlankStr ; invitee's slack-id
-   :first-name schema/Str ; invitee's first name
-   :org-name schema/Str
-   :slack-org-id lib-schema/NonBlankStr
-   :bot-token lib-schema/NonBlankStr})
+  {
+    :script {
+      :id (schema/pred #(= invite %))
+      :from schema/Str ; inviter's name
+      :first-name schema/Str ; invitee's first name
+      :org-name schema/Str
+    } 
+    :receiver {:id lib-schema/NonBlankStr ; invitee's slack-id 
+               :type (schema/pred #(= receiver %))}
+    :bot {:token lib-schema/NonBlankStr}
+  })
 
 ;; ----- SQS Message Creation -----
 
@@ -66,13 +77,12 @@
          (schema/validate lib-schema/NonBlankStr (:slack-org-id payload))
          (schema/validate lib-schema/NonBlankStr (:bot-token payload))]}
   {
-    :type invite
-    :to (:slack-id payload)
-    :from (or from "")
-    :first-name (or (:first-name payload) "")
-    :org-name (or (:org-name payload) "")
-    :slack-org-id (:slack-org-id payload)
-    :bot-token (:bot-token payload)
+    :script {:id invite
+             :from (or from "")
+             :org-name (or (:org-name payload) "")
+             :first-name (or (:first-name payload) "")}
+    :receiver {:id (:slack-id payload) :type receiver}
+    :bot {:token (:bot-token payload)}
   })
 
 (defn ->token-auth [payload]
@@ -88,13 +98,15 @@
 ;; ----- SQS Message Functions -----
 
 (defn send!
-  [type msg sqs-queue]
-  (timbre/info "Request to send" (:type msg) "to:" (:to msg))
-  (schema/validate type msg)
-  (timbre/info "Sending" (:type msg) "to:" (:to msg))
-  (sqs/send-message
-    {:access-key config/aws-access-key-id
-     :secret-key config/aws-secret-access-key}
-    sqs-queue
-    msg)
-  (timbre/info "Sent" (:type msg) "to:" (:to msg)))
+  [msg-schema msg sqs-queue]
+  (let [type (or (:type msg) (-> msg :script :id))
+        to (or (:to msg) (-> msg :receiver :id))]
+    (timbre/info "Request to send" type "to:" to)
+    (schema/validate msg-schema msg)
+    (timbre/info "Sending" type "to:" to)
+    (sqs/send-message
+      {:access-key config/aws-access-key-id
+       :secret-key config/aws-secret-access-key}
+      sqs-queue
+      msg)
+    (timbre/info "Sent" type "to:" to)))
