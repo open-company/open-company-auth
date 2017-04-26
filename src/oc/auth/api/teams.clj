@@ -141,8 +141,10 @@
         slack-id (:slack-id invite)]
     (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
     (sqs/send! sqs/SlackInvite
-      (sqs/->slack-invite (merge invite {:bot-token bot-token :first-name (:first-name user)})
-        (:name sender))
+      (sqs/->slack-invite (merge invite {:bot-token bot-token
+                                         :first-name (:first-name user)
+                                         :from-id (:slack-id sender)})
+        (:first-name sender))
       config/aws-sqs-bot-queue)
     user))
 

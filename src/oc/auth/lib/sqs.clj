@@ -46,11 +46,13 @@
       :id (schema/pred #(= invite %))
       :params {
         :from schema/Str ; inviter's name
+        :from-id (schema/maybe schema/Str) ; inviter's Slack ID
         :first-name schema/Str ; invitee's first name
         :org-name schema/Str
+        :url lib-schema/NonBlankStr
       }
     }
-    :receiver {:id lib-schema/NonBlankStr ; invitee's slack-id 
+    :receiver {:id lib-schema/NonBlankStr ; invitee's Slack ID 
                :type (schema/pred #(= receiver %))}
     :bot {:token lib-schema/NonBlankStr}
   })
@@ -82,9 +84,12 @@
     :script {:id invite
              :params {
                 :from (or from "")
+                :from-id (:from-id payload)
                 :org-name (or (:org-name payload) "")
-                :first-name (or (:first-name payload) "")}}
-    :receiver {:id (:slack-id payload) :type receiver}
+                :first-name (or (:first-name payload) "")
+                :url config/ui-server-url}}
+    :receiver {:id (:slack-id payload)
+               :type receiver}
     :bot {:token (:bot-token payload)}
   })
 
