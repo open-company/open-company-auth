@@ -18,7 +18,9 @@
 
 (defn- coerce-to-user
   "Coerce the given map to a user."
-  [user-data]
+  ([user-data] (coerce-to-user user-data nil))
+  
+  ([user-data team-data]
   (let [user-name (or (:real_name_normalized user-data)
                       (:real_name user-data)
                       (:name user-data))
@@ -46,17 +48,24 @@
                      (get-in user-data [:profile :image_48])
                      (get-in user-data [:profile :image_32])
                      (get-in user-data [:profile :image_24]))
+     :logo-url (when team-data
+                  (or (:image_230 team-data)
+                      (:image_132 team-data)
+                      (:image_88 team-data)
+                      (:image_44 team-data)
+                      (:image_34 team-data)
+                      nil))
      :email (or (:email user-data)
-                (get-in user-data [:profile :email]))}))
+                (get-in user-data [:profile :email]))})))
 
 (defn get-user-info
   [access-token scope slack-id]
   {:pre [(string? access-token) (string? slack-id)]}
-  (let [resp (slack-users/info (merge slack-connection {:token access-token}) slack-id)]
-    (if (:ok resp)
-      (coerce-to-user (merge (:user resp) (-> resp :user :profile)))
+  (let [response (slack-users/info (merge slack-connection {:token access-token}) slack-id)]
+    (if (:ok response)
+      (coerce-to-user (merge (:user response) (-> response :user :profile)) (:team response))
       (throw (ex-info "Error response from Slack API while retrieving user data"
-                      {:response resp :slack-id slack-id :scope scope})))))
+                      {:response response :slack-id slack-id :scope scope})))))
 
 (defn valid-access-token?
   "Given a Slack access token, see if it's valid by making a test call to Slack."
@@ -92,15 +101,17 @@
                          :token (-> response :bot :bot_access_token)})
         access-token  (:access_token response)
         scope         (:scope response)
-        user-profile  (:user response)]
+        user-profile  (:user response)
+        team-profile  (:team response)]
     (if (and (:ok response) (valid-access-token? access-token))
       ;; valid response and access token
       ;; w/ identity.basic this response contains all user information we can get
       ;; so munge that into the right shape, or get user info if that doesn't work
       (let [user (if user-profile
-                    (coerce-to-user user-profile)
+                    (coerce-to-user user-profile team-profile)
                     (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
+        (println user)
         (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id
                                :user-id user-id :redirect redirect}))
 
@@ -149,7 +160,7 @@
           false))))
 
 (defn user-info
-  "Given a Slack bot token, return the info on a user in the Slack org."
+  "Given a Slack bot token, return the info on a specified user in the Slack org."
   [bot-token slack-id]
   (let [conn (merge slack-connection {:token bot-token :user slack-id})
         info (slack/slack-request conn "users.info")]

@@ -1,6 +1,7 @@
 (ns oc.auth.api.slack
   "Liberator API for Slack callback to auth service."
   (:require [defun.core :refer (defun-)]
+            [if-let.core :refer (when-let*)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
@@ -19,7 +20,7 @@
 (defn- clean-slack-user
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
-  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :redirect))
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :logo-url :redirect))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -82,9 +83,11 @@
 
 (defn- create-team-for
   "Create a new team for the specified Slack user."
-  [conn {slack-org-id :slack-org-id team-name :slack-org-name} admin-id]
+  [conn {slack-org-id :slack-org-id team-name :slack-org-name logo-url :logo-url} admin-id]
   (timbre/info "Creating new team for Slack org:" slack-org-id team-name)
-  (if-let [team (team-res/create-team! conn (team-res/->team {:name team-name} admin-id))]
+  (when-let* [team-name {:name team-name}
+              team-map (if logo-url (assoc team-name :logo-url logo-url) team-name)
+              team (team-res/create-team! conn (team-res/->team team-map admin-id))]
     (team-res/add-slack-org conn (:team-id team) slack-org-id)))
 
 (defn- create-user-for

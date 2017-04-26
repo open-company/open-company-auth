@@ -19,6 +19,7 @@
   :admins [lib-schema/UniqueID]
   :email-domains [lib-schema/EmailDomain]
   :slack-orgs [lib-schema/NonBlankStr]
+  (schema/optional-key :logo-url) (schema/maybe schema/Str)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 

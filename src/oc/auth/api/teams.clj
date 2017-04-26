@@ -64,7 +64,7 @@
   [conn user-id]
   (when-let* [user (user-res/get-user conn user-id)
             teams (:teams user)]
-    (team-res/list-teams-by-ids conn teams [:admins :created-at :updated-at])))
+    (team-res/list-teams-by-ids conn teams [:logo-url :admins :created-at :updated-at])))
 
 (defun- handle-invite
   "Handle an invitation/re-invite request.
