@@ -70,7 +70,7 @@
       (if (and (lib-schema/valid? user-res/User updated-user)
                (or (nil? new-password) ; not attempting to change password
                    (and (empty? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
-                   (and (not (empty? current-password)) (user-res/password-match? current-password (:password-hash user))))) ; attempting to change the password with an old password set, checking that the old password match
+                   (and (seq current-password) (user-res/password-match? current-password (:password-hash user))))) ; attempting to change the password with an old password set, checking that the old password match
         {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) user-props)}
         [false, {:user-update updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later

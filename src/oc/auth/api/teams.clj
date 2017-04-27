@@ -457,7 +457,7 @@
     (let [team (:existing-team ctx)
           slack-orgs (slack-org-res/list-slack-orgs-by-ids conn (:slack-orgs team) [:bot-token]) ; Slack orgs for team
           bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
-          slack-users (apply concat (map #(slack/user-list %) bot-tokens)) ; Slack roster of users
+          slack-users (mapcat #(slack/user-list %) bot-tokens) ; Slack roster of users
           oc-users (user-res/list-users conn team-id [:status :created-at :updated-at]) ; OC roster of users
           slack-emails (set (map :email slack-users)) ; email of Slack users
           oc-emails (set (map :email oc-users)) ; email of OC users
