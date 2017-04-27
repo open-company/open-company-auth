@@ -19,11 +19,21 @@
   :admins [lib-schema/UniqueID]
   :email-domains [lib-schema/EmailDomain]
   :slack-orgs [lib-schema/NonBlankStr]
+  (schema/optional-key :logo-url) (schema/maybe schema/Str)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 
-(def Invite {
+(def EmailInviteRequest {
   :email lib-schema/EmailAddress
+  :admin schema/Bool
+  (schema/optional-key :org-name) (schema/maybe schema/Str)
+  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :first-name) (schema/maybe schema/Str)
+  (schema/optional-key :last-name) (schema/maybe schema/Str)})
+
+(def SlackInviteRequest {
+  :slack-id lib-schema/NonBlankStr
+  :slack-org-id lib-schema/NonBlankStr
   :admin schema/Bool
   (schema/optional-key :org-name) (schema/maybe schema/Str)
   (schema/optional-key :logo-url) (schema/maybe schema/Str)

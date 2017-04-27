@@ -8,7 +8,7 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.slack-auth :as slack]))
 
-(def representation-props [:team-id :name :users :created-at :updated-at])
+(def representation-props [:team-id :logo-url :name :users :created-at :updated-at])
 
 (defun url
   ([team-id :guard string?] (str "/teams/" team-id))

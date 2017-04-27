@@ -64,7 +64,7 @@
   [conn user-id]
   (when-let* [user (user-res/get-user conn user-id)
             teams (:teams user)]
-    (team-res/list-teams-by-ids conn teams [:admins :created-at :updated-at])))
+    (team-res/list-teams-by-ids conn teams [:logo-url :admins :created-at :updated-at])))
 
 (defun- handle-invite
   "Handle an invitation/re-invite request.
@@ -72,8 +72,10 @@
   This may involve one or more of the following:
   Creating the user
   Adding the user to the team
-  Creating a one-time token for the invitee to auth with
-  Sending an email with the token to invite them"
+  Creating a one-time token for the invitee to auth with (email only)
+  Sending an email with the token to invite them (email only)
+  Sending a Slack message to invite them (Slack only)
+  "
 
   ;; No team to invite to!
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
@@ -83,8 +85,8 @@
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   true)
   
-  ;; No user yet
-  ([conn sender team nil member? admin? invite]
+  ;; No user yet, email invite
+  ([conn sender team nil member? admin? invite :guard :email]
   (let [team-id (:team-id team)
         email (:email invite)]
     (timbre/info "Creating user:" email "for team:" team-id)
@@ -95,6 +97,22 @@
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
+
+  ;; No user yet, Slack invite
+  ([conn sender team nil member? admin? invite :guard :slack-id]
+  (let [team-id (:team-id team)
+        slack-id (:slack-id invite)
+        slack-org-id (:slack-org-id invite)]
+    (timbre/info "Creating user:" slack-id "for team:" team-id)
+    (if-let* [slack-org (slack-org-res/get-slack-org conn slack-org-id)
+              bot-token (:bot-token slack-org)
+              slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
+              oc-user (user-res/->user (-> slack-user
+                                          (assoc :teams [team-id])
+                                          (dissoc :slack-id :slack-org-id :logo-url :name)))
+              new-user (user-res/create-user! conn oc-user)]
+      (handle-invite conn sender team new-user true admin? invite bot-token) ; recurse
+      (do (timbre/error "Failed adding user:" slack-id) false))))
   
   ;; User exists, but not a team member yet
   ([conn sender team user member? :guard not admin? invite]
@@ -117,14 +135,27 @@
       (handle-invite conn sender team user true true invite) ; recurse
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
+  ;; Non-active team member, needs a Slack invite
+  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id bot-token]
+  (let [user-id (:user-id user)
+        slack-id (:slack-id invite)]
+    (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
+    (sqs/send! sqs/SlackInvite
+      (sqs/->slack-invite (merge invite {:bot-token bot-token
+                                         :first-name (:first-name user)
+                                         :from-id (:slack-id sender)})
+        (:first-name sender))
+      config/aws-sqs-bot-queue)
+    user))
+
   ;; Non-active team member without a token, needs a token
   ([conn sender team user :guard #(and (not= "active" (:status %))
                                 (not (:one-time-token %))) true admin? invite]
   (let [user-id (:user-id user)]
     (timbre/info "Adding token to user:" user-id)
     (if-let [updated-user (user-res/add-token conn user-id)]
-      (handle-invite conn sender team updated-user true admin? invite)) ; recurse
-      (do (timbre/error "Failed adding token to user:" user-id) false)))
+      (handle-invite conn sender team updated-user true admin? invite) ; recurse
+      (do (timbre/error "Failed adding token to user:" user-id) false))))
 
   ;; Non-active team member with a token, needs an email invite
   ([_conn sender _team user :guard #(not= "active" (:status %)) true _admin? invite]
@@ -133,10 +164,11 @@
         one-time-token (:one-time-token user)]
     (timbre/info "Sending email invitation to user:" user-id "at:" email)
     (sqs/send! sqs/EmailInvite
-      (sqs/->invite
-        (merge invite {:token one-time-token})
+      (sqs/->email-invite
+        (merge invite {:token one-time-token :first-name (:first-name user)})
         (:name sender)
-        (:email sender)))
+        (:email sender))
+      config/aws-sqs-email-queue)
     user)))
 
 (defn- update-team [conn ctx team-id]
@@ -250,7 +282,8 @@
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
-                        (let [user (user-res/get-user-by-email conn (-> ctx :data :email))
+                        (let [email (-> ctx :data :email)
+                              user (when email (user-res/get-user-by-email conn email))
                               member? (when (and team user) (if ((set (:teams user)) (:team-id team)) true false))
                               admin? (when (and team user) (if ((set (:admins team)) (:user-id user)) true false))]
                           {:existing-team team :existing-user user :member? member? :admin? admin?})
@@ -259,7 +292,8 @@
   ;; Validations
   :processable? (by-method {
     :options true
-    :post (fn [ctx] (lib-schema/valid? team-res/Invite (:data ctx)))})
+    :post (fn [ctx] (or (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
+                        (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
 
   ;; Actions
   :post! (fn [ctx] {:updated-user 
@@ -419,8 +453,20 @@
                         false))
 
   ;; Responses
-  :handle-ok (fn [ctx] (let [users (user-res/list-users conn team-id [:created-at :updated-at])]
-                          (user-rep/render-user-list team-id users))))
+  :handle-ok (fn [ctx]
+    (let [team (:existing-team ctx)
+          slack-orgs (slack-org-res/list-slack-orgs-by-ids conn (:slack-orgs team) [:bot-token]) ; Slack orgs for team
+          bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
+          slack-users (mapcat #(slack/user-list %) bot-tokens) ; Slack roster of users
+          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at]) ; OC roster of users
+          slack-emails (set (map :email slack-users)) ; email of Slack users
+          oc-emails (set (map :email oc-users)) ; email of OC users
+          uninvited-slack-emails (clojure.set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
+          ;; Slack users not in OC (from their email)
+          uninvited-slack-users (map (fn [email] (some #(when (= (:email %) email) %) slack-users)) uninvited-slack-emails)
+          ;; OC users and univited Slack users (w/ status of uninvited) together gives us all the users
+          all-users (concat oc-users (map #(assoc % :status :uninvited) uninvited-slack-users))]
+      (user-rep/render-user-list team-id all-users))))
 
 ;; A resource for Slack channels for a particular team
 (defresource channels [conn team-id]

@@ -69,7 +69,8 @@
           updated-user (merge user (user-res/ignore-props (dissoc user-props :current-password)))]
       (if (and (lib-schema/valid? user-res/User updated-user)
                (or (nil? new-password) ; not attempting to change password
-                   (user-res/password-match? current-password (:password-hash user)))) ; got the old password right
+                   (and (empty? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
+                   (and (seq current-password) (user-res/password-match? current-password (:password-hash user))))) ; attempting to change the password with an old password set, checking that the old password match
         {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) user-props)}
         [false, {:user-update updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later
