@@ -154,8 +154,8 @@
   (let [user-id (:user-id user)]
     (timbre/info "Adding token to user:" user-id)
     (if-let [updated-user (user-res/add-token conn user-id)]
-      (handle-invite conn sender team updated-user true admin? invite)) ; recurse
-      (do (timbre/error "Failed adding token to user:" user-id) false)))
+      (handle-invite conn sender team updated-user true admin? invite) ; recurse
+      (do (timbre/error "Failed adding token to user:" user-id) false))))
 
   ;; Non-active team member with a token, needs an email invite
   ([_conn sender _team user :guard #(not= "active" (:status %)) true _admin? invite]
