@@ -140,7 +140,7 @@
         team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
         user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
         redirect (:redirect slack-response)] ; where we redirect the browser back to
-    (if-let [slack-user (when-not (:error slack-response) slack-response)]
+    (if-let [slack-user (when-not (or (:error slack-response) (false? (first slack-response))))]
       
       ;; got an auth'd user back from Slack
       (let [
