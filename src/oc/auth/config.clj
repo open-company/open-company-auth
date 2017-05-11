@@ -68,5 +68,5 @@
 
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
-(defonce slack-user-scope "identity.basic,identity.email,identity.avatar,identity.team")
-(defonce slack-bot-scope "bot,users:read")
+(defonce slack-user-scope "users:read,team:read,chat:write:user,channels:read,channels:history")
+(defonce slack-bot-scope "bot,chat:write:bot")

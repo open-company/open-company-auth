@@ -36,6 +36,9 @@
   (schema/optional-key :password-hash) schema/Str
   :first-name schema/Str
   :last-name schema/Str
+  (schema/optional-key :slack-users) (schema/maybe {lib-schema/NonBlankStr {:slack-org-id lib-schema/NonBlankStr
+                                                                            :id lib-schema/NonBlankStr
+                                                                            :token lib-schema/NonBlankStr}})
   :avatar-url (schema/maybe schema/Str)})
 
 (def User "User resource as stored in the DB."
