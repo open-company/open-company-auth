@@ -111,7 +111,6 @@
                     (coerce-to-user user-profile team-profile)
                     (get-user-info access-token scope slack-id))]
         ;; return user and Slack org info
-        (println user)
         (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id
                                :user-id user-id :redirect redirect}))
 
