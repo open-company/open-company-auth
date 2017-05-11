@@ -98,7 +98,9 @@
     (do
       (timbre/info "Created user:" email)
       (timbre/info "Sending email verification request for:" user-id "(" email ")")
-      (sqs/send! sqs/TokenAuth (sqs/->token-auth {:type :verify :email email :token (:one-time-token created-user)}))
+      (sqs/send! sqs/TokenAuth
+                 (sqs/->token-auth {:type :verify :email email :token (:one-time-token created-user)})
+                 config/aws-sqs-email-queue)
       (timbre/info "Sent email verification for:" user-id "(" email ")")
       {:new-user (assoc created-user :admin admin-teams)})
     
@@ -130,7 +132,9 @@
       (timbre/info "Adding one-time-token for:" user-id "(" email ")")
       (user-res/update-user! conn user-id {:one-time-token one-time-token})
       (timbre/info "Sending password reset request for:" user-id "(" email ")")
-      (sqs/send! sqs/TokenAuth (sqs/->token-auth {:type :reset :email email :token one-time-token}))
+      (sqs/send! sqs/TokenAuth
+                 (sqs/->token-auth {:type :reset :email email :token one-time-token})
+                 config/aws-sqs-email-queue)
       (timbre/info "Sent password reset request for:" user-id "(" email ")"))
 
     (timbre/warn "Password reset request, no user for:" email)))
