@@ -65,8 +65,8 @@ Leiningen is easy to install:
 Then let Leiningen install the rest of the dependencies:
 
 ```console
-git clone https://github.com/open-company/open-company-api.git
-cd open-company-api
+git clone https://github.com/open-company/open-company-auth.git
+cd open-company-auth
 lein deps
 ```
 
