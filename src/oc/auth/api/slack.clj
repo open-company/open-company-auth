@@ -13,7 +13,8 @@
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.slack-org :as slack-org-res]
-            [oc.auth.representations.user :as user-rep]))
+            [oc.auth.representations.user :as user-rep]
+            [oc.auth.representations.slack-auth :as slack-rep]))
 
 ;; ----- Utility Functions -----
 
@@ -199,12 +200,19 @@
             ;; Determine where we redirect them to
             bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
             redirect-arg (if bot-only? :bot :team)]
-        ;; Add the Slack org to the existing team if needed
-        (when (and target-team (not bot-only?))
-          (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
-        ;; All done, send them back to the OC Web UI with a JWToken
-        (redirect-to-web-ui redirect redirect-arg
-          (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))
+        ;; When we are authing a user for a Slack team w/o the bot installed, we redirect to the 
+        ;; bot access directly
+        (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token)))
+          (let [bot-team-id (if new-team (:team-id new-team) (:team-id target-team))
+                bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))]
+            (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect)))))
+          (do
+            ;; Add the Slack org to the existing team if needed
+            (when (and target-team (not bot-only?))
+              (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
+            ;; All done, send them back to the OC Web UI with a JWToken
+            (redirect-to-web-ui redirect redirect-arg
+              (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))))
 
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed))))
