@@ -189,13 +189,19 @@
 
             ;; Final user
             user (or updated-user (create-user-for conn new-user teams)) ; create new user if needed
+
+            ; new Slack team
+            new-slack-user {(:slack-org-id slack-user) {:id (:slack-id slack-user)
+                                                        :slack-org-id (:slack-org-id slack-user)
+                                                        :token (:slack-token slack-user)}}
+
+            ;; Add or update the Slack users list of the user
+            updated-slack-user (user-res/update-user! conn (:user-id user) (assoc user :slack-users (merge (:slack-users user) new-slack-user)))
             
             ;; Create a JWToken from the user for the response
-            jwt-user (user-rep/jwt-props-for (-> user
+            jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                                 (clean-user)
-                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                                (assoc :slack-id (:slack-id slack-user))
-                                                (assoc :slack-token (:slack-token slack-user))) :slack)
+                                                (assoc :admin (user-res/admin-of conn (:user-id user)))) :slack)
 
             ;; Determine where we redirect them to
             bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
