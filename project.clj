@@ -6,13 +6,13 @@
     :url "http://www.mozilla.org/MPL/2.0/"
   }
 
-  :min-lein-version "2.5.1" ; highest version supported by Travis-CI as of 7/5/2015
+  :min-lein-version "2.7.1"
 
   ;; JVM memory
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha16"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha17"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
     [http-kit "2.3.0-alpha2"] ; Web client/server http://http-kit.org/
     [ring/ring-devel "1.6.1"] ; Web application library https://github.com/ring-clojure/ring
@@ -26,7 +26,7 @@
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.1"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.10.7-d128484"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.10.9-2151229"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
