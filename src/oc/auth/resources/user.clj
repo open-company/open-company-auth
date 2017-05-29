@@ -28,18 +28,16 @@
   "
   #{:pending :unverified :active})
 
-(def ^:private UserCommon {
-  :user-id lib-schema/UniqueID
-  :teams [lib-schema/UniqueID]
-  (schema/optional-key :one-time-token) lib-schema/UUIDStr
-  :email (schema/maybe lib-schema/EmailAddress)
-  (schema/optional-key :password-hash) schema/Str
-  :first-name schema/Str
-  :last-name schema/Str
-  (schema/optional-key :slack-users) (schema/maybe {lib-schema/NonBlankStr {:slack-org-id lib-schema/NonBlankStr
-                                                                            :id lib-schema/NonBlankStr
-                                                                            :token lib-schema/NonBlankStr}})
-  :avatar-url (schema/maybe schema/Str)})
+(def ^:private UserCommon
+  (merge {:user-id lib-schema/UniqueID
+          :teams [lib-schema/UniqueID]
+          (schema/optional-key :one-time-token) lib-schema/UUIDStr
+          :email (schema/maybe lib-schema/EmailAddress)
+          (schema/optional-key :password-hash) schema/Str
+          :first-name schema/Str
+          :last-name schema/Str
+          :avatar-url (schema/maybe schema/Str)}
+         lib-schema/slack-users))
 
 (def User "User resource as stored in the DB."
   (merge UserCommon {
