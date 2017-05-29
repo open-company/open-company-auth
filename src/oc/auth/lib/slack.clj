@@ -78,47 +78,62 @@
       (timbre/warn "Access token could not be validated"
                    {:identity identity :auth-test auth-test}))))
 
+(defn- split-state
+  [slack-state]
+  (let [split-state   (s/split slack-state #":")
+        team-id       (when (or (= (count split-state) 4) (= (count split-state) 5)) (second split-state)) ; team-id from state
+        user-id       (when (or (= (count split-state) 4) (= (count split-state) 5)) (nth split-state 2)) ; user-id from state
+        redirect      (case (count split-state)
+                        5 (nth split-state 3)
+                        4 (nth split-state 3)
+                        2 (last split-state))
+        slack-org-id  (when (= (count split-state) 5) (last split-state))]
+    {:team-id team-id :user-id user-id :redirect redirect :state-slack-org-id slack-org-id}))
+
 (defn- swap-code-for-user
   "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
   If the swap works, then test the access token to get user information.
-  State format: open-company-auth:{team-id}:{user-id}:/redirect/path or open-company-auth:/redirect/path"
+  Possible state format:
+    open-company-auth:/redirect/path first user auth, no user or team id just yet
+    open-company-auth:{team-id}:{user-id}:/redirect/path adding team or bot
+    open-company-auth:{team-id}:{user-id}:/redirect/path:{slack-org-id} second step of user auth trying to add the bot"
   [slack-code slack-state]
   (timbre/info "Processing Slack response code with Slack state:" slack-state)
-  (let [split-state   (s/split slack-state #":")
-        team-id       (when (= (count split-state) 4) (second split-state)) ; team-id from state
-        user-id       (when (= (count split-state) 4) (nth split-state 2)) ; user-id from state
-        redirect      (when (or (= (count split-state) 4) (= (count split-state) 2)) (last split-state)) ; redirect URL fragment from state
-        response      (slack-oauth/access slack-connection
-                                        config/slack-client-id
-                                        config/slack-client-secret
-                                        slack-code
-                                        (str config/auth-server-url (:redirectURI slack)))
-        slack-id      (or (:user_id response) (-> response :user :id)) ; identity.basic returns different data
-        slack-org     {:slack-org-id (or (:team_id response)
-                                     (-> response :team :id)) ; identity.basic returns different data
-                       :slack-org-name (or (:team_name response) (-> response :team :name) "")}
-        slack-bot     (when (-> response :bot :bot_user_id)
-                        {:id (-> response :bot :bot_user_id)
-                         :token (-> response :bot :bot_access_token)})
-        access-token  (:access_token response)
-        scope         (:scope response)
-        user-profile  (:user response)
-        team-profile  (:team response)]
-    (if (and (:ok response) (valid-access-token? access-token))
-      ;; valid response and access token
-      ;; w/ identity.basic this response contains all user information we can get
-      ;; so munge that into the right shape, or get user info if that doesn't work
-      (let [user (if user-profile
-                    (coerce-to-user user-profile team-profile)
-                    (get-user-info access-token scope slack-id))]
-        ;; return user and Slack org info
-        (merge user slack-org {:bot slack-bot :slack-token access-token :team-id team-id
-                               :user-id user-id :redirect redirect}))
+  (let [splitted-state (split-state slack-state)]
+    (if slack-code
+      (let [response      (slack-oauth/access slack-connection
+                                            config/slack-client-id
+                                            config/slack-client-secret
+                                            slack-code
+                                            (str config/auth-server-url (:redirectURI slack)))
+            slack-id      (or (:user_id response) (-> response :user :id)) ; identity.basic returns different data
+            slack-org     {:slack-org-id (or (:team_id response)
+                                         (-> response :team :id)) ; identity.basic returns different data
+                           :slack-org-name (or (:team_name response) (-> response :team :name) "")}
+            slack-bot     (when (-> response :bot :bot_user_id)
+                            {:id (-> response :bot :bot_user_id)
+                             :token (-> response :bot :bot_access_token)})
+            access-token  (:access_token response)
+            scope         (:scope response)
+            user-profile  (:user response)
+            team-profile  (:team response)]
+        (if (and (:ok response) (valid-access-token? access-token))
+          ;; valid response and access token
+          ;; w/ identity.basic this response contains all user information we can get
+          ;; so munge that into the right shape, or get user info if that doesn't work
+          (let [user (if user-profile
+                        (coerce-to-user user-profile team-profile)
+                        (get-user-info access-token scope slack-id))]
+            ;; return user and Slack org info
+            (merge user slack-org splitted-state {:bot slack-bot :slack-token access-token}))
 
-      ;; invalid response or access token
+          ;; invalid response or access token
+          (do
+            (timbre/warn "Could not swap code for token" {:oauth-response response})
+            (merge splitted-state {:error true}))))
       (do
-        (timbre/warn "Could not swap code for token" {:oauth-response response})
-        {:error true :team-id team-id}))))
+        (timbre/warn "Empty slack code, user denied permission:" slack-code)
+        (merge splitted-state {:error true})))))
 
 (defn oauth-callback
   "Handle the callback from Slack, returning either a tuple of:
@@ -127,8 +142,8 @@
   [false, {error-description}]"
   [params]
   (cond
+    (get params "state") (swap-code-for-user (get params "code") (get params "state"))
     (get params "error") [false "denied"]
-    (get params "code")  (swap-code-for-user (get params "code") (get params "state"))
     :else                [false "no-code"]))
 
 (defn channel-list
