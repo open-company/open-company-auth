@@ -14,9 +14,9 @@
             [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.resources.user :as user-res]))
 (def slack-props [:name :slack-id :slack-org-id])
-(def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at])
+(def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :slack-users])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
