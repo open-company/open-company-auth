@@ -175,7 +175,9 @@
                                                                     :token (:slack-token slack-response)}}
 
           ;; Add or update the Slack users list of the user
-          updated-slack-user (user-res/update-user! conn (:user-id user) (assoc user :slack-users (merge (:slack-users user) new-slack-user)))
+          updated-slack-user (user-res/update-user! conn
+                                                    (:user-id user)
+                                                    (update-in user [:slack-users] merge new-slack-user))
 
           ;; Create a JWToken from the user for the response
           jwt-user (user-rep/jwt-props-for (-> updated-slack-user
@@ -245,7 +247,9 @@
                                                                   :token (:slack-token slack-user)}}
 
             ;; Add or update the Slack users list of the user
-            updated-slack-user (user-res/update-user! conn (:user-id user) (assoc user :slack-users (merge (:slack-users user) new-slack-user)))
+            updated-slack-user (user-res/update-user! conn
+                                                      (:user-id user)
+                                                      (update-in user [:slack-users] merge new-slack-user))
             
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-slack-user
@@ -280,7 +284,7 @@
         user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
         redirect (:redirect slack-response) ; where we redirect the browser back to
         state-slack-org-id (:state-slack-org-id slack-response)]
-    (if (not (nil? state-slack-org-id))
+    (if-not (nil? state-slack-org-id)
       (slack-callback-step2 conn slack-response)
       (slack-callback-step1 conn slack-response))))
 

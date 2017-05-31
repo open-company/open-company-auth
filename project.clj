@@ -26,7 +26,7 @@
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.1"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.10.10-1635b6e"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.11.2"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -93,6 +93,15 @@
         [lein-zprint "0.3.1"] ; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint        
       ]
     }]
+
+    ;; Production environment
+    :prod {
+      :env {
+        :db-name "open_company_auth"
+        :hot-reload "false"
+      }
+    }
+
     :repl-config [:dev {
       :dependencies [
         [org.clojure/tools.nrepl "0.2.13"] ; Network REPL https://github.com/clojure/tools.nrepl
@@ -115,14 +124,6 @@
                  '[oc.auth.resources.slack-org :as slack-org])
       ]
     }]
-
-    ;; Production environment
-    :prod {
-      :env {
-        :db-name "open_company_auth"
-        :hot-reload "false"
-      }
-    }
   }
 
   :repl-options {
