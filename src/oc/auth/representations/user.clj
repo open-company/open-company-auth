@@ -16,7 +16,7 @@
 (def slack-props [:name :slack-id :slack-org-id])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :slack-users])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
@@ -87,6 +87,7 @@
   (let [jwt-props (zipmap jwt-props (map user jwt-props))
         slack? (:slack-id user)
         slack-bots? (:slack-bots user)
+        slack-users? (:slack-users user)
         slack-props (if slack?
                       (-> jwt-props
                         (assoc :slack-id (:slack-id user))
@@ -94,8 +95,11 @@
                       jwt-props)
         bot-props (if slack-bots?
                     (assoc slack-props :slack-bots (:slack-bots user))
-                    slack-props)]
-    (-> bot-props
+                    slack-props)
+        slack-users-props (if slack-users?
+                            (assoc bot-props :slack-users (:slack-users user))
+                            bot-props)]
+    (-> slack-users-props
       (assoc :name (name-for user))
       (assoc :auth-source source)
       (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
