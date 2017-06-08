@@ -29,20 +29,13 @@
   ([port]
   (init port)
   (start)
-  (bind-conn!)))
+  (bind-conn!)
+  (app/echo-config port)
+  (println (str "Now serving auth from the REPL.\n"
+                "A DB connection is available with: conn\n"
+                "When you're ready to stop the system, just type: (stop)\n"))
+  port))
 
 (defn reset []
   (stop)
   (ctnrepl/refresh :after 'user/go))
-
-(comment
-
-  (into {} system)
-
-  (go)
-
-  (do
-    (clojure.tools.namespace.repl/set-refresh-dirs "src")
-    (reset))
-
-  )

@@ -26,7 +26,7 @@
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.1"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.11.2"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.11.7"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -79,7 +79,6 @@
         :aws-access-key-id "CHANGE-ME"
         :aws-secret-access-key "CHANGE-ME"
         :aws-secrets-bucket "CHANGE-ME"
-        :intro "true"
         :log-level "debug"
       }
       :plugins [
@@ -129,7 +128,6 @@
   :repl-options {
     :welcome (println (str "\n" (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"
                       "OpenCompany Auth REPL\n"
-                      "Database: " oc.auth.config/db-name "\n"
                       "\nReady to do your bidding... I suggest (go) or (go <port>) as your first command.\n"))
       :init-ns dev
   }

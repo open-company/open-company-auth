@@ -50,6 +50,17 @@
 
 ;; ----- System Startup -----
 
+(defn echo-config [port]
+  (println (str "\n"
+    "Running on port: " c/auth-server-port "\n"
+    "Database: " c/db-name "\n"
+    "Database pool: " c/db-pool-size "\n"
+    "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
+    "Trace: " c/liberator-trace "\n"
+    "Hot-reload: " c/hot-reload "\n"
+    "Sentry: " c/dsn "\n\n"
+    (when c/intro? "Ready to serve...\n"))))
+
 ;; Ring app definition
 (defn app [sys]
   (cond-> (routes sys)
@@ -81,15 +92,8 @@
   ;; Echo config information
   (println (str "\n"
     (when c/intro? (str (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"))
-    "OpenCompany Auth Service\n\n"
-    "Running on port: " c/auth-server-port "\n"
-    "Database: " c/db-name "\n"
-    "Database pool: " c/db-pool-size "\n"
-    "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
-    "Trace: " c/liberator-trace "\n"
-    "Hot-reload: " c/hot-reload "\n"
-    "Sentry: " c/dsn "\n\n"
-    (when c/intro? "Ready to serve...\n"))))
+    "OpenCompany Auth Service\n"))
+  (echo-config port))
 
 (defn -main []
   (start c/auth-server-port))
