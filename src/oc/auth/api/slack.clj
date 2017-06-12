@@ -295,15 +295,14 @@
   (if-let [slack-user (slack/valid-access-token? slack-token)]
     (do
       (timbre/info "Refreshing Slack user" slack-id)
-      (let [updated-user (update-user conn slack-user (dissoc user :admin))]
-        ;; Respond w/ JWToken and location
-        (user-rep/auth-response (-> updated-user
-                                  (clean-user)
-                                  (assoc :admin (:admin user))
-                                  (assoc :slack-id slack-id)
-                                  (assoc :slack-token slack-token)
-                                  (assoc :slack-bots (bots-for conn updated-user)))
-          :slack)))
+      ;; Respond w/ JWToken and location
+      (user-rep/auth-response (-> user
+                                (clean-user)
+                                (assoc :admin (:admin user))
+                                (assoc :slack-id slack-id)
+                                (assoc :slack-token slack-token)
+                                (assoc :slack-bots (bots-for conn updated-user)))
+        :slack))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)
       (api-common/error-response "Could note confirm token." 400))))
