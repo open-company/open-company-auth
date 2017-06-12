@@ -301,7 +301,7 @@
                                 (assoc :admin (:admin user))
                                 (assoc :slack-id slack-id)
                                 (assoc :slack-token slack-token)
-                                (assoc :slack-bots (bots-for conn updated-user)))
+                                (assoc :slack-bots (bots-for conn user)))
         :slack))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)
