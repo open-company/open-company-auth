@@ -144,10 +144,13 @@
           (not= state-slack-org-id (:slack-org-id slack-response))) ; user granted bot for a different team
     ; User didn't grant bot permissions, need to go back to UI with only first step response
     (let [user (user-res/get-user conn user-id)
+          slack-user-data (get-in user [:slack-users (keyword state-slack-org-id)])
           ;; Create a JWToken from the user for the response
           jwt-user (user-rep/jwt-props-for (-> user
                                               (clean-user)
-                                              (assoc :admin (user-res/admin-of conn (:user-id user)))) :slack)]
+                                              (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                              (assoc :slack-id (:id slack-user-data))
+                                              (assoc :slack-token (:token slack-user-data))) :slack)]
       (redirect-to-web-ui redirect :team
               (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))
     ;; Need to add the new authed bot to the team and redirect to web UI.
@@ -182,7 +185,9 @@
           ;; Create a JWToken from the user for the response
           jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                               (clean-user)
-                                              (assoc :admin (user-res/admin-of conn (:user-id user)))) :slack)]
+                                              (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                              (assoc :slack-id (:slack-id slack-response))
+                                              (assoc :slack-token (:slack-token slack-response))) :slack)]
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect :team
         (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))))
@@ -254,7 +259,9 @@
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                                 (clean-user)
-                                                (assoc :admin (user-res/admin-of conn (:user-id user)))) :slack)
+                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                                (assoc :slack-id (:slack-id slack-user))
+                                                (assoc :slack-token (:slack-token slack-user))) :slack)
 
             ;; Determine where we redirect them to
             bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
@@ -295,15 +302,14 @@
   (if-let [slack-user (slack/valid-access-token? slack-token)]
     (do
       (timbre/info "Refreshing Slack user" slack-id)
-      (let [updated-user (update-user conn slack-user (dissoc user :admin))]
-        ;; Respond w/ JWToken and location
-        (user-rep/auth-response (-> updated-user
-                                  (clean-user)
-                                  (assoc :admin (:admin user))
-                                  (assoc :slack-id slack-id)
-                                  (assoc :slack-token slack-token)
-                                  (assoc :slack-bots (bots-for conn updated-user)))
-          :slack)))
+      ;; Respond w/ JWToken and location
+      (user-rep/auth-response (-> user
+                                (clean-user)
+                                (assoc :admin (:admin user))
+                                (assoc :slack-id slack-id)
+                                (assoc :slack-token slack-token)
+                                (assoc :slack-bots (bots-for conn user)))
+        :slack))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)
       (api-common/error-response "Could note confirm token." 400))))
