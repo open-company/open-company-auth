@@ -21,7 +21,7 @@ To maintain transparency, OpenCompany information is always accessible and easy 
 
 Transparency expectations are changing. Startups need to change as well if they are going to attract and retain savvy employees and investors. Just as open source changed the way we build software, transparency changes how we build successful startups with information that is open, interactive, and always accessible. The OpenCompany platform turns transparency into a competitive advantage.
 
-Like the open companies we promote and support, the [OpenCompany](https://opencompany.com/) platform is completely transparent. The company supporting this effort, OpenCompany, LLC, is an open company. The [platform](https://github.com/open-company/open-company-web) is open source software, and open company data is [open data](https://en.wikipedia.org/wiki/Open_data) accessible through the [platform API](https://github.com/open-company/open-company-api).
+Like the open companies we promote and support, the [OpenCompany](https://opencompany.com/) platform is completely transparent. The company supporting this effort, OpenCompany, LLC, is an open company. The [platform](https://github.com/open-company/open-company-web) is open source software, and open company data is [open data](https://en.wikipedia.org/wiki/Open_data) accessible through the [Storage service](https://github.com/open-company/open-company-storage).
 
 To get started, head to: [OpenCompany](https://opencompany.com/)
 
@@ -168,7 +168,7 @@ RethinkDB [isn't supported on Windows](https://github.com/rethinkdb/rethinkdb/is
 
 #### Required Secrets
 
-A secret is shared between the [OpenCompany API](https://github.com/open-company/open-company-api) and the Auth service for creating and validating [JSON Web Tokens](https://jwt.io/).
+A secret is shared between the [Storage service](https://github.com/open-company/open-company-storage) and the Auth service for creating and validating [JSON Web Tokens](https://jwt.io/).
 
 A [Slack App](https://api.slack.com/apps) needs to be created for OAuth authentication. For local development, create a Slack app with a Redirect URI of `http://localhost:3003/slack-oauth` and get the client ID and secret from the Slack app you create.
 
