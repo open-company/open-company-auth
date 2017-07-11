@@ -1,4 +1,4 @@
-# [OpenCompany](https://opencompany.com/) Authentication Service
+# [OpenCompany](https://github.com/open-company/open-company-auth) Authentication Service
 
 [![MPL License](http://img.shields.io/badge/license-MPL-blue.svg?style=flat)](https://www.mozilla.org/MPL/2.0/)
 [![Build Status](https://travis-ci.org/open-company/open-company-auth.svg)](https://travis-ci.org/open-company/open-company-auth)
@@ -11,19 +11,25 @@
 
 > -- [Jeff Weiner](https://www.linkedin.com/in/jeffweiner08)
 
-Employees and investors, co-founders and execs, they all want more transparency from their startups, but there's no consensus about what it means to be transparent. OpenCompany is a platform that simplifies how key business information is shared with stakeholders.
+Companies struggle to keep everyone on the same page. People are hyper-connected in the moment but still don’t know what’s happening across the company. Employees and investors, co-founders and execs, customers and community, they all want more transparency. The solution is surprisingly simple and effective - great company updates that build transparency and alignment.
 
-When information about growth, finances, ownership and challenges is shared transparently, it inspires trust, new ideas and new levels of stakeholder engagement. OpenCompany makes it easy for founders to engage with employees and investors, creating a sense of ownership and urgency for everyone.
+With that in mind we designed the [Carrot](https://carrot.io/) application, and the [OpenCompany platform](https://github.com/open-company), based on three principles:
 
-[OpenCompany](https://opencompany.com/) is GitHub for the rest of your company.
+1. It has to be easy or no one will play.
+2. The "big picture" should always be visible.
+3. Alignment is valuable beyond the team, too.
 
-To maintain transparency, OpenCompany information is always accessible and easy to find. Being able to search or flip through prior updates empowers everyone. Historical context brings new employees and investors up to speed, refreshes memories, and shows how the company is evolving over time.
+Carrot is a software-as-a-service application powered by the OpenCompany platform. Carrot simplifies how key business information is shared with stakeholders to create alignment.
 
-Transparency expectations are changing. Startups need to change as well if they are going to attract and retain savvy employees and investors. Just as open source changed the way we build software, transparency changes how we build successful startups with information that is open, interactive, and always accessible. The OpenCompany platform turns transparency into a competitive advantage.
+When information about growth, finances, ownership and challenges is shared transparently, it inspires trust, new ideas and new levels of stakeholder engagement. Carrot makes it easy for founders to engage with employees and investors, creating alignment for everyone.
 
-Like the open companies we promote and support, the [OpenCompany](https://opencompany.com/) platform is completely transparent. The company supporting this effort, OpenCompany, LLC, is an open company. The [platform](https://github.com/open-company/open-company-web) is open source software, and open company data is [open data](https://en.wikipedia.org/wiki/Open_data) accessible through the [Storage service](https://github.com/open-company/open-company-storage).
+[Carrot](https://carrot.io/) is GitHub for the rest of your company.
 
-To get started, head to: [OpenCompany](https://opencompany.com/)
+Transparency expectations are changing. Organizations need to change as well if they are going to attract and retain savvy employees and investors. Just as open source changed the way we build software, transparency changes how we build successful companies with information that is open, interactive, and always accessible. Carrot, and the OpenCompany platform, turn transparency into a competitive advantage.
+
+Like the open companies we promote and support, the [OpenCompany](https://github.com/open-company) platform is open and transparent. The company supporting this effort, OpenCompany, LLC, is an open company. The [platform](https://github.com/open-company) is open source software, and open company data is [open data](https://en.wikipedia.org/wiki/Open_data) accessible through the [OpenCompany Storage Service](https://github.com/open-company/open-company-storage).
+
+To get started, head to: [Carrot](https://carrot.io/)
 
 
 ## Overview
@@ -35,7 +41,7 @@ In addition, the Authentication Service handles team management and membership.
 
 ## Local Setup
 
-Users of the [OpenCompany](https://opencompany.com/) platform should get started by going to [OpenCompany](https://opencompany.com/). The following local setup is for developers wanting to work on the platform's Authentication software.
+Prospective users of [Carrot](https://carrot.io/) should get started by going to [Carrot.io](https://carrot.io/). The following local setup is **for developers** wanting to work on the OpenCompany Authentication Service.
 
 Most of the dependencies are internal, meaning [Leiningen](https://github.com/technomancy/leiningen) will handle getting them for you. There are a few exceptions:
 
@@ -192,9 +198,10 @@ Make sure you update the section in `project.clj` that looks like this to contai
 You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and
 `AWS_ACCESS_KEY_ID`, etc. Use environmental variables to provide production secrets when running in production.
 
+
 ## Usage
 
-Users of the [OpenCompany](https://opencompany.com/) platform should get started by going to [OpenCompany](https://opencompany.com/). The following usage is for developers wanting to work on the platform's Auth application software.
+Prospective users of [Carrot](https://carrot.io/) should get started by going to [Carrot.io](https://carrot.io/). The following usage is **for developers** wanting to work on the OpenCompany Authentication Service.
 
 **Make sure you've updated `project.clj` as described above.**
 
@@ -273,13 +280,13 @@ Based on local settings in the OpenCompany Web application, a GET request is mad
       {
         "rel" : "authenticate",
         "method" : "GET",
-        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack/auth&state=open-company-auth&scope=bot,users:read",
+        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://auth.carrot.io/slack/auth&state=open-company-auth&scope=bot,users:read",
         "type" : "text/plain"
       },
       {
         "rel" : "authenticate-retry",
         "method" : "GET",
-        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://staging-auth.opencompany.com/slack/auth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
+        "href" : "https://slack.com/oauth/authorize?client_id=6895731204.51562819040&redirect_uri=https://auth.carrot.io/slack/auth&state=open-company-auth&scope=identity.basic,identity.email,identity.avatar,identity.team",
         "type" : "text/plain"
       }
     ]
