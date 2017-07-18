@@ -8,6 +8,7 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.lib.jwt :as jwt]
+            [oc.lib.slack :as slack-lib]
             [oc.auth.lib.slack :as slack]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
@@ -121,6 +122,21 @@
       (timbre/info "Adding acces to team:" team-id "to user:" user-id)
       (add-teams conn (user-res/add-team conn user-id team-id) (rest additional-teams)))))
 
+(defn- logo-url-for
+  "Get the logo for the Slack org with team.info if we don't already have it."
+  [{slack-token :slack-token logo-url :logo-url}]
+  (let [response (when-not logo-url (slack-lib/get-team-info slack-token)) ; get team.info if we need it
+        icon (:icon response)
+        image-default (:image-default icon)]
+    (or logo-url ; return it if we already had it
+        (if image-default nil ; don't return the Slack default
+            (or (:image_230 icon) ; use the highest resolution we have
+                (:image_132 icon)
+                (:image_88 icon)
+                (:image_44 icon)
+                (:image_34 icon)
+                nil))))) ; give up
+
 ;; ----- Slack Request Handling Functions -----
 
 (defn- redirect-to-web-ui
@@ -229,7 +245,8 @@
             
             ;; Create a new team if we're creating a new user and have no team(s) already for this Slack org
             new-team (when (and new-user (empty? relevant-teams))
-                      (create-team-for conn slack-user (:user-id new-user))) 
+                        (let [logo-url (logo-url-for slack-user)]
+                          (create-team-for conn (assoc slack-user :logo-url logo-url) (:user-id new-user))))
             
             ;; Final set of teams relevant to this Slack org
             teams (if new-team [new-team] relevant-teams)
