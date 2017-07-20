@@ -129,13 +129,14 @@
         icon (:icon response)
         image-default (:image-default icon)]
     (or logo-url ; return it if we already had it
-        (if image-default nil ; don't return the Slack default
-            (or (:image_230 icon) ; use the highest resolution we have
-                (:image_132 icon)
-                (:image_88 icon)
-                (:image_44 icon)
-                (:image_34 icon)
-                nil))))) ; give up
+      (when-not image-default ; don't return the Slack default
+        (or ; use the highest resolution we have
+          (:image_230 icon)
+          (:image_132 icon)
+          (:image_88 icon)
+          (:image_44 icon)
+          (:image_34 icon)
+          nil))))) ; give up
 
 ;; ----- Slack Request Handling Functions -----
 
