@@ -15,8 +15,8 @@
     [org.clojure/clojure "1.9.0-alpha17"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
     [http-kit "2.3.0-alpha2"] ; Web client/server http://http-kit.org/
-    [ring/ring-devel "1.6.1"] ; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-core "1.6.1"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-devel "1.6.2"] ; Web application library https://github.com/ring-clojure/ring
+    [ring/ring-core "1.6.2"] ; Web application library https://github.com/ring-clojure/ring
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
     [ring-logger-timbre "0.7.5" :exclusions [com.taoensso/encore]] ; Ring logging https://github.com/nberger/ring-logger-timbre
     [compojure "1.6.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
@@ -26,7 +26,7 @@
     [buddy/buddy-auth "1.4.1"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.2"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.11.14"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.11.15"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
