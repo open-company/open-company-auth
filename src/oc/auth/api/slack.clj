@@ -1,7 +1,7 @@
 (ns oc.auth.api.slack
   "Liberator API for Slack callback to auth service."
   (:require [defun.core :refer (defun-)]
-            [if-let.core :refer (when-let*)]
+            [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
@@ -122,6 +122,14 @@
       (timbre/info "Adding acces to team:" team-id "to user:" user-id)
       (add-teams conn (user-res/add-team conn user-id team-id) (rest additional-teams)))))
 
+(defn- email-for
+  "Get the email for the Slack user with users.info if we don't already have it."
+  [{slack-token :slack-token email :email slack-user-id :slack-id}]
+  (let [response (when-not email (slack-lib/get-user-info slack-token slack-user-id))] ; get users.info if we need it
+    (println "E4:" response)
+    (or email ; return it if we already had it
+      (:email response))))
+
 (defn- logo-url-for
   "Get the logo for the Slack org with team.info if we don't already have it."
   [{slack-token :slack-token logo-url :logo-url}]
@@ -212,16 +220,19 @@
 (defn- slack-callback-step1
   "First step of slack oauth, if the user is authing and the team has no bot installed we redirect him to the bot add sequence directly,
    if not we redirect to the web UI with the auth response."
-  [conn {:keys [team-id user-id redirect error] :as slack-response}]
-  (timbre/info "slack callback step 1" slack-response)
-  (if-let [slack-user (when-not (or error (false? (first slack-response))) slack-response)]
+  [conn {:keys [team-id user-id redirect error] :as response}]
+  (timbre/info "slack callback step 1:" response)
+  (if-let* [slack-response (when-not (or error (false? (first response))) response)
+            email (email-for slack-response)
+            slack-user (assoc slack-response :email email)]
       
       ;; got an auth'd user back from Slack
       (let [
             ;; Get existing user by user ID or by email
+
             existing-user (if user-id
                             (user-res/get-user conn user-id)
-                            (user-res/get-user-by-email conn (:email slack-user))) ; user already exists?
+                            (user-res/get-user-by-email conn email)) ; user already exists?
             _error (when (and user-id (not existing-user)) ; shouldn't have a Slack org being done by non-existent user
               (timbre/error "No user found for user-id" user-id "during Slack org add of:" slack-response))
 
