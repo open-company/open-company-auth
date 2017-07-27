@@ -126,7 +126,6 @@
   "Get the email for the Slack user with users.info if we don't already have it."
   [{slack-token :slack-token email :email slack-user-id :slack-id}]
   (let [response (when-not email (slack-lib/get-user-info slack-token slack-user-id))] ; get users.info if we need it
-    (println "E4:" response)
     (or email ; return it if we already had it
       (:email response))))
 
