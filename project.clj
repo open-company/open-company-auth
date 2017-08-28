@@ -14,7 +14,7 @@
   :dependencies [
     [org.clojure/clojure "1.9.0-alpha19"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
-    [http-kit "2.3.0-alpha2"] ; Web client/server http://http-kit.org/
+    [http-kit "2.3.0-alpha3"] ; Web client/server http://http-kit.org/
     [ring/ring-devel "1.6.2"] ; Web application library https://github.com/ring-clojure/ring
     [ring/ring-core "1.6.2"] ; Web application library https://github.com/ring-clojure/ring
     [jumblerg/ring.middleware.cors "1.0.1"] ; CORS library https://github.com/jumblerg/ring.middleware.cors
@@ -26,7 +26,7 @@
     [buddy/buddy-auth "2.0.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.2"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.12.5"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.12.6"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -44,7 +44,7 @@
   ]
 
   :plugins [
-    [lein-ring "0.12.0"]
+    [lein-ring "0.12.1"]
     [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
