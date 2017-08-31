@@ -16,6 +16,7 @@
     [compojure.core :as compojure :refer (GET)]
     [com.stuartsierra.component :as component]
     [oc.lib.sentry-appender :as sa]
+    [oc.lib.api.common :as api-common]
     [oc.auth.components :as components]
     [oc.auth.config :as c]
     [oc.auth.api.entry-point :as entry-point-api]
@@ -64,7 +65,8 @@
 ;; Ring app definition
 (defn app [sys]
   (cond-> (routes sys)
-    c/dsn             (sentry-mw/wrap-sentry c/dsn) ; important that this is first
+    true              api-common/wrap-500 ; important that this is first
+    c/dsn             (sentry-mw/wrap-sentry c/dsn) ; important that this is second
     c/prod?           wrap-with-logger
     true              wrap-params
     c/liberator-trace (wrap-trace :header :ui)
