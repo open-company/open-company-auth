@@ -22,11 +22,11 @@
     [compojure "1.6.0"] ; A concise routing library for Ring/Clojure https://github.com/weavejester/compojure
     [commons-codec "1.10" :exclusions [[org.clojure/clojure]]] ; Dependency of compojure, ring-core, and midje http://commons.apache.org/proper/commons-codec/
     [org.julienxx/clj-slack "0.5.5"] ; Clojure Slack REST API https://github.com/julienXX/clj-slack
-    [buddy "1.3.0"] ; Security library https://github.com/funcool/buddy
-    [buddy/buddy-auth "2.0.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
+    [buddy "2.0.0"] ; Security library https://github.com/funcool/buddy
+    [buddy/buddy-auth "2.1.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.2"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.12.6"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.12.10"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
