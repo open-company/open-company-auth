@@ -31,9 +31,12 @@
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
           :teams [lib-schema/UniqueID]
+
           (schema/optional-key :one-time-token) lib-schema/UUIDStr
-          :email (schema/maybe lib-schema/EmailAddress)
-          (schema/optional-key :password-hash) schema/Str
+
+          :email (schema/maybe lib-schema/EmailAddress)          
+          (schema/optional-key :password-hash) lib-schema/NonBlankStr
+
           :first-name schema/Str
           :last-name schema/Str
           :avatar-url (schema/maybe schema/Str)}
@@ -83,15 +86,30 @@
 
 ;; ----- Password based authentication -----
 
-(def ^:private crypto-algo "bcrypt+sha512$")
+(def ^:private crypto-algo :bcrypt+sha512)
+(def ^:private trusted-algs #{:bcrypt+sha512}) ; if we change algos (above), add the additional algo to this list
+(def ^:private crypto-algo-iterations 12)
 
-(defn- password-hash [password]
-  (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
+(defn- password-hash
+  "
+  Create a crypto hash from the provided password as a string in the format:
 
-(defn password-match? [password password-hash]
+  <algorithm used>$<salt used>$<password hash>
+  "
+  [password]
+  (hashers/derive password {:alg crypto-algo :iterations crypto-algo-iterations}))
+
+(defn password-match?
+  [password password-hash]
+  "
+  Return true if the provided password hashes to the provided password hash. The provided password hash is in
+  the format:
+
+  <algorithm used>$<salt used>$<password hash>
+  "
   (if (s/blank? password-hash)
     false
-    (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512})))
+    (hashers/check password password-hash {:limit trusted-algs})))
 
 (declare get-user-by-email)
 (defn authenticate? [conn email password]
