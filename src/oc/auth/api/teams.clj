@@ -108,12 +108,15 @@
     (timbre/info "Creating user:" slack-id "for team:" team-id)
     (if-let* [slack-org (slack-org-res/get-slack-org conn slack-org-id)
               bot-token (:bot-token slack-org)
+              bot-user-id (:bot-user-id slack-org)
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :logo-url :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (handle-invite conn sender team new-user true admin? (assoc invite :bot-token bot-token)) ; recurse
+      (handle-invite conn sender team new-user true admin? (-> invite 
+                                                              (assoc :bot-token bot-token)
+                                                              (assoc :bot-user-id bot-user-id))) ; recurse
       (do (timbre/error "Failed adding user:" slack-id) false))))
   
   ;; User exists, but not a team member yet
@@ -140,12 +143,10 @@
   ;; Non-active team member, needs a Slack invite/re-invite
   ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id]
   (let [user-id (:user-id user)
-        slack-id (:slack-id invite)
-        bot-token (:bot-token invite)]
+        slack-id (:slack-id invite)]
     (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
     (sqs/send! sqs/SlackInvite
-      (sqs/->slack-invite (merge invite {:bot-token bot-token
-                                         :first-name (:first-name user)
+      (sqs/->slack-invite (merge invite {:first-name (:first-name user)
                                          :from-id (:slack-id sender)})
         (:first-name sender))
       config/aws-sqs-bot-queue)
