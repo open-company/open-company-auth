@@ -57,7 +57,7 @@
         [false, {:team-update updated-team}])) ; invalid update
     true)) ; No team for this team-id, so this will fail existence check later
 
-;; ----- Actions -----
+;; ----- Utility functions -----
 
 (defn teams-for-user
   "Return a sequence of teams that the user, specified by their user-id, is a member of."
@@ -65,6 +65,8 @@
   (when-let* [user (user-res/get-user conn user-id)
             teams (:teams user)]
     (team-res/list-teams-by-ids conn teams [:logo-url :admins :created-at :updated-at])))
+
+;; ----- Actions -----
 
 (defun- handle-invite
   "Handle an invitation/re-invite request.
@@ -111,7 +113,7 @@
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :logo-url :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (handle-invite conn sender team new-user true admin? invite bot-token) ; recurse
+      (handle-invite conn sender team new-user true admin? (assoc invite :bot-token bot-token)) ; recurse
       (do (timbre/error "Failed adding user:" slack-id) false))))
   
   ;; User exists, but not a team member yet
@@ -135,10 +137,11 @@
       (handle-invite conn sender team user true true invite) ; recurse
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
-  ;; Non-active team member, needs a Slack invite
-  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id bot-token]
+  ;; Non-active team member, needs a Slack invite/re-invite
+  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id]
   (let [user-id (:user-id user)
-        slack-id (:slack-id invite)]
+        slack-id (:slack-id invite)
+        bot-token (:bot-token invite)]
     (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
     (sqs/send! sqs/SlackInvite
       (sqs/->slack-invite (merge invite {:bot-token bot-token
@@ -157,7 +160,7 @@
       (handle-invite conn sender team updated-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding token to user:" user-id) false))))
 
-  ;; Non-active team member with a token, needs an email invite
+  ;; Non-active team member with a token, needs an email invite/re-invite
   ([_conn sender _team user :guard #(not= "active" (:status %)) true _admin? invite]
   (let [user-id (:user-id user)
         email (:email user)
