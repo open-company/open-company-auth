@@ -12,7 +12,7 @@
   :jvm-opts ^:replace ["-Xms512m" "-Xmx2048m" "-server"]
 
   :dependencies [
-    [org.clojure/clojure "1.9.0-alpha19"] ; Lisp on the JVM http://clojure.org/documentation
+    [org.clojure/clojure "1.9.0-alpha20"] ; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/tools.cli "0.3.5"] ; Command-line parsing https://github.com/clojure/tools.cli
     [http-kit "2.3.0-alpha4"] ; Web client/server http://http-kit.org/
     [ring/ring-devel "1.6.2"] ; Web application library https://github.com/ring-clojure/ring
@@ -57,7 +57,7 @@
         :open-company-auth-passphrase "this_is_a_qa_secret" ; JWT secret
       }
       :dependencies [
-        [midje "1.9.0-alpha9"] ; Example-based testing https://github.com/marick/Midje
+        [midje "1.9.0-alpha10"] ; Example-based testing https://github.com/marick/Midje
         [ring-mock "0.1.5"] ; Test Ring requests https://github.com/weavejester/ring-mock
       ]
       :plugins [

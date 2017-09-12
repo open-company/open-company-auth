@@ -23,10 +23,11 @@
             body (json/parse-string (:body resp))]
         (:status resp) => 200
         (test-utils/response-mime-type resp) => "application/json"
-        (contains? body "slack") => true
-        (contains? (body "slack") "links") => true
-        (contains? body "email") => true
-        (contains? (body "email") "links") => true))
+        (contains? body "links") => true
+        ; (contains? (body "slack") "links") => true
+        ; (contains? body "email") => true
+        ; (contains? (body "email") "links") => true)
+        ))
     
     (future-fact "by requesting auth-settings with an invalid JWToken")
 
@@ -34,13 +35,4 @@
 
     (future-fact "by requesting auth-settings with a Slack JWToken")
 
-    (future-fact "by requesting auth-settings with an Email JWToken")
-
-    (fact "by requesting token debugging with /test-token"
-      (let [resp (test-utils/api-request :get "/test-token" {})
-            body (json/parse-string (:body resp))]
-        (:status resp) => 200
-        (contains? body "jwt-token") => true
-        (contains? body "jwt-verified") => true
-        (contains? body "jwt-decoded") => true
-        (body "jwt-verified") => true))))
+    (future-fact "by requesting auth-settings with an Email JWToken")))

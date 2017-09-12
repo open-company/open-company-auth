@@ -151,10 +151,12 @@
   "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
   ([redirect access] (redirect-to-web-ui redirect access nil))
   
-  ([redirect access jwtoken]
+  ([redirect access jwtoken] (redirect-to-web-ui redirect access jwtoken false))
+
+  ([redirect access jwtoken new?]
   (let [page (or redirect "/login")
         jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
-        url (str config/ui-server-url page "?access=" (name access))]
+        url (str config/ui-server-url page "?access=" (name access) "&new=" new?)]
     (timbre/info "Redirecting request to:" url)
     (response/redirect (str url jwt-param)))))
 
@@ -217,8 +219,10 @@
         (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))))
 
 (defn- slack-callback-step1
-  "First step of slack oauth, if the user is authing and the team has no bot installed we redirect him to the bot add sequence directly,
-   if not we redirect to the web UI with the auth response."
+  "
+  First step of slack oauth, if the user is authing and the team has no bot installed we redirect him to the
+  bot add sequence directly, if not we redirect to the web UI with the auth response.
+  "
   [conn {:keys [team-id user-id redirect error] :as response}]
   (timbre/info "slack callback step 1:" response)
   (if-let* [slack-response (when-not (or error (false? (first response))) response)
@@ -228,7 +232,6 @@
       ;; got an auth'd user back from Slack
       (let [
             ;; Get existing user by user ID or by email
-
             existing-user (if user-id
                             (user-res/get-user conn user-id)
                             (user-res/get-user-by-email conn email)) ; user already exists?
