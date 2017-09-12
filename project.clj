@@ -26,7 +26,7 @@
     [buddy/buddy-auth "2.1.0"] ; Authentication for ring https://github.com/funcool/buddy-auth
     [zprint "0.4.2"] ; Pretty-print clj and EDN https://github.com/kkinnear/zprint
     
-    [open-company/lib "0.12.16"] ; Library for OC projects https://github.com/open-company/open-company-lib
+    [open-company/lib "0.12.17"] ; Library for OC projects https://github.com/open-company/open-company-lib
     ; In addition to common functions, brings in the following common dependencies used by this project:
     ; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
