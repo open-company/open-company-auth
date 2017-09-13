@@ -10,6 +10,7 @@
             [oc.lib.schema :as lib-schema]
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
+            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]
@@ -161,11 +162,11 @@
                                                                             (-> ctx :request :identity) ; Basic HTTP Auth
                                                                             (:email ctx))) ; one time use token auth
                                    admin-teams (user-res/admin-of conn (:user-id user))]
-                        (if (= (:status user) "pending")
+                        (if (= (keyword (:status user)) :pending)
                           ;; they need to verify their email, so no love
                           (api-common/blank-response)
                           ;; respond w/ JWToken and location
-                          (user-rep/auth-response 
+                          (user-rep/auth-response conn
                             (-> user
                               (assoc :admin admin-teams)
                               (assoc :slack-bots (slack-api/bots-for conn user)))
@@ -206,11 +207,11 @@
   ;; Responses
   :handle-conflict (ring-response {:status 409})
   :handle-created (fn [ctx] (let [user (:new-user ctx)]
-                              (if (= (:status user) "pending")
+                              (if (= (keyword (:status user)) :pending)
                                 ;; they need to verify their email, so no love
                                 (api-common/blank-response)
                                 ;; respond w/ JWToken and location
-                                (user-rep/auth-response
+                                (user-rep/auth-response conn
                                   (assoc user :slack-bots (slack-api/bots-for conn user))
                                   :email)))))
 
@@ -292,7 +293,7 @@
 
                         ;; Email token - respond w/ JWToken and location
                         "email" (let [user (:existing-user ctx)]
-                                  (user-rep/auth-response  
+                                  (user-rep/auth-response conn
                                     (assoc user :slack-bots (slack-api/bots-for conn user))
                                     :email))
 

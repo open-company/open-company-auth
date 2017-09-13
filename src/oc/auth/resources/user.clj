@@ -45,6 +45,7 @@
 (def User "User resource as stored in the DB."
   (merge UserCommon {
     :status (schema/pred #(statuses (keyword %)))
+    (schema/optional-key :last-token-at) lib-schema/ISO8601
     :created-at lib-schema/ISO8601
     :updated-at lib-schema/ISO8601}))
 
@@ -138,7 +139,7 @@
         (update :first-name #(or % ""))
         (update :last-name #(or % ""))
         (update :avatar-url #(or % ""))
-        (assoc :status "pending")
+        (assoc :status :pending)
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
 
@@ -155,7 +156,7 @@
         teams (if new-team [(:team-id new-team)] existing-teams)
         user-with-teams (assoc user :teams teams)
         user-with-status (if new-team
-                            (assoc user-with-teams :status "unverified") ; new team, so no need to pre-verify
+                            (assoc user-with-teams :status :unverified) ; new team, so no need to pre-verify
                             user-with-teams)]
     (db-common/create-resource conn table-name user-with-status (db-common/current-timestamp))))
 

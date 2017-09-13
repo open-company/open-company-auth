@@ -83,7 +83,7 @@
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
 
   ;; An already active team member... who is inviting this person, yoh?
-  ([_conn _sender team user :guard #(= "active" (:status %)) true _admin? _invite]
+  ([_conn _sender team user :guard #(= :active (keyword (:status %))) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   true)
   
@@ -123,10 +123,10 @@
   ([conn sender team user member? :guard not admin? invite]
   (let [team-id (:team-id team)
         user-id (:user-id user)
-        status (:status user)]
+        status (keyword (:status user))]
     (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
-      (if (= status "active")
+      (if (= status :active)
         user ; TODO need to send a welcome to the team email
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
@@ -141,7 +141,7 @@
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; Non-active team member, needs a Slack invite/re-invite
-  ([conn sender team user :guard #(and (not= "active" (:status %))) true _admin? invite :guard :slack-id]
+  ([conn sender team user :guard #(not= :active (keyword (:status %))) true _admin? invite :guard :slack-id]
   (let [user-id (:user-id user)
         slack-id (:slack-id invite)]
     (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
@@ -153,8 +153,8 @@
     user))
 
   ;; Non-active team member without a token, needs a token
-  ([conn sender team user :guard #(and (not= "active" (:status %))
-                                (not (:one-time-token %))) true admin? invite]
+  ([conn sender team user :guard #(and (not= :active (keyword (:status %)))
+                                       (not (:one-time-token %))) true admin? invite]
   (let [user-id (:user-id user)]
     (timbre/info "Adding token to user:" user-id)
     (if-let [updated-user (user-res/add-token conn user-id)]
@@ -162,7 +162,7 @@
       (do (timbre/error "Failed adding token to user:" user-id) false))))
 
   ;; Non-active team member with a token, needs an email invite/re-invite
-  ([_conn sender _team user :guard #(not= "active" (:status %)) true _admin? invite]
+  ([_conn sender _team user :guard #(not= :active (keyword (:status %))) true _admin? invite]
   (let [user-id (:user-id user)
         email (:email user)
         one-time-token (:one-time-token user)]

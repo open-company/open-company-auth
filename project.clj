@@ -117,6 +117,7 @@
                  '[schema.core :as schema]
                  '[oc.lib.schema :as lib-schema]
                  '[oc.lib.jwt :as jwt]
+                 '[oc.auth.lib.jwtoken :as jwtoken]
                  '[oc.auth.config :as config]
                  '[oc.auth.resources.user :as u]
                  '[oc.auth.resources.team :as team]

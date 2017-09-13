@@ -7,7 +7,7 @@
             [ring.util.response :as response]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
-            [oc.lib.jwt :as jwt]
+            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.lib.slack :as slack-lib]
             [oc.auth.lib.slack :as slack]
             [oc.auth.config :as config]
@@ -169,7 +169,7 @@
                                               (assoc :slack-id (:id slack-user-data))
                                               (assoc :slack-token (:token slack-user-data))) :slack)]
       (redirect-to-web-ui redirect :team
-              (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))
+              (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))))
     ;; Need to add the new authed bot to the team and redirect to web UI.
     (let [user (user-res/get-user conn user-id)
 
@@ -207,7 +207,7 @@
                                               (assoc :slack-token (:slack-token slack-response))) :slack)]
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect :team
-        (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase)))))
+        (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))))))
 
 (defn- slack-callback-step1
   "
@@ -277,7 +277,7 @@
             updated-slack-user (user-res/update-user! conn
                                                       (:user-id user)
                                                       (-> user
-                                                        (assoc :status "active") ; no longer "pending" (if they were)
+                                                        (assoc :status :active) ; no longer :pending (if they were)
                                                         (update-in [:slack-users] merge new-slack-user)))
             
             ;; Create a JWToken from the user for the response
@@ -301,7 +301,7 @@
             (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))))
           ;; All done, send them back to the OC Web UI with a JWToken
           (redirect-to-web-ui redirect redirect-arg
-            (jwt/generate (assoc jwt-user :slack-bots (bots-for conn jwt-user)) config/passphrase))))
+            (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user))))))
 
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed)))
@@ -327,12 +327,12 @@
     (do
       (timbre/info "Refreshing Slack user" slack-id)
       ;; Respond w/ JWToken and location
-      (user-rep/auth-response (-> user
-                                (clean-user)
-                                (assoc :admin (:admin user))
-                                (assoc :slack-id slack-id)
-                                (assoc :slack-token slack-token)
-                                (assoc :slack-bots (bots-for conn user)))
+      (user-rep/auth-response conn (-> user
+                                      (clean-user)
+                                      (assoc :admin (:admin user))
+                                      (assoc :slack-id slack-id)
+                                      (assoc :slack-token slack-token)
+                                      (assoc :slack-bots (bots-for conn user)))
         :slack))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)
