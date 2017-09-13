@@ -39,13 +39,13 @@
 
           :first-name schema/Str
           :last-name schema/Str
-          :avatar-url (schema/maybe schema/Str)}
+          :avatar-url (schema/maybe schema/Str)
+          (schema/optional-key :last-token-at) lib-schema/ISO8601}
          lib-schema/slack-users))
 
 (def User "User resource as stored in the DB."
   (merge UserCommon {
     :status (schema/pred #(statuses (keyword %)))
-    (schema/optional-key :last-token-at) lib-schema/ISO8601
     :created-at lib-schema/ISO8601
     :updated-at lib-schema/ISO8601}))
 

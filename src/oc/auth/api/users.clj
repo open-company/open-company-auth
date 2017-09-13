@@ -10,7 +10,6 @@
             [oc.lib.schema :as lib-schema]
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
-            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]

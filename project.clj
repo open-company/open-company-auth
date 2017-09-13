@@ -115,6 +115,7 @@
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
                  '[schema.core :as schema]
+                 '[oc.lib.db-common :as db-common]
                  '[oc.lib.schema :as lib-schema]
                  '[oc.lib.jwt :as jwt]
                  '[oc.auth.lib.jwtoken :as jwtoken]

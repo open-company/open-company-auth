@@ -142,12 +142,10 @@
   "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
   ([redirect access] (redirect-to-web-ui redirect access nil))
   
-  ([redirect access jwtoken] (redirect-to-web-ui redirect access jwtoken false))
-
-  ([redirect access jwtoken new?]
+  ([redirect access jwtoken last-token-at]
   (let [page (or redirect "/login")
         jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
-        url (str config/ui-server-url page "?access=" (name access) "&new=" new?)]
+        url (str config/ui-server-url page "?access=" (name access) "&new=" (if last-token-at false true))]
     (timbre/info "Redirecting request to:" url)
     (response/redirect (str url jwt-param)))))
 
@@ -169,7 +167,8 @@
                                               (assoc :slack-id (:id slack-user-data))
                                               (assoc :slack-token (:token slack-user-data))) :slack)]
       (redirect-to-web-ui redirect :team
-              (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))))
+              (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))
+              (:last-token-at user)))
     ;; Need to add the new authed bot to the team and redirect to web UI.
     (let [user (user-res/get-user conn user-id)
 
@@ -207,7 +206,8 @@
                                               (assoc :slack-token (:slack-token slack-response))) :slack)]
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect :team
-        (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))))))
+        (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))
+        (:last-token-at user)))))
 
 (defn- slack-callback-step1
   "
@@ -301,7 +301,8 @@
             (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))))
           ;; All done, send them back to the OC Web UI with a JWToken
           (redirect-to-web-ui redirect redirect-arg
-            (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user))))))
+            (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))
+            (:last-token-at user))))
 
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed)))
