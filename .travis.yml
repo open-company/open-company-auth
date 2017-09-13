@@ -11,10 +11,10 @@ cache:
 before_script:
   - "export JAVA_OPTS=-Xmx512m"
   - "echo $JAVA_OPTS"
-  - lein2 clean
+  - lein clean
 script:
-- lein2 eastwood
-- lein2 kibit
+- lein eastwood
+- lein kibit
 branches:
   only:
   - master
