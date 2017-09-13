@@ -206,6 +206,7 @@
     (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active))
     false))
 
+(declare admin-of)
 (schema/defn ^:always-validate  delete-user!
   "Given the user-id of the user, delete it and return `true` on success."
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]

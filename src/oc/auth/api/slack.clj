@@ -67,6 +67,29 @@
                              (map #(bot-for slack-org-to-bot % []) (vals team-to-slack-orgs)))] ; map of team to bot(s)
     (into {} (remove (comp empty? second) team-to-bots)))) ; remove any team with no bots
 
+(defn- email-for
+  "Get the email for the Slack user with users.info if we don't already have it."
+  [{slack-token :slack-token email :email slack-user-id :slack-id}]
+  (let [response (when-not email (slack-lib/get-user-info slack-token slack-user-id))] ; get users.info if we need it
+    (or email ; return it if we already had it
+      (:email response))))
+
+(defn- logo-url-for
+  "Get the logo for the Slack org with team.info if we don't already have it."
+  [{slack-token :slack-token logo-url :logo-url}]
+  (let [response (when-not logo-url (slack-lib/get-team-info slack-token)) ; get team.info if we need it
+        icon (:icon response)
+        image-default (:image-default icon)]
+    (or logo-url ; return it if we already had it
+      (when-not image-default ; don't return the Slack default
+        (or ; use the highest resolution we have
+          (:image_230 icon)
+          (:image_132 icon)
+          (:image_88 icon)
+          (:image_44 icon)
+          (:image_34 icon)
+          nil))))) ; give up
+
 ;; ----- Actions -----
 
 (defn- create-slack-org-for
@@ -100,15 +123,6 @@
                                 (assoc :status :active)
                                 (assoc :teams (map :team-id teams)))))
 
-(defn- update-user
-  "Update the existing user from their Slack user profile."
-  ([conn slack-user existing-user] (update-user conn slack-user existing-user (:teams existing-user)))
-
-  ([conn slack-user existing-user teams]
-  (let [updated-user (merge existing-user (dissoc (clean-slack-user slack-user) :user-id))]
-    (timbre/info "Updating user:" (:user-id updated-user))
-    (user-res/update-user! conn (:user-id updated-user) updated-user))))
-
 (defun- add-teams 
   "Recursive function to add team access to the user"
 
@@ -121,29 +135,6 @@
           team-id (first additional-teams)]
       (timbre/info "Adding acces to team:" team-id "to user:" user-id)
       (add-teams conn (user-res/add-team conn user-id team-id) (rest additional-teams)))))
-
-(defn- email-for
-  "Get the email for the Slack user with users.info if we don't already have it."
-  [{slack-token :slack-token email :email slack-user-id :slack-id}]
-  (let [response (when-not email (slack-lib/get-user-info slack-token slack-user-id))] ; get users.info if we need it
-    (or email ; return it if we already had it
-      (:email response))))
-
-(defn- logo-url-for
-  "Get the logo for the Slack org with team.info if we don't already have it."
-  [{slack-token :slack-token logo-url :logo-url}]
-  (let [response (when-not logo-url (slack-lib/get-team-info slack-token)) ; get team.info if we need it
-        icon (:icon response)
-        image-default (:image-default icon)]
-    (or logo-url ; return it if we already had it
-      (when-not image-default ; don't return the Slack default
-        (or ; use the highest resolution we have
-          (:image_230 icon)
-          (:image_132 icon)
-          (:image_88 icon)
-          (:image_44 icon)
-          (:image_34 icon)
-          nil))))) ; give up
 
 ;; ----- Slack Request Handling Functions -----
 
@@ -285,7 +276,9 @@
             ;; Add or update the Slack users list of the user
             updated-slack-user (user-res/update-user! conn
                                                       (:user-id user)
-                                                      (update-in user [:slack-users] merge new-slack-user))
+                                                      (-> user
+                                                        (assoc :status "active") ; no longer "pending" (if they were)
+                                                        (update-in [:slack-users] merge new-slack-user)))
             
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-slack-user
