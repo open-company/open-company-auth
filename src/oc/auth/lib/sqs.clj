@@ -66,8 +66,8 @@
 
 ;; ----- SQS Message Creation -----
 
-(schema/defn ^:always-validate ->email-invite [payload from :- (schema/maybe schema/Str)
-                                                 reply-to :- (schema/maybe lib-schema/EmailAddress)] :- EmailInvite
+(schema/defn ^:always-validate ->email-invite :- EmailInvite
+  [payload from :- (schema/maybe schema/Str) reply-to :- (schema/maybe lib-schema/EmailAddress)]
   {:pre [(map? payload)
          (lib-schema/valid-email-address? (:email payload))
          (lib-schema/uuid-string? (:token payload))]}
@@ -82,7 +82,8 @@
     :token-link (token-link invite (:token payload))
   })
 
-(schema/defn ^:always-validate ->slack-invite [payload from :- (schema/maybe schema/Str)] :- SlackInvite
+(schema/defn ^:always-validate ->slack-invite :- SlackInvite
+  [payload from :- (schema/maybe schema/Str)]
   {:pre [(map? payload)
          (schema/validate lib-schema/NonBlankStr (:slack-id payload))
          (schema/validate lib-schema/NonBlankStr (:slack-org-id payload))

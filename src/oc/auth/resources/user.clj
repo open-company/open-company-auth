@@ -101,13 +101,13 @@
   (hashers/derive password {:alg crypto-algo :iterations crypto-algo-iterations}))
 
 (defn password-match?
-  [password password-hash]
   "
   Return true if the provided password hashes to the provided password hash. The provided password hash is in
   the format:
 
   <algorithm used>$<salt used>$<password hash>
   "
+  [password password-hash]
   (if (s/blank? password-hash)
     false
     (hashers/check password password-hash {:limit trusted-algs})))
