@@ -210,6 +210,9 @@
   "Given the user-id of the user, delete it and return `true` on success."
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (try
+    ;; Remove admin roles
+    (doseq [team-id (admin-of conn user-id)] (team-res/remove-admin conn team-id user-id))
+    ;; Remove user
     (db-common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
 

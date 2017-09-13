@@ -8,6 +8,7 @@
 ;; ----- Utility Functions -----
 
 (def team-admin "abcd-1234-abcd")
+(def new-admin "1234-abcd-1234")
 (def team-names ["a" "b" "c"])
 
 (defn- create-teams [conn]
@@ -28,47 +29,33 @@
           
           (fact "team creator is an admin"
             (user-res/admin-of conn team-admin) => (contains team-ids :in-any-order)
-            ;(map #(:admins (team-res/get-team conn %)) team-ids)
-            )
+            (:admins (team-res/get-team conn (first team-ids))) => [team-admin]
+            (:admins (team-res/get-team conn (second team-ids))) => [team-admin]
+            (:admins (team-res/get-team conn (last team-ids))) => [team-admin])
 
-          (future-fact "added admin is an admin")
-        )
-      )
-    )
-  )
-)
-;     (fact "By pinging"
-;       (let [resp (test-utils/api-request :get "/ping" {})]
-;         (:status resp) => 200))
+          (fact "added admin is an admin"
+            (team-res/add-admin conn (first team-ids) new-admin)
+            (user-res/admin-of conn new-admin) => [(first team-ids)]
+            (:admins (team-res/get-team conn (first team-ids))) => (contains [team-admin new-admin] :in-any-order))
 
-;     (facts "By testing errors"
-;       (test-utils/api-request :get "/---error-test---" {}) => (throws Exception)
-;       (let [resp (test-utils/api-request :get "/---500-test---" {})]
-;         (:status resp) => 500))
-    
-;     (fact "By requesting auth-settings anonymously"
-;       (let [resp (test-utils/api-request :get "/" {})
-;             body (json/parse-string (:body resp))]
-;         (:status resp) => 200
-;         (test-utils/response-mime-type resp) => "application/json"
-;         (contains? body "slack") => true
-;         (contains? (body "slack") "links") => true
-;         (contains? body "email") => true
-;         (contains? (body "email") "links") => true))
-    
-;     (future-fact "by requesting auth-settings with an invalid JWToken")
+          (fact "removed admin is not an admin"
+            ;; 2 admins
+            (user-res/admin-of conn new-admin) => [(first team-ids)]
+            (:admins (team-res/get-team conn (first team-ids))) => (contains [team-admin new-admin] :in-any-order)
+            ;; remove
+            (team-res/remove-admin conn (first team-ids) new-admin)
+            ;; 1 admin
+            (user-res/admin-of conn new-admin) => []
+            (:admins (team-res/get-team conn (first team-ids))) => [team-admin])
 
-;     (future-fact "by requesting auth-settings with an old JWToken")
-
-;     (future-fact "by requesting auth-settings with a Slack JWToken")
-
-;     (future-fact "by requesting auth-settings with an Email JWToken")
-
-;     (fact "by requesting token debugging with /test-token"
-;       (let [resp (test-utils/api-request :get "/test-token" {})
-;             body (json/parse-string (:body resp))]
-;         (:status resp) => 200
-;         (contains? body "jwt-token") => true
-;         (contains? body "jwt-verified") => true
-;         (contains? body "jwt-decoded") => true
-;         (body "jwt-verified") => true))))
+          (fact "deleted user is not an admin"
+            ;; is an admin
+            (:admins (team-res/get-team conn (first team-ids))) => [team-admin]
+            (:admins (team-res/get-team conn (second team-ids))) => [team-admin]
+            (:admins (team-res/get-team conn (last team-ids))) => [team-admin]            
+            ;; delete user
+            (user-res/delete-user! conn team-admin)
+            ;; not an admin
+            (:admins (team-res/get-team conn (first team-ids))) => []
+            (:admins (team-res/get-team conn (second team-ids))) => []
+            (:admins (team-res/get-team conn (last team-ids))) => []))))))
