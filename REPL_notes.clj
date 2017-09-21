@@ -1,8 +1,10 @@
 ;; productive set of development namespaces
+(require '[rethinkdb.query :as r])
 (require '[schema.core :as schema])
-(require '[oc.lib.jwt :as jwt] :reload)
-(require '[oc.lib.db.common :as common] :reload)
-(require '[oc.lib.api.common :as api-common] :reload)
+(require '[oc.lib.api.common :as api-common])
+(require '[oc.lib.db.common :as common])
+(require '[oc.lib.jwt :as jwt])
+(require '[oc.auth.lib.jwtoken :as jwtoken] :reload)
 (require '[oc.auth.app :as app] :reload)
 (require '[oc.auth.slack-auth :as slack] :reload)
 (require '[oc.auth.email-auth :as email] :reload)

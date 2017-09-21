@@ -7,7 +7,7 @@
             [oc.auth.config :as config]))
 
 ;; SQS message types
-(def invite :invite)
+(def invite "invite")
 (def reset "reset")
 (def verify "verify")
 
@@ -23,7 +23,7 @@
 
 (def EmailInvite
   {
-    :type (schema/pred #(= (name invite) %))
+    :type (schema/enum invite)
     :from schema/Str ; inviter's name
     :reply-to schema/Str ; inviter's email address
     :to lib-schema/EmailAddress ; invitee's email address
@@ -40,27 +40,34 @@
     :token-link lib-schema/NonBlankStr
    })
 
-(def SlackInvite
+(def BotTrigger 
+  "All Slack bot triggers have the following properties."
   {
-    :script {
-      :id (schema/pred #(= invite %))
-      :params {
-        :from schema/Str ; inviter's name
-        :from-id (schema/maybe schema/Str) ; inviter's Slack ID
-        :first-name schema/Str ; invitee's first name
-        :org-name schema/Str
-        :url lib-schema/NonBlankStr
-      }
+    :type (schema/enum invite)
+    :bot {
+       :token lib-schema/NonBlankStr
+       :id lib-schema/NonBlankStr
     }
-    :receiver {:id lib-schema/NonBlankStr ; invitee's Slack ID 
-               :type (schema/pred #(= receiver %))}
-    :bot {:token lib-schema/NonBlankStr}
-  })
+    :receiver {
+      :type (schema/enum :all-members :user :channel)
+      :slack-org-id lib-schema/NonBlankStr
+      (schema/optional-key :id) schema/Str
+  }})
+
+(def SlackInvite
+  "A Slack bot trigger to invite a user."
+  (merge BotTrigger {
+    :from schema/Str ; inviter's name
+    :from-id (schema/maybe schema/Str) ; inviter's Slack ID
+    :first-name schema/Str ; invitee's first name
+    :org-name schema/Str
+    :url lib-schema/NonBlankStr
+  }))
 
 ;; ----- SQS Message Creation -----
 
-(schema/defn ^:always-validate ->email-invite [payload from :- (schema/maybe schema/Str)
-                                                 reply-to :- (schema/maybe lib-schema/EmailAddress)]
+(schema/defn ^:always-validate ->email-invite :- EmailInvite
+  [payload from :- (schema/maybe schema/Str) reply-to :- (schema/maybe lib-schema/EmailAddress)]
   {:pre [(map? payload)
          (lib-schema/valid-email-address? (:email payload))
          (lib-schema/uuid-string? (:token payload))]}
@@ -75,22 +82,25 @@
     :token-link (token-link invite (:token payload))
   })
 
-(schema/defn ^:always-validate ->slack-invite [payload from :- (schema/maybe schema/Str)]
+(schema/defn ^:always-validate ->slack-invite :- SlackInvite
+  [payload from :- (schema/maybe schema/Str)]
   {:pre [(map? payload)
          (schema/validate lib-schema/NonBlankStr (:slack-id payload))
          (schema/validate lib-schema/NonBlankStr (:slack-org-id payload))
-         (schema/validate lib-schema/NonBlankStr (:bot-token payload))]}
+         (schema/validate lib-schema/NonBlankStr (:bot-token payload))
+         (schema/validate lib-schema/NonBlankStr (:bot-user-id payload))]}
   {
-    :script {:id invite
-             :params {
-                :from (or from "")
-                :from-id (:from-id payload)
-                :org-name (or (:org-name payload) "")
-                :first-name (or (:first-name payload) "")
-                :url config/ui-server-url}}
-    :receiver {:id (:slack-id payload)
-               :type receiver}
-    :bot {:token (:bot-token payload)}
+    :type invite
+    :from (or from "")
+    :from-id (:from-id payload)
+    :org-name (or (:org-name payload) "")
+    :first-name (or (:first-name payload) "")
+    :url config/ui-server-url
+    :receiver {:slack-org-id (:slack-org-id payload)
+               :type receiver
+               :id (:slack-id payload)}
+    :bot {:token (:bot-token payload)
+          :id (:bot-user-id payload)}
   })
 
 (defn ->token-auth [payload]

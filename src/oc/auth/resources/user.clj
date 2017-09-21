@@ -31,12 +31,16 @@
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
           :teams [lib-schema/UniqueID]
+
           (schema/optional-key :one-time-token) lib-schema/UUIDStr
-          :email (schema/maybe lib-schema/EmailAddress)
-          (schema/optional-key :password-hash) schema/Str
+
+          :email (schema/maybe lib-schema/EmailAddress)          
+          (schema/optional-key :password-hash) lib-schema/NonBlankStr
+
           :first-name schema/Str
           :last-name schema/Str
-          :avatar-url (schema/maybe schema/Str)}
+          :avatar-url (schema/maybe schema/Str)
+          (schema/optional-key :last-token-at) lib-schema/ISO8601}
          lib-schema/slack-users))
 
 (def User "User resource as stored in the DB."
@@ -83,15 +87,30 @@
 
 ;; ----- Password based authentication -----
 
-(def ^:private crypto-algo "bcrypt+sha512$")
+(def ^:private crypto-algo :bcrypt+sha512)
+(def ^:private trusted-algs #{:bcrypt+sha512}) ; if we change algos (above), add the additional algo to this list
+(def ^:private crypto-algo-iterations 12)
 
-(defn- password-hash [password]
-  (s/join "$" (rest (s/split (hashers/derive password {:alg :bcrypt+sha512}) #"\$"))))
+(defn- password-hash
+  "
+  Create a crypto hash from the provided password as a string in the format:
 
-(defn password-match? [password password-hash]
+  <algorithm used>$<salt used>$<password hash>
+  "
+  [password]
+  (hashers/derive password {:alg crypto-algo :iterations crypto-algo-iterations}))
+
+(defn password-match?
+  "
+  Return true if the provided password hashes to the provided password hash. The provided password hash is in
+  the format:
+
+  <algorithm used>$<salt used>$<password hash>
+  "
+  [password password-hash]
   (if (s/blank? password-hash)
     false
-    (hashers/check password (str crypto-algo password-hash) {:alg :bcrypt+sha512})))
+    (hashers/check password password-hash {:limit trusted-algs})))
 
 (declare get-user-by-email)
 (defn authenticate? [conn email password]
@@ -120,7 +139,7 @@
         (update :first-name #(or % ""))
         (update :last-name #(or % ""))
         (update :avatar-url #(or % ""))
-        (assoc :status "pending")
+        (assoc :status :pending)
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
 
@@ -137,7 +156,7 @@
         teams (if new-team [(:team-id new-team)] existing-teams)
         user-with-teams (assoc user :teams teams)
         user-with-status (if new-team
-                            (assoc user-with-teams :status "unverified") ; new team, so no need to pre-verify
+                            (assoc user-with-teams :status :unverified) ; new team, so no need to pre-verify
                             user-with-teams)]
     (db-common/create-resource conn table-name user-with-status (db-common/current-timestamp))))
 
@@ -188,10 +207,14 @@
     (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active))
     false))
 
+(declare admin-of)
 (schema/defn ^:always-validate  delete-user!
   "Given the user-id of the user, delete it and return `true` on success."
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (try
+    ;; Remove admin roles
+    (doseq [team-id (admin-of conn user-id)] (team-res/remove-admin conn team-id user-id))
+    ;; Remove user
     (db-common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
 

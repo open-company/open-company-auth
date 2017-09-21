@@ -8,11 +8,13 @@
             [oc.lib.hateoas :as hateoas]
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
+            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.resources.user :as user-res]))
+
 (def slack-props [:name :slack-id :slack-org-id])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
@@ -106,10 +108,10 @@
 
 (schema/defn ^:always-validate auth-response
   "Return a JWToken for the user, or and a Location header."
-  [user :- user-res/UserRep source :- schema/Keyword]
+  [conn user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-user (jwt-props-for user source)
         location (url (:user-id user))]
-    (api-common/location-response location (jwt/generate jwt-user config/passphrase) jwt/media-type)))
+    (api-common/location-response location (jwtoken/generate conn jwt-user) jwt/media-type)))
 
 (schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
