@@ -53,7 +53,7 @@
 
 (defn echo-config [port]
   (println (str "\n"
-    "Running on port: " c/auth-server-port "\n"
+    "Running on port: " port "\n"
     "Database: " c/db-name "\n"
     "Database pool: " c/db-pool-size "\n"
     "AWS SQS email queue: " c/aws-sqs-email-queue "\n"

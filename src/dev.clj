@@ -25,7 +25,10 @@
   (alter-var-root #'system (fn [s] (when s (component/stop s)))))
 
 (defn go
-  ([] (go c/auth-server-port))
+
+  ([]
+  (go c/auth-server-port))
+  
   ([port]
   (init port)
   (start)
