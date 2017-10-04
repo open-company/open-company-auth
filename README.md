@@ -174,20 +174,22 @@ A secret is shared between the [Storage service](https://github.com/open-company
 
 A [Slack App](https://api.slack.com/apps) needs to be created for OAuth authentication. For local development, create a Slack app with a Redirect URI of `http://localhost:3003/slack-oauth` and get the client ID and secret from the Slack app you create.
 
-An [AWS S3](https://aws.amazon.com/s3/) bucket is used to cache bot tokens. Setup an S3 bucket and key/secret access to the bucket using the AWS Web Console or API.
-
-Make sure you update the section in `project.clj` that looks like this to contain your actual JWT, Slack, and AWS S3 secrets:
+Make sure you update the `CHANGE-ME` items in the section of the `project.clj` that looks like this to contain your actual JWT, Slack, and AWS secrets:
 
 ```clojure
 ;; Dev environment and dependencies
 :dev [:qa {
   :env ^:replace {
+    :db-name "open_company_auth_dev"
+    :liberator-trace "true" ; liberator debug data in HTTP response headers
     :open-company-auth-passphrase "this_is_a_dev_secret" ; JWT secret
+    :hot-reload "true" ; reload code when changed on the file system
     :open-company-slack-client-id "CHANGE-ME"
     :open-company-slack-client-secret "CHANGE-ME"
     :aws-access-key-id "CHANGE-ME"
     :aws-secret-access-key "CHANGE-ME"
     :aws-secrets-bucket "CHANGE-ME"
+    :log-level "debug"
   }
 ```
 
