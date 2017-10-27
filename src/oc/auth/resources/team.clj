@@ -112,7 +112,6 @@
   "Given the team-id of the team, delete it and return `true` on success."
   [conn team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  ;; TODO remove team from users
   (try
     (db-common/delete-resource conn table-name team-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no team to delete

@@ -13,7 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.9.0-beta1"]
+    [org.clojure/clojure "1.9.0-beta3"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.3.5"]
     [http-kit "2.3.0-alpha4"] ; Web client/server http://http-kit.org/
@@ -29,7 +29,7 @@
     ;; Ring logging https://github.com/nberger/ring-logger-timbre
     ;; NB: com.taoensso/encore pulled in by oc.lib
     ;; NB: com.taoensso/timbre pulled in by oc.lib
-    [ring-logger-timbre "0.7.5" :exclusions [com.taoensso/encore com.taoensso/timbre]] 
+    [ring-logger-timbre "0.7.6" :exclusions [com.taoensso/encore com.taoensso/timbre]] 
     ;; Web routing https://github.com/weavejester/compojure
     [compojure "1.6.0"]
     ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
@@ -41,7 +41,7 @@
     ;; Authentication for ring https://github.com/funcool/buddy-auth
     [buddy/buddy-auth "2.1.0"]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "0.4.2"]
+    [zprint "0.4.4"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     [clj-http "3.7.0"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
@@ -50,7 +50,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.14.5" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.14.7" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -94,7 +94,7 @@
         ;; Example-based testing https://github.com/marick/lein-midje
         [lein-midje "3.2.1"]
         ;; Linter https://github.com/jonase/eastwood
-        [jonase/eastwood "0.2.4"]
+        [jonase/eastwood "0.2.6-beta2"]
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
@@ -124,13 +124,13 @@
       :plugins [
         ;; Check for code smells https://github.com/dakrone/lein-bikeshed
         ;; NB: org.clojure/tools.cli is pulled in by lein-kibit
-        [lein-bikeshed "0.4.1" :exclusions [org.clojure/tools.cli]] 
+        [lein-bikeshed "0.5.0" :exclusions [org.clojure/tools.cli]] 
         ;; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-checkall "0.1.1"]
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint
         [lein-pprint "1.1.2"]
         ;; Check for outdated dependencies https://github.com/xsc/lein-ancient
-        [lein-ancient "0.6.12"]
+        [lein-ancient "0.6.14"]
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-spell "0.1.0"]
         ;; Dead code finder https://github.com/venantius/yagni
@@ -138,7 +138,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "0.3.2" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "0.3.4" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 
