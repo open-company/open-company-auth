@@ -13,7 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.9.0-RC1"]
+    [org.clojure/clojure "1.9.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.3.5"]
     [http-kit "2.3.0-alpha4"] ; Web client/server http://http-kit.org/
@@ -41,7 +41,7 @@
     ;; Authentication for ring https://github.com/funcool/buddy-auth
     [buddy/buddy-auth "2.1.0"]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "0.4.4"]
+    [zprint "0.4.5"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     [clj-http "3.7.0"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
@@ -50,7 +50,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.14.7" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.14.8" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -68,7 +68,7 @@
   ]
 
   :plugins [
-    [lein-ring "0.12.1"]
+    [lein-ring "0.12.2"]
     [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
@@ -118,7 +118,6 @@
         :open-company-slack-client-secret "CHANGE-ME"
         :aws-access-key-id "CHANGE-ME"
         :aws-secret-access-key "CHANGE-ME"
-        :aws-secrets-bucket "CHANGE-ME"
         :log-level "debug"
       }
       :plugins [
@@ -138,7 +137,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "0.3.5" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "0.3.6" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 

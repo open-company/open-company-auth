@@ -187,7 +187,6 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :open-company-slack-client-secret "CHANGE-ME"
     :aws-access-key-id "CHANGE-ME"
     :aws-secret-access-key "CHANGE-ME"
-    :aws-secrets-bucket "CHANGE-ME"
     :log-level "debug"
   }
 ```
