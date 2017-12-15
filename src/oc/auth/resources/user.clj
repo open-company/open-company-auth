@@ -28,6 +28,10 @@
   "
   #{:pending :unverified :active})
 
+(def digest-medium #{:email :slack})
+
+(def digest-frequency #{:daily :weekly :never})
+
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
           :teams [lib-schema/UniqueID]
@@ -40,6 +44,12 @@
           :first-name schema/Str
           :last-name schema/Str
           :avatar-url (schema/maybe schema/Str)
+
+          (schema/optional-key :time-zone) schema/Str ; want it missing at first so we can default it on the client
+
+          :digest-medium (schema/pred #(digest-medium (keyword %)))
+          :digest-frequency (schema/pred #(digest-frequency (keyword %)))
+
           (schema/optional-key :last-token-at) lib-schema/ISO8601}
          lib-schema/slack-users))
 
@@ -139,6 +149,8 @@
         (update :first-name #(or % ""))
         (update :last-name #(or % ""))
         (update :avatar-url #(or % ""))
+        (update :digest-frequency #(or % :daily))
+        (update :digest-medium #(or % :email)) ; lowest common denominator
         (assoc :status :pending)
         (assoc :created-at ts)
         (assoc :updated-at ts)))))

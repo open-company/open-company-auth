@@ -1,0 +1,20 @@
+(ns oc.auth.db.migrations.add-digest-props
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.lib.db.common :as db-common]
+            [oc.auth.config :as config]
+            [oc.auth.resources.user :as user-res]))
+
+(defn up [conn]
+
+  (println "Add new properties to existing users...")
+  (let [users (db-common/read-resources conn user-res/table-name)]
+    (println "Updating" (count users) "existing users...")
+    (doseq [user users]
+      (-> (r/table user-res/table-name)
+        (r/get (user-res/primary-key user))
+        (r/update (r/fn [resource]
+          {:digest-frequency :daily
+           :digest-medium :email}))
+        (r/run conn))))
+  true) ; return true on success
