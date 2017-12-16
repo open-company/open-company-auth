@@ -119,7 +119,7 @@
   "Create a new user for the specified Slack user."
   [conn new-user teams]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
-  (user-res/create-user! conn (-> (user-res/->user new-user)
+  (user-res/create-user! conn (-> new-user
                                 (assoc :status :active)
                                 (assoc :teams (map :team-id teams)))))
 

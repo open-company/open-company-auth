@@ -16,7 +16,9 @@
             [oc.auth.resources.user :as user-res]))
 
 (def slack-props [:name :slack-id :slack-org-id])
-(def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at :slack-users])
+(def oc-props [:user-id :first-name :last-name :email :avatar-url
+               :digest-frequency :digest-medium :timezone
+               :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
@@ -116,8 +118,7 @@
 (schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
   [team-id :- lib-schema/UniqueID user]
-  {:pre [(map? user)
-         (schema/validate user-res/User (dissoc user :admin?))]}
+  {:pre [(map? user)]}
   (let [user-id (:user-id user)]
     (-> user
       (select-keys (concat representation-props [:admin? :status]))
