@@ -82,11 +82,10 @@
       }
       :dependencies [
         ;; Example-based testing https://github.com/marick/Midje
-        ;; NB: org.clojure/tools.macro is pulled in manually
         ;; NB: clj-time is pulled in by oc.lib
         ;; NB: joda-time is pulled in by oc.lib via clj-time
         ;; NB: commons-codec pulled in by oc.lib
-        [midje "1.9.0" :exclusions [joda-time org.clojure/tools.macro clj-time commons-codec]] 
+        [midje "1.9.2-alpha2" :exclusions [joda-time clj-time commons-codec]] 
         ;; Test Ring requests https://github.com/weavejester/ring-mock
         [ring-mock "0.1.5"]
       ]
