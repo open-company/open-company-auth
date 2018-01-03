@@ -764,8 +764,7 @@ TBD.
 
 Users are stored as documents in the `users` table of the `open_company_auth` RethinkDB database.
 
-In the case of a Slack user, `owner` and `admin` properties have to do with their privilages in the
-Slack organization. An example stored Slack user:
+In the case of a Slack user, `owner` and `admin` properties have to do with their privileges in the Slack organization. An example stored Slack user:
 
 ```json
 {
