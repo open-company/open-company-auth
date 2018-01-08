@@ -79,13 +79,6 @@
       (delete-link user-id)
       teams-link])))
 
-(defun- name-for 
-  ([user] (name-for (:first-name user) (:last-name user)))
-  ([first-name :guard s/blank? last-name :guard s/blank?] "")
-  ([first-name last-name :guard s/blank?] first-name)
-  ([first-name :guard s/blank? last-name] last-name)
-  ([first-name last-name] (str first-name " " last-name)))
-
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-props (zipmap jwt-props (map user jwt-props))
@@ -104,7 +97,7 @@
                             (assoc bot-props :slack-users (:slack-users user))
                             bot-props)]
     (-> slack-users-props
-      (assoc :name (name-for user))
+      (assoc :name (jwt/name-for user))
       (assoc :auth-source source)
       (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
 

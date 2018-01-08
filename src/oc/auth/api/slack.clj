@@ -7,8 +7,9 @@
             [ring.util.response :as response]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
-            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.lib.slack :as slack-lib]
+            [oc.lib.jwt :as lib-jwt]
+            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.lib.slack :as slack]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
@@ -28,44 +29,6 @@
   "Remove properties from a user that are not needed for a JWToken."
   [user]
   (dissoc user :created-at :updated-at :status))
-
-(defun- bot-for
-  "
-  Given a Slack org resource, return the bot properties suitable for use in a JWToken, or nil if there's no bot
-  for the Slack org.
-
-  Or, given a map of Slack orgs to their bots, and a sequence of Slack orgs, return a sequence of bots.
-  "
-  ;; Single Slack org case
-  ([slack-org]
-  (when (and (:bot-user-id slack-org) (:bot-token slack-org))
-    ;; Extract and rename the keys for JWToken use
-    (select-keys
-      (clojure.set/rename-keys slack-org {:bot-user-id :id :bot-token :token})
-      [:slack-org-id :id :token])))
-
-  ;; Empty case, no more Slack orgs
-  ([_bots _slack-orgs :guard empty? results :guard empty?] nil)
-  ([_bots _slack-orgs :guard empty? results] (remove nil? results))
-
-  ;; Many Slack orgs case, recursively get the bot for each org one by one
-  ([bots slack-orgs results]
-  (bot-for bots (rest slack-orgs) (conj results (get bots (first slack-orgs))))))
-
-(defn bots-for
-  "Given a user, return a map of configured bots for each of the user's teams, keyed by team-id."
-  [conn {team-ids :teams}]
-  (let [teams (team-res/list-teams-by-ids conn team-ids [:slack-orgs]) ; teams the user is a member of
-        teams-with-slack (remove #(empty? (:slack-orgs %)) teams) ; teams with a Slack org
-        slack-org-ids (distinct (flatten (map :slack-orgs teams-with-slack))) ; distinct Slack orgs
-        slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids [:bot-user-id :bot-token]) ; bot lookup
-        bots (remove nil? (map bot-for slack-orgs)) ; remove slack orgs with no bots
-        slack-org-to-bot (zipmap (map :slack-org-id bots) bots) ; map of slack org to its bot
-        team-to-slack-orgs (zipmap (map :team-id teams-with-slack)
-                                   (map :slack-orgs teams-with-slack)) ; map of team to its Slack org(s)
-        team-to-bots (zipmap (keys team-to-slack-orgs)
-                             (map #(bot-for slack-org-to-bot % []) (vals team-to-slack-orgs)))] ; map of team to bot(s)
-    (into {} (remove (comp empty? second) team-to-bots)))) ; remove any team with no bots
 
 (defn- email-for
   "Get the email for the Slack user with users.info if we don't already have it."
@@ -167,7 +130,7 @@
                                               (assoc :slack-id (:id slack-user-data))
                                               (assoc :slack-token (:token slack-user-data))) :slack)]
       (redirect-to-web-ui redirect :team
-              (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))
+              (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
               (:last-token-at user)))
     ;; Need to add the new authed bot to the team and redirect to web UI.
     (let [user (user-res/get-user conn user-id)
@@ -206,7 +169,7 @@
                                               (assoc :slack-token (:slack-token slack-response))) :slack)]
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect :team
-        (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))
+        (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
         (:last-token-at user)))))
 
 (defn- slack-callback-step1
@@ -301,7 +264,7 @@
             (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))))
           ;; All done, send them back to the OC Web UI with a JWToken
           (redirect-to-web-ui redirect redirect-arg
-            (jwtoken/generate conn (assoc jwt-user :slack-bots (bots-for conn jwt-user)))
+            (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
             (:last-token-at user))))
 
       ;; Error came back from Slack, send them back to the OC Web UI
@@ -333,7 +296,7 @@
                                       (assoc :admin (:admin user))
                                       (assoc :slack-id slack-id)
                                       (assoc :slack-token slack-token)
-                                      (assoc :slack-bots (bots-for conn user)))
+                                      (assoc :slack-bots (lib-jwt/bots-for conn user)))
         :slack))
     (do
       (timbre/warn "Invalid access token" slack-token "for user" user-id)

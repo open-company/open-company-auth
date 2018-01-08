@@ -17,4 +17,7 @@
           {:digest-frequency :daily
            :digest-medium :email}))
         (r/run conn))))
+
+  (println (m/create-index conn user-res/table-name "digest-frequency"))
+
   true) ; return true on success

@@ -219,13 +219,12 @@
     (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active))
     false))
 
-(declare admin-of)
 (schema/defn ^:always-validate  delete-user!
   "Given the user-id of the user, delete it and return `true` on success."
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (try
     ;; Remove admin roles
-    (doseq [team-id (admin-of conn user-id)] (team-res/remove-admin conn team-id user-id))
+    (doseq [team-id (jwt/admin-of conn user-id)] (team-res/remove-admin conn team-id user-id))
     ;; Remove user
     (db-common/delete-resource conn table-name user-id)
     (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
@@ -273,12 +272,7 @@
   (if-let [user (get-user conn user-id)]
     (db-common/remove-from-set conn table-name user-id "teams" team-id)))
 
-(schema/defn ^:always-validate admin-of :- (schema/maybe [lib-schema/UniqueID])
-  "Given the user-id of the user, return a sequence of team-ids for the teams the user is an admin of."
-  [conn user-id :- lib-schema/UniqueID]
-  {:pre [(db-common/conn? conn)]}
-  (let [teams (team-res/list-teams-by-index conn :admins user-id)]
-    (vec (map :team-id teams))))
+(defn admin-of [conn user-id] (jwt/admin-of conn user-id)) ; alias
 
 ;; ----- Collection of users -----
 
