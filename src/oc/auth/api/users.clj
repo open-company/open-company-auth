@@ -168,7 +168,7 @@
                           (user-rep/auth-response conn
                             (-> user
                               (assoc :admin admin-teams)
-                              (assoc :slack-bots (slack-api/bots-for conn user)))
+                              (assoc :slack-bots (jwt/bots-for conn user)))
                             :email)))))
 
 ;; A resource for creating users by email
@@ -211,7 +211,7 @@
                                 (api-common/blank-response)
                                 ;; respond w/ JWToken and location
                                 (user-rep/auth-response conn
-                                  (assoc user :slack-bots (slack-api/bots-for conn user))
+                                  (assoc user :slack-bots (jwt/bots-for conn user))
                                   :email)))))
 
 
@@ -293,7 +293,7 @@
                         ;; Email token - respond w/ JWToken and location
                         "email" (let [user (:existing-user ctx)]
                                   (user-rep/auth-response conn
-                                    (assoc user :slack-bots (slack-api/bots-for conn user))
+                                    (assoc user :slack-bots (jwt/bots-for conn user))
                                     :email))
 
                         ;; Slack token - defer to Slack API handler

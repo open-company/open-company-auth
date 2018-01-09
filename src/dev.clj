@@ -26,8 +26,7 @@
 
 (defn go
 
-  ([]
-  (go c/auth-server-port))
+  ([] (go c/auth-server-port))
   
   ([port]
   (init port)

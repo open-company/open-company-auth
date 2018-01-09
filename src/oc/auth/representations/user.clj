@@ -16,7 +16,9 @@
             [oc.auth.resources.user :as user-res]))
 
 (def slack-props [:name :slack-id :slack-org-id])
-(def oc-props [:user-id :first-name :last-name :email :avatar-url :created-at :updated-at :slack-users])
+(def oc-props [:user-id :first-name :last-name :email :avatar-url
+               :digest-frequency :digest-medium :timezone
+               :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
@@ -77,13 +79,6 @@
       (delete-link user-id)
       teams-link])))
 
-(defun- name-for 
-  ([user] (name-for (:first-name user) (:last-name user)))
-  ([first-name :guard s/blank? last-name :guard s/blank?] "")
-  ([first-name last-name :guard s/blank?] first-name)
-  ([first-name :guard s/blank? last-name] last-name)
-  ([first-name last-name] (str first-name " " last-name)))
-
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-props (zipmap jwt-props (map user jwt-props))
@@ -102,7 +97,7 @@
                             (assoc bot-props :slack-users (:slack-users user))
                             bot-props)]
     (-> slack-users-props
-      (assoc :name (name-for user))
+      (assoc :name (jwt/name-for user))
       (assoc :auth-source source)
       (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
 
@@ -116,8 +111,7 @@
 (schema/defn ^:always-validate render-user-for-collection
   "Create a map of the user for use in a collection in the REST API"
   [team-id :- lib-schema/UniqueID user]
-  {:pre [(map? user)
-         (schema/validate user-res/User (dissoc user :admin?))]}
+  {:pre [(map? user)]}
   (let [user-id (:user-id user)]
     (-> user
       (select-keys (concat representation-props [:admin? :status]))

@@ -2,8 +2,7 @@
 
 [![MPL License](http://img.shields.io/badge/license-MPL-blue.svg?style=flat)](https://www.mozilla.org/MPL/2.0/)
 [![Build Status](https://travis-ci.org/open-company/open-company-auth.svg)](https://travis-ci.org/open-company/open-company-auth)
-[![Dependency Status](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e/badge.svg?style=flat)](https://www.versioneye.com/user/projects/562129c236d0ab0021000a0e)
-[![Roadmap on Trello](http://img.shields.io/badge/roadmap-trello-blue.svg?style=flat)](https://trello.com/b/3naVWHgZ/open-company-development)
+[![Dependencies Status](https://versions.deps.co/open-company/open-company-auth/status.svg)](https://versions.deps.co/open-company/open-company-auth)
 
 ## Background
 
@@ -43,7 +42,7 @@ Most of the dependencies are internal, meaning [Leiningen](https://github.com/te
 
 * [Java 8](http://www.oracle.com/technetwork/java/javase/downloads/index.html) - a Java 8 JRE is needed to run Clojure
 * [Leiningen](https://github.com/technomancy/leiningen) - Clojure's build and dependency management tool
-* [RethinkDB](http://rethinkdb.com/) v2.3.5+ - a multi-modal (document, key/value, relational) open source NoSQL database
+* [RethinkDB](http://rethinkdb.com/) v2.3.6+ - a multi-modal (document, key/value, relational) open source NoSQL database
 
 #### Java
 
@@ -188,7 +187,6 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :open-company-slack-client-secret "CHANGE-ME"
     :aws-access-key-id "CHANGE-ME"
     :aws-secret-access-key "CHANGE-ME"
-    :aws-secrets-bucket "CHANGE-ME"
     :log-level "debug"
   }
 ```
@@ -766,8 +764,7 @@ TBD.
 
 Users are stored as documents in the `users` table of the `open_company_auth` RethinkDB database.
 
-In the case of a Slack user, `owner` and `admin` properties have to do with their privilages in the
-Slack organization. An example stored Slack user:
+In the case of a Slack user, `owner` and `admin` properties have to do with their privileges in the Slack organization. An example stored Slack user:
 
 ```json
 {
@@ -870,4 +867,4 @@ Please note that this project is released with a [Contributor Code of Conduct](h
 
 Distributed under the [Mozilla Public License v2.0](http://www.mozilla.org/MPL/2.0/).
 
-Copyright © 2015-2017 OpenCompany, LLC
+Copyright © 2015-2018 OpenCompany, LLC
