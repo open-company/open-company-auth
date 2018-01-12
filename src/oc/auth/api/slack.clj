@@ -103,7 +103,7 @@
 
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
-  ([redirect access] (redirect-to-web-ui redirect access nil))
+  ([redirect access] (redirect-to-web-ui redirect access nil :not-a-new-user)) ; nil = no jwtoken
   
   ([redirect access jwtoken last-token-at]
   (let [page (or redirect "/login")
