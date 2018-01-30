@@ -130,7 +130,7 @@
     (let [user-id (:user-id user)
           one-time-token (str (java.util.UUID/randomUUID))]
       (timbre/info "Adding one-time-token for:" user-id "(" email ")")
-      (user-res/update-user! conn user-id {:one-time-token one-time-token})
+      (user-res/add-token conn user-id one-time-token)
       (timbre/info "Sending password reset request for:" user-id "(" email ")")
       (sqs/send! sqs/TokenAuth
                  (sqs/->token-auth {:type :reset :email email :token one-time-token})
