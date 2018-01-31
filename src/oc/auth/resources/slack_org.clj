@@ -15,6 +15,7 @@
 (def SlackOrg {
   :slack-org-id lib-schema/NonBlankStr
   :name lib-schema/NonBlankStr
+  (schema/optional-key :slack-domain) lib-schema/NonBlankStr
   (schema/optional-key :bot-user-id) lib-schema/NonBlankStr
   (schema/optional-key :bot-token) lib-schema/NonBlankStr
   :created-at lib-schema/ISO8601

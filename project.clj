@@ -50,7 +50,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.14.15" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.14.16" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -102,7 +102,7 @@
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.0" :exclusions [org.clojure/tools.reader]]
         ;; Not used directly, dependency of lein-kibit and rewrite-clj https://github.com/clojure/tools.reader
-        [org.clojure/tools.reader "1.1.3.1"]
+        [org.clojure/tools.reader "1.2.1"]
       ]
     }
 
@@ -122,7 +122,7 @@
       :plugins [
         ;; Check for code smells https://github.com/dakrone/lein-bikeshed
         ;; NB: org.clojure/tools.cli is pulled in by lein-kibit
-        [lein-bikeshed "0.5.0" :exclusions [org.clojure/tools.cli]] 
+        [lein-bikeshed "0.5.1" :exclusions [org.clojure/tools.cli]] 
         ;; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-checkall "0.1.1"]
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint

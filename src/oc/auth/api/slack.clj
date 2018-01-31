@@ -53,6 +53,20 @@
           (:image_34 icon)
           nil))))) ; give up
 
+(defn- slack-domain-for
+  "Get the Slack domain for the Slack org with team.info if we don't already have it."
+  [{slack-token :slack-token domain :slack-domain :as slack-org}]
+  (if domain
+    slack-org ; we already have it
+    (do
+      (timbre/info "Retrieving Slack domain from team.info with:" slack-token)
+      (let [response (slack-lib/get-team-info slack-token)
+            slack-domain (:domain response)]
+        (timbre/info "team.info response:" response)
+        (if slack-domain ; it's possible we don't get a response to team.info due to permissions
+          (assoc slack-org :slack-domain slack-domain)
+          slack-org)))))
+
 ;; ----- Actions -----
 
 (defn- create-slack-org-for
@@ -60,13 +74,15 @@
   [conn {slack-org-id :slack-org-id :as slack-user}]
   (timbre/info "Creating new Slack org for:" slack-org-id)
   (slack-org-res/create-slack-org! conn 
-    (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :bot]))))
+    (slack-org-res/->slack-org
+      (select-keys (slack-domain-for slack-user) [:slack-org-id :slack-org-name :bot :slack-domain]))))
 
 (defn- update-slack-org-for
   "Update the existing Slack org for the specified Slack user."
   [conn slack-user {slack-org-id :slack-org-id :as existing-slack-org}]
   (timbre/info "Updating Slack org:" slack-org-id)
-  (let [updated-slack-org (merge existing-slack-org (select-keys slack-user [:slack-org-name :bot]))]
+  (let [updated-slack-org (merge (slack-domain-for existing-slack-org)
+                            (select-keys slack-user [:slack-org-name :bot]))]
     (slack-org-res/update-slack-org! conn slack-org-id updated-slack-org)))
 
 (defn- create-team-for
@@ -120,7 +136,8 @@
   (if (or error                             ; user denied bot auth
           (false? (first slack-response))   ; something went wrong with bot auth
           (not= state-slack-org-id (:slack-org-id slack-response))) ; user granted bot for a different team
-    ; User didn't grant bot permissions, need to go back to UI with only first step response
+    
+    ;; User didn't grant bot permissions, need to go back to UI with only first step response
     (let [user (user-res/get-user conn user-id)
           slack-user-data (get-in user [:slack-users (keyword state-slack-org-id)])
           ;; Create a JWToken from the user for the response
@@ -132,12 +149,14 @@
       (redirect-to-web-ui redirect :team
               (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
               (:last-token-at user)))
-    ;; Need to add the new authed bot to the team and redirect to web UI.
-    (let [user (user-res/get-user conn user-id)
+    
+    ;; User granted bot permission, so need to add the new authed bot to the team and redirect to web UI.
+    (let [user (user-res/get-user conn user-id) ; existing user
 
-          ;; Get existing Slack org for this auth sequence, or create one if it's never been seen before
-          existing-slack-org (slack-org-res/get-slack-org conn state-slack-org-id) ; existing Slack org?
+          ;; Get existing Slack org for this auth sequence and update it with the bot
+          existing-slack-org (slack-org-res/get-slack-org conn state-slack-org-id) ; existing Slack org
           slack-org (update-slack-org-for conn slack-response existing-slack-org) ; update the Slack org
+          
           ;; Get the relevant teams
 
           ;; teams already exists for this slack org
