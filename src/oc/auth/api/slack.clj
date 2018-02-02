@@ -40,6 +40,7 @@
 (defn- logo-url-for
   "Get the logo for the Slack org with team.info if we don't already have it."
   [{slack-token :slack-token logo-url :logo-url}]
+  (timbre/info "Retrieving Slack domain from team.info with:" slack-token)
   (let [response (when-not logo-url (slack-lib/get-team-info slack-token)) ; get team.info if we need it
         icon (:icon response)
         image-default (:image-default icon)]
@@ -55,14 +56,14 @@
 
 (defn- slack-domain-for
   "Get the Slack domain for the Slack org with team.info if we don't already have it."
-  [{slack-token :slack-token domain :slack-domain :as slack-org}]
+  [{slack-token :slack-token bot :bot domain :slack-domain :as slack-org}]
   (if domain
     slack-org ; we already have it
-    (do
-      (timbre/info "Retrieving Slack domain from team.info with:" slack-token)
+    (let [token (or (:token bot) slack-token)]
+      (timbre/info "Retrieving Slack domain from team.info with:" token)
       (let [response (slack-lib/get-team-info slack-token)
             slack-domain (:domain response)]
-        (timbre/info "team.info response:" response)
+        (timbre/trace "team.info response:" response)
         (if slack-domain ; it's possible we don't get a response to team.info due to permissions
           (assoc slack-org :slack-domain slack-domain)
           slack-org)))))
@@ -81,8 +82,11 @@
   "Update the existing Slack org for the specified Slack user."
   [conn slack-user {slack-org-id :slack-org-id :as existing-slack-org}]
   (timbre/info "Updating Slack org:" slack-org-id)
-  (let [updated-slack-org (merge (slack-domain-for existing-slack-org)
-                            (select-keys slack-user [:slack-org-name :bot]))]
+  (let [updated-slack-org (merge existing-slack-org ; existing Slack org
+                                 ;; and the Slack domain from existing or a team.info lookup
+                                 (select-keys (slack-domain-for (merge existing-slack-org slack-user)) [:slack-domain])
+                                 ;; and the bot from this callback
+                                 (select-keys slack-user [:slack-org-name :bot]))]
     (slack-org-res/update-slack-org! conn slack-org-id updated-slack-org)))
 
 (defn- create-team-for
