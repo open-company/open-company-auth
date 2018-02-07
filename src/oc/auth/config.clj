@@ -71,3 +71,8 @@
 (defonce slack-user-scope "identity.basic,identity.team,identity.avatar,identity.email")
 (defonce slack-comment-scope "users:read,users:read.email,team:read,chat:write:user,channels:read,channels:history")
 (defonce slack-bot-scope (str slack-comment-scope ",bot,chat:write:bot"))
+
+;; ----- Email -----
+
+(defonce email-domain-blacklist (rest (clojure.string/split
+                                  (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
