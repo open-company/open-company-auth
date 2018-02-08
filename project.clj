@@ -16,7 +16,7 @@
     [org.clojure/clojure "1.9.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.3.5"]
-    [http-kit "2.3.0-alpha4"] ; Web client/server http://http-kit.org/
+    [http-kit "2.3.0-alpha5"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.6.3"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -102,7 +102,7 @@
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.0" :exclusions [org.clojure/tools.reader]]
         ;; Not used directly, dependency of lein-kibit and rewrite-clj https://github.com/clojure/tools.reader
-        [org.clojure/tools.reader "1.1.1"]
+        [org.clojure/tools.reader "1.2.1"]
       ]
     }
 
@@ -122,7 +122,7 @@
       :plugins [
         ;; Check for code smells https://github.com/dakrone/lein-bikeshed
         ;; NB: org.clojure/tools.cli is pulled in by lein-kibit
-        [lein-bikeshed "0.5.0" :exclusions [org.clojure/tools.cli]] 
+        [lein-bikeshed "0.5.1" :exclusions [org.clojure/tools.cli]] 
         ;; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-checkall "0.1.1"]
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint

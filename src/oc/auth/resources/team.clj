@@ -2,9 +2,10 @@
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (when-let*)]
-            [oc.lib.db.common :as db-common]
             [schema.core :as schema]
-            [oc.lib.schema :as lib-schema]))
+            [oc.lib.db.common :as db-common]
+            [oc.lib.schema :as lib-schema]
+            [oc.auth.config :as c]))
 
 ;; ----- RethinkDB metadata -----
 
@@ -138,13 +139,17 @@
   (if-let [team (get-team conn team-id)]
     (db-common/remove-from-set conn table-name team-id "admins" user-id)))
 
+(defn allowed-email-domain? [email-domain]
+  (not-any? #(= % email-domain) c/email-domain-blacklist))
+
 (schema/defn ^:always-validate add-email-domain :- (schema/maybe Team)
   "
   Given the team-id of the team, and an email domain, add the email domain to the team if it exists.
   Returns the updated team on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
   [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
-  {:pre [(db-common/conn? conn)]}
+  {:pre [(db-common/conn? conn)
+         (allowed-email-domain? email-domain)]}
   (if-let [team (get-team conn team-id)]
     (db-common/add-to-set conn table-name team-id "email-domains" email-domain)))
 
