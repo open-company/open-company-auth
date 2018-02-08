@@ -402,6 +402,7 @@
   
   ;; Responses
   :respond-with-entity? false
+  :handle-unprocessable-entity (fn [ctx] (api-common/text-response "Email domain not allowed." 409))
   :handle-created (fn [ctx] (if (or (:updated-team ctx) (:existing-domain ctx))
                               (api-common/blank-response)
                               (api-common/missing-response)))
