@@ -140,7 +140,7 @@
     (db-common/remove-from-set conn table-name team-id "admins" user-id)))
 
 (defn allowed-email-domain? [email-domain]
-  (not (some #(= % email-domain) c/email-domain-blacklist)))
+  (not-any? #(= % email-domain) c/email-domain-blacklist))
 
 (schema/defn ^:always-validate add-email-domain :- (schema/maybe Team)
   "
