@@ -16,7 +16,7 @@
     [org.clojure/clojure "1.9.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.3.5"]
-    [http-kit "2.3.0-alpha4"] ; Web client/server http://http-kit.org/
+    [http-kit "2.3.0-alpha5"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.6.3"]
     ;; Web application library https://github.com/ring-clojure/ring

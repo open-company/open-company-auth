@@ -382,6 +382,8 @@
     :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
+  :processable? (fn [ctx] (team-res/allowed-email-domain? (:data ctx))) ; check for blacklisted email domain
+
   ;; Existentialism
   :exists? (by-method {
     :post (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -400,6 +402,7 @@
   
   ;; Responses
   :respond-with-entity? false
+  :handle-unprocessable-entity (fn [ctx] (api-common/text-response "Email domain not allowed." 409))
   :handle-created (fn [ctx] (if (or (:updated-team ctx) (:existing-domain ctx))
                               (api-common/blank-response)
                               (api-common/missing-response)))
