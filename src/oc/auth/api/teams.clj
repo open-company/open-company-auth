@@ -462,17 +462,19 @@
   ;; Responses
   :handle-ok (fn [ctx]
     (let [team (:existing-team ctx)
-          slack-orgs (slack-org-res/list-slack-orgs-by-ids conn (:slack-orgs team) [:bot-token]) ; Slack orgs for team
+          slack-orgs (slack-org-res/list-slack-orgs-by-ids conn (:slack-orgs team) [:bot-token :bot-user-id]) ; Slack orgs for team
           bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
+          slack-bot-ids (map :bot-user-id (filter :bot-user-id slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
           slack-users (mapcat #(slack/user-list %) bot-tokens) ; Slack roster of users
           oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users]) ; OC roster of users
+          oc-users-with-slack (map #(assoc % :slack-bot-ids slack-bot-ids) oc-users)
           slack-emails (set (map :email slack-users)) ; email of Slack users
           oc-emails (set (map :email oc-users)) ; email of OC users
           uninvited-slack-emails (clojure.set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
           ;; Slack users not in OC (from their email)
           uninvited-slack-users (map (fn [email] (some #(when (= (:email %) email) %) slack-users)) uninvited-slack-emails)
           ;; OC users and univited Slack users (w/ status of uninvited) together gives us all the users
-          all-users (concat oc-users (map #(assoc % :status :uninvited) uninvited-slack-users))]
+          all-users (concat oc-users-with-slack (map #(assoc % :status :uninvited) uninvited-slack-users))]
       (user-rep/render-user-list team-id all-users))))
 
 ;; A resource for Slack channels for a particular team
