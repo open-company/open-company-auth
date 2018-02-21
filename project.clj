@@ -50,7 +50,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.14.15" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.2" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -102,7 +102,7 @@
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.0" :exclusions [org.clojure/tools.reader]]
         ;; Not used directly, dependency of lein-kibit and rewrite-clj https://github.com/clojure/tools.reader
-        [org.clojure/tools.reader "1.2.1"]
+        [org.clojure/tools.reader "1.2.2"]
       ]
     }
 
