@@ -171,7 +171,8 @@
                  '[oc.auth.config :as config]
                  '[oc.auth.resources.user :as u]
                  '[oc.auth.resources.team :as team]
-                 '[oc.auth.resources.slack-org :as slack-org])
+                 '[oc.auth.resources.slack-org :as slack-org]
+                 '[oc.auth.resources.maintenance :as maint])
       ]
     }]
   }
