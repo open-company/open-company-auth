@@ -35,5 +35,5 @@
 (with-open [c (apply r/connect conn2)]
   (-> (r/table "users")
     (r/get-all ["30b6-4fdd-b4fa" "8c3b-462a-b8e6" "4c61-4782-b0b3" "be62-4263-8b72"])
-    (r/update (r/fn [_] {:status "verified"}))
+    (r/update (r/fn [_] {:status "active"}))
     (r/run c)))
