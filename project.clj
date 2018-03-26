@@ -16,7 +16,7 @@
     [org.clojure/clojure "1.9.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.3.5"]
-    [http-kit "2.3.0-beta1"] ; Web client/server http://http-kit.org/
+    [http-kit "2.3.0-beta2"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.6.3"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -50,7 +50,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.16.2" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.3" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -68,7 +68,7 @@
   ]
 
   :plugins [
-    [lein-ring "0.12.3"]
+    [lein-ring "0.12.4"]
     [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
