@@ -236,12 +236,11 @@
                                                                   :slack-org-id (:slack-org-id slack-user)
                                                                   :token (:slack-token slack-user)}}
 
-            ;; Add or update the Slack users list of the user
-            updated-slack-user (user-res/update-user! conn
-                                                      (:user-id user)
-                                                      (-> user
-                                                        (assoc :status :active) ; no longer :pending (if they were)
-                                                        (update-in [:slack-users] merge new-slack-user)))
+            ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
+            updated-slack-user (do (user-res/activate! conn (:user-id user)) ; no longer :pending (if they were)
+                                   (user-res/update-user! conn
+                                                          (:user-id user)
+                                                          (update-in user [:slack-users] merge new-slack-user)))
             
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-slack-user
