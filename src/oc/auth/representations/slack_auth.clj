@@ -33,6 +33,10 @@
     {:auth-source "slack"
     :authentication "oauth"}))
 
+(defn comment-link
+  ([] (comment-link nil))
+  ([state] (slack-link "bot" config/slack-comment-scope state)))
+
 (defn bot-link 
   ([] (bot-link nil))
   ([state] (slack-link "bot" config/slack-bot-scope state)))

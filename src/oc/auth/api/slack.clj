@@ -250,16 +250,16 @@
                                                 (assoc :slack-token (:slack-token slack-user))) :slack)
 
             ;; Determine where we redirect them to
-            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
-            redirect-arg (if bot-only? :bot :team)]
+            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))]
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
-
         (let [bot-team-id (if new-team (:team-id new-team) (:team-id (first relevant-teams)))
-              bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))]
-          (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org)))))))
-
+              bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))
+              redirect-url (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token)))
+                             (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))
+                             (:href (slack-rep/comment-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org)))))]
+          (response/redirect redirect-url)))
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed)))
 
