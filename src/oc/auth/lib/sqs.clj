@@ -29,7 +29,9 @@
     :to lib-schema/EmailAddress ; invitee's email address
     :first-name schema/Str ; invitee's first name
     :org-name schema/Str
-    :logo-url schema/Str
+    :org-logo-url schema/Str
+    :org-logo-width schema/Int
+    :org-logo-height schema/Int
     :token-link lib-schema/NonBlankStr
   })
 
@@ -78,7 +80,9 @@
     :reply-to (or reply-to "")
     :first-name (or (:first-name payload) "")
     :org-name (or (:org-name payload) "")
-    :logo-url (or (:logo-url payload) "")
+    :org-logo-url (or (:logo-url payload) "")
+    :org-logo-width (or (:logo-width payload) 0)
+    :org-logo-height (or (:logo-height payload) 0)
     :token-link (token-link invite (:token payload))
   })
 
@@ -94,6 +98,9 @@
     :from (or from "")
     :from-id (:from-id payload)
     :org-name (or (:org-name payload) "")
+    :org-logo-url (or (:logo-url payload) "")
+    :org-logo-width (or (:logo-width payload) 0)
+    :org-logo-height (or (:logo-height payload) 0)
     :first-name (or (:first-name payload) "")
     :url config/ui-server-url
     :receiver {:slack-org-id (:slack-org-id payload)
