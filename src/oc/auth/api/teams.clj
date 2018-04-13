@@ -94,7 +94,7 @@
     (timbre/info "Creating user:" email "for team:" team-id)
     (if-let [new-user (user-res/create-user! conn
                         (user-res/->user (-> invite
-                          (dissoc :admin :org-name :logo-url)
+                          (dissoc :admin :org-name :logo-url :logo-width :logo-height)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
@@ -112,7 +112,7 @@
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
-                                          (dissoc :slack-id :slack-org-id :logo-url :name)))
+                                          (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
               new-user (user-res/create-user! conn oc-user)]
       (handle-invite conn sender team new-user true admin? (-> invite 
                                                               (assoc :bot-token bot-token)
