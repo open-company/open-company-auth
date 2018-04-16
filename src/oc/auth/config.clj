@@ -69,12 +69,8 @@
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
 (defonce slack-user-scope "identity.basic,identity.team,identity.avatar,identity.email")
-(defonce slack-unfurl-scope "links:read,links:write")
 (defonce slack-comment-scope "users:read,users:read.email,team:read,chat:write:user,channels:read,channels:history")
-(defonce slack-bot-scope (str slack-comment-scope
-                              ","
-                              slack-unfurl-scope
-                              ",bot,chat:write:bot"))
+(defonce slack-bot-scope (str slack-comment-scope ",bot,chat:write:bot"))
 
 ;; ----- Email -----
 
