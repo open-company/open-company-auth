@@ -171,6 +171,7 @@
       (sqs/->email-invite
         (merge invite {:token one-time-token :first-name (:first-name user)})
         (:name sender)
+        (:avatar-url sender)
         (:email sender))
       config/aws-sqs-email-queue)
     user)))
