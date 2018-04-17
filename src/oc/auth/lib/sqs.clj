@@ -34,6 +34,7 @@
     :org-logo-width schema/Int
     :org-logo-height schema/Int
     :token-link lib-schema/NonBlankStr
+    :note schema/Str
   })
 
 (def TokenAuth
@@ -65,6 +66,7 @@
     :first-name schema/Str ; invitee's first name
     :org-name schema/Str
     :url lib-schema/NonBlankStr
+    :note schema/Str
   }))
 
 ;; ----- SQS Message Creation -----
@@ -80,6 +82,7 @@
     :to (:email payload)
     :from (or from "")
     :from-avatar (or from-avatar "")
+    :note (or (:note payload) "")
     :reply-to (or reply-to "")
     :first-name (or (:first-name payload) "")
     :org-name (or (:org-name payload) "")
