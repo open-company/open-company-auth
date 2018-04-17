@@ -41,7 +41,7 @@
   (schema/optional-key :org-name) (schema/maybe schema/Str)
   (schema/optional-key :logo-url) (schema/maybe schema/Str)
   (schema/optional-key :logo-width) (schema/maybe schema/Int)
-  (schema/optional-key :logo-hegiht) (schema/maybe schema/Int)
+  (schema/optional-key :logo-height) (schema/maybe schema/Int)
   (schema/optional-key :first-name) (schema/maybe schema/Str)
   (schema/optional-key :last-name) (schema/maybe schema/Str)})
 
