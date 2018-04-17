@@ -94,7 +94,7 @@
     (timbre/info "Creating user:" email "for team:" team-id)
     (if-let [new-user (user-res/create-user! conn
                         (user-res/->user (-> invite
-                          (dissoc :admin :org-name :logo-url :logo-width :logo-height)
+                          (dissoc :admin :org-name :logo-url :logo-width :logo-height :note)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
