@@ -64,6 +64,9 @@
     :first-name schema/Str ; invitee's first name
     :org-name schema/Str
     :url lib-schema/NonBlankStr
+    :org-logo-url schema/Str
+    :org-logo-width schema/Int
+    :org-logo-height schema/Int
   }))
 
 ;; ----- SQS Message Creation -----
