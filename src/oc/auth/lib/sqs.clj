@@ -67,6 +67,9 @@
     :org-name schema/Str
     :url lib-schema/NonBlankStr
     :note schema/Str
+    :org-logo-url schema/Str
+    :org-logo-width schema/Int
+    :org-logo-height schema/Int
   }))
 
 ;; ----- SQS Message Creation -----
