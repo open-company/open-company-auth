@@ -13,6 +13,7 @@
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]
+            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.api.slack :as slack-api]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
@@ -267,11 +268,26 @@
 
   ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
   :initialize-context (by-method {
-    :get (fn [ctx] (if-let* [token (api-common/get-token (get-in ctx [:request :headers]))
-                             claims (:claims (jwt/decode token))]
-                      (when (and (jwt/check-token token config/passphrase) ; we signed it
-                            (nil? (schema/check jwt/Claims claims))) ; claims are valid
-                        {:jwtoken token :user claims})))})
+    :get (fn [ctx]
+           (let [token (api-common/get-token (get-in ctx [:request :headers]))
+                 decoded-token (jwt/decode token)]
+             (timbre/debug "CONTEXT:" decoded-token)
+             ;; We signed the token
+             (when (jwt/check-token token config/passphrase)
+               (if (nil? (schema/check jwt/Claims (:claims decoded-token))) ; claims are valid
+                 {:jwtoken token :user (:claims decoded-token)}
+                 (do
+                   (timbre/debug "SUPER USER")
+                   (timbre/debug (:super-user (:claims decoded-token)))
+                   (timbre/debug (user-res/get-user-by-slack-id conn (:slack-user-id (:claims decoded-token))))
+                   (when-let* [magic-token (:super-user (:claims decoded-token))
+                               user-id (:slack-user-id (:cliams decoded-token))
+                               user (user-res/get-user-by-slack-id conn user-id)
+                               jwt-user (user-rep/jwt-props-for user :slack)
+                               utoken (jwtoken/generate conn jwt-user)]
+                              (timbre/debug "GENERATED: " utoken jwt-user user)
+                              ;; generated token
+                              {:jwtoken utoken :user user}))))))})
   
   :allowed-methods [:options :get]
 

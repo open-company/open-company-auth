@@ -75,7 +75,7 @@
                               ","
                               slack-unfurl-scope
                               ",bot,chat:write:bot"))
-
+(defonce slack-user-scope (str slack-comment-scope "," slack-unfurl-scope))
 
 ;; ----- Email -----
 

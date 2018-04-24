@@ -256,9 +256,7 @@
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
         (let [bot-team-id (if new-team (:team-id new-team) (:team-id (first relevant-teams)))
               bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))
-              redirect-url (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token)))
-                             (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))
-                             (:href (slack-rep/comment-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org)))))]
+              redirect-url (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))]
           (response/redirect redirect-url)))
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed)))
