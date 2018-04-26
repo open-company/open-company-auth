@@ -19,7 +19,7 @@
     
     ;; auth'd settings
     (json/generate-string
-      (user-rep/authed-settings (user-res/get-user conn (:user-id user)))
+      (user-rep/authed-settings (merge user (user-res/get-user conn (:user-id user))))
       {:pretty config/pretty?})
     
     ;; not auth'd, give them both email and Slack settings
