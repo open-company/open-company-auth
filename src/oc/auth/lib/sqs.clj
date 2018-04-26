@@ -25,6 +25,7 @@
   {
     :type (schema/enum invite)
     :from schema/Str ; inviter's name
+    :from-avatar schema/Str ; inviter's avatar Url
     :reply-to schema/Str ; inviter's email address
     :to lib-schema/EmailAddress ; invitee's email address
     :first-name schema/Str ; invitee's first name
@@ -33,6 +34,7 @@
     :org-logo-width schema/Int
     :org-logo-height schema/Int
     :token-link lib-schema/NonBlankStr
+    :note schema/Str
   })
 
 (def TokenAuth
@@ -64,12 +66,17 @@
     :first-name schema/Str ; invitee's first name
     :org-name schema/Str
     :url lib-schema/NonBlankStr
+    :note schema/Str
+    :org-logo-url schema/Str
+    :org-logo-width schema/Int
+    :org-logo-height schema/Int
   }))
 
 ;; ----- SQS Message Creation -----
 
 (schema/defn ^:always-validate ->email-invite :- EmailInvite
-  [payload from :- (schema/maybe schema/Str) reply-to :- (schema/maybe lib-schema/EmailAddress)]
+  [payload from :- (schema/maybe schema/Str) from-avatar :- (schema/maybe schema/Str)
+   reply-to :- (schema/maybe lib-schema/EmailAddress)]
   {:pre [(map? payload)
          (lib-schema/valid-email-address? (:email payload))
          (lib-schema/uuid-string? (:token payload))]}
@@ -77,6 +84,8 @@
     :type (name invite)
     :to (:email payload)
     :from (or from "")
+    :from-avatar (or from-avatar "")
+    :note (or (:note payload) "")
     :reply-to (or reply-to "")
     :first-name (or (:first-name payload) "")
     :org-name (or (:org-name payload) "")
