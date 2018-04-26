@@ -52,7 +52,8 @@
     :name-required user has empty first-name and empty last-name
     nothing if the user is good to go"
   [user]
-  (let [with-password-required (if (s/blank? (:password-hash user))
+  (let [with-password-required (if (and (s/blank? (:password-hash user))
+                                        (= (:auth-source user) "email"))
                                  [:password-required]
                                  [])
         with-name-required (if (and (s/blank? (:first-name user))
