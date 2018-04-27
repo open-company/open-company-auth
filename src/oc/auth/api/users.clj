@@ -101,7 +101,7 @@
       (sqs/send! sqs/TokenAuth
                  (sqs/->token-auth {:type :verify :email email :token (:one-time-token created-user)})
                  config/aws-sqs-email-queue
-                 (if (= (keyword (:status created-user)) :pending) 0 900))
+                 (if (= (keyword (:status created-user)) :unverified) 900 0))
       (timbre/info "Sent email verification for:" user-id "(" email ")")
       {:new-user (assoc created-user :admin admin-teams)})
     
