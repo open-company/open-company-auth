@@ -132,7 +132,8 @@
 ;; ----- SQS Message Functions -----
 
 (defn send!
-  [msg-schema msg sqs-queue]
+  ([msg-schema msg sqs-queue] (send! msg-schema msg sqs-queue 0))
+  ([msg-schema msg sqs-queue seconds-delay]
   (let [type (or (:type msg) (-> msg :script :id))
         to (or (:to msg) (-> msg :receiver :id))]
     (timbre/info "Request to send" type "to:" to)
@@ -141,6 +142,7 @@
     (sqs/send-message
       {:access-key config/aws-access-key-id
        :secret-key config/aws-secret-access-key}
-      sqs-queue
-      msg)
-    (timbre/info "Sent" type "to:" to)))
+      :queue-url sqs-queue
+      :message-body msg
+      :delay-seconds seconds-delay)
+    (timbre/info "Sent" type "to:" to "with delay" seconds-delay))))
