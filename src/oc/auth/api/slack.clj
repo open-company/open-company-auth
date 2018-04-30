@@ -250,14 +250,22 @@
                                                 (assoc :slack-token (:slack-token slack-user))) :slack)
 
             ;; Determine where we redirect them to
-            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))]
+            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
+            redirect-arg (if bot-only? :bot :team)]
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
-        (let [bot-team-id (if new-team (:team-id new-team) (:team-id (first relevant-teams)))
-              bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))
-              redirect-url (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))]
-          (response/redirect redirect-url)))
+        ;; When we are authing a user for a Slack team w/o the bot installed, we redirect to the 
+        ;; bot access directly
+        (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token)))
+          (let [bot-team-id (if new-team (:team-id new-team) (:team-id (first relevant-teams)))
+                bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))]
+            (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))))
+          ;; All done, send them back to the OC Web UI with a JWToken
+          (redirect-to-web-ui redirect redirect-arg
+            (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
+            (:last-token-at user))))
+
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed)))
 

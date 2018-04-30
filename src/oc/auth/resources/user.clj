@@ -192,9 +192,9 @@
 
 (schema/defn ^:always-validate get-user-by-slack-id :- (schema/maybe User)
   "Given the slack id of the user, retrieve them from the database, or return nil if user doesn't exist."
-  [conn slack-id :- lib-schema/NonBlankStr]
+  [conn slack-team-id :- lib-schema/NonBlankStr slack-id :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (first (db-common/read-resources conn table-name "slack-users.slack-id" slack-id)))
+  (first (db-common/read-resources conn table-name "user-slack-team-id" [[slack-team-id, slack-id]])))
 
 (schema/defn ^:always-validate update-user! :- User
   "
