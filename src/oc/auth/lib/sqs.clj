@@ -111,6 +111,7 @@
     :org-logo-width (or (:logo-width payload) 0)
     :org-logo-height (or (:logo-height payload) 0)
     :first-name (or (:first-name payload) "")
+    :note (or (:note payload) "")
     :url config/ui-server-url
     :receiver {:slack-org-id (:slack-org-id payload)
                :type receiver
