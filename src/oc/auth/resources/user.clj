@@ -162,7 +162,7 @@
   (let [email (:email user)
         email-domain (last (s/split email #"\@"))
         email-teams (map :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
-        existing-teams (concat email-teams (:teams user))
+        existing-teams (vec (set (concat email-teams (:teams user))))
         new-team (when (empty? existing-teams)
                     (team-res/create-team! conn (team-res/->team {} (:user-id user))))
         teams (if new-team [(:team-id new-team)] existing-teams)
