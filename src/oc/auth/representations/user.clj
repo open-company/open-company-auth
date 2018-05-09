@@ -13,6 +13,7 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
+            [oc.auth.representations.slack-auth :as slack-auth]
             [oc.auth.resources.user :as user-res]))
 
 (def slack-props [:name :slack-id :slack-org-id])
@@ -46,10 +47,19 @@
 
 (def teams-link (hateoas/collection-link "/teams" {:accept mt/team-collection-media-type}))
 
-(defn authed-settings [user-id] {:links [(user-link user-id)
-                                         refresh-link
-                                         teams-link
-                                         email-rep/auth-link]}) ; auth-link used for email verification w/ token
+(defn authed-settings [user-id]
+  "
+  The auth-link is used for email verification w/ token.
+
+  The slack links are used to ask for more permissions even after
+  authentication.
+  "
+  {:links (conj
+           slack-auth/auth-settings
+           (user-link user-id)
+           refresh-link
+           teams-link
+           email-rep/auth-link)})
 
 (defn- admin-action-link
   "If a user is an admin, a link to remove them, if not, a link to add them"
