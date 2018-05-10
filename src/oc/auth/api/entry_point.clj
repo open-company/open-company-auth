@@ -7,6 +7,7 @@
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.representations.user :as user-rep]
+            [oc.auth.resources.user :as user-res]
             [oc.auth.representations.email-auth :as email-auth]
             [oc.auth.representations.slack-auth :as slack-auth]))
 
@@ -18,7 +19,7 @@
     
     ;; auth'd settings
     (json/generate-string
-      (user-rep/authed-settings (:user-id user))
+      (user-rep/authed-settings (merge user (user-res/get-user conn (:user-id user))))
       {:pretty config/pretty?})
     
     ;; not auth'd, give them both email and Slack settings
