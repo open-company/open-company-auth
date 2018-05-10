@@ -109,7 +109,13 @@
   ([redirect access jwtoken last-token-at bot-team-id]
   (let [page (or redirect "/login")
         jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
-        access-url (str config/ui-server-url page "?access=" (name access) "&new=" (if last-token-at false true))
+        access-url (str config/ui-server-url
+                        page
+                        (if (clojure.string/includes? page "?")
+                          "&access="
+                          "?access=")
+                        (name access)
+                        "&new=" (if last-token-at false true))
         url (if bot-team-id
               (str access-url "&bot-ids=" bot-team-id)
               access-url)]
