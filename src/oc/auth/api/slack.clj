@@ -15,8 +15,7 @@
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.slack-org :as slack-org-res]
-            [oc.auth.representations.user :as user-rep]
-            [oc.auth.representations.slack-auth :as slack-rep]))
+            [oc.auth.representations.user :as user-rep]))
 
 ;; ----- Utility Functions -----
 
