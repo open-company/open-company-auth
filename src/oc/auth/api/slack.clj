@@ -260,7 +260,7 @@
                                                 (assoc :slack-token (:slack-token slack-user))) :slack)
             ;; Determine where we redirect them to
             bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
-            redirect-arg (if bot-only? :bot :team)]
+            redirect-arg (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token))) :bot :team)]
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
