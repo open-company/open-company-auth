@@ -86,6 +86,7 @@
                 [remove-link (add-slack-bot-link team-id)])]
   {:name (:name slack-org)
    :slack-org-id slack-org-id
+   :logo-url (:logo-url slack-org)
    :links links}))
 
 (defn render-team

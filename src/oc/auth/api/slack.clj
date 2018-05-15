@@ -60,14 +60,16 @@
   [conn {slack-org-id :slack-org-id :as slack-user}]
   (timbre/info "Creating new Slack org for:" slack-org-id)
   (slack-org-res/create-slack-org! conn 
-    (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :bot]))))
+    (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :logo-url :bot]))))
 
 (defn- update-slack-org-for
   "Update the existing Slack org for the specified Slack user."
   [conn slack-user {slack-org-id :slack-org-id :as existing-slack-org}]
   (timbre/info "Updating Slack org:" slack-org-id)
-  (let [updated-slack-org (merge existing-slack-org (select-keys slack-user [:slack-org-name :bot]))]
-    (slack-org-res/update-slack-org! conn slack-org-id updated-slack-org)))
+  (let [slack-logo-url (or (:logo-url slack-user) (:logo-url existing-slack-org))
+        updated-slack-org (merge existing-slack-org (select-keys slack-user [:slack-org-name :bot]))
+        slack-org-with-logo (assoc updated-slack-org :logo-url slack-logo-url)]
+    (slack-org-res/update-slack-org! conn slack-org-id slack-org-with-logo)))
 
 (defn- create-team-for
   "Create a new team for the specified Slack user."
