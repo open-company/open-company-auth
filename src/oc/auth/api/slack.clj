@@ -104,11 +104,21 @@
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
   ([redirect access] (redirect-to-web-ui redirect access nil :not-a-new-user)) ; nil = no jwtoken
-  
   ([redirect access jwtoken last-token-at]
+     (redirect-to-web-ui redirect access jwtoken last-token-at nil))
+  ([redirect access jwtoken last-token-at bot-team-id]
   (let [page (or redirect "/login")
         jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
-        url (str config/ui-server-url page "?access=" (name access) "&new=" (if last-token-at false true))]
+        access-url (str config/ui-server-url
+                        page
+                        (if (clojure.string/includes? page "?")
+                          "&access="
+                          "?access=")
+                        (name access)
+                        "&new=" (if last-token-at false true))
+        url (if bot-team-id
+              (str access-url "&bot-ids=" bot-team-id)
+              access-url)]
     (timbre/info "Redirecting request to:" url)
     (response/redirect (str url jwt-param)))))
 
@@ -177,7 +187,7 @@
   First step of slack oauth, if the user is authing and the team has no bot installed we redirect him to the
   bot add sequence directly, if not we redirect to the web UI with the auth response.
   "
-  [conn {:keys [team-id user-id redirect error] :as response}]
+  [conn {:keys [team-id user-id redirect error] :as response} from-settings]
   (timbre/info "slack callback step 1:" response)
   (if-let* [slack-response (when-not (or error (false? (first response))) response)
             email (email-for slack-response)
@@ -248,23 +258,31 @@
                                                 (assoc :admin (user-res/admin-of conn (:user-id user)))
                                                 (assoc :slack-id (:slack-id slack-user))
                                                 (assoc :slack-token (:slack-token slack-user))) :slack)
-
             ;; Determine where we redirect them to
             bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
-            redirect-arg (if bot-only? :bot :team)]
+            redirect-arg (if bot-only? :bot :team)
+            login-redirect-arg (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token))) :bot :nobot)]
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
-        ;; When we are authing a user for a Slack team w/o the bot installed, we redirect to the 
-        ;; bot access directly
-        (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token)))
+
+        (if from-settings
+          ;; When we are authing a user for a Slack team w/o the bot installed, we redirect to the
+          ;; bot access directly
+          (if (and (not bot-only?) slack-org (not (contains? slack-org :bot-token)))
+            (let [bot-team-id (if new-team (:team-id new-team) (:team-id (first relevant-teams)))
+                  bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))]
+              (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))))
+            ;; All done, send them back to the OC Web UI with a JWToken
+            (redirect-to-web-ui redirect redirect-arg
+              (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
+              (:last-token-at user)))
           (let [bot-team-id (if new-team (:team-id new-team) (:team-id (first relevant-teams)))
                 bot-user-id (if new-user (:user-id new-user) (:user-id existing-user))]
-            (response/redirect (:href (slack-rep/bot-link (str bot-team-id ":" bot-user-id ":" redirect ":" (:slack-org-id slack-org))))))
-          ;; All done, send them back to the OC Web UI with a JWToken
-          (redirect-to-web-ui redirect redirect-arg
-            (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
-            (:last-token-at user))))
+            (redirect-to-web-ui redirect login-redirect-arg
+              (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
+              (:last-token-at user)
+              (str bot-team-id ":" bot-user-id ":" (:slack-org-id slack-org))))))
 
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect :failed)))
@@ -273,14 +291,16 @@
   "Handle a callback from Slack, then redirect the user's browser back to the web UI."
   [conn params]
   (timbre/info "Slack callback")
-  (let [slack-response (slack/oauth-callback params) ; process the response from Slack
+  (let [split-state (clojure.string/split (get params "state") #":")
+        from-settings (if (= (count split-state) 4) true false)
+        slack-response (slack/oauth-callback params) ; process the response from Slack
         team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
         user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
         redirect (:redirect slack-response) ; where we redirect the browser back to
         state-slack-org-id (:state-slack-org-id slack-response)]
     (if-not (nil? state-slack-org-id)
       (slack-callback-step2 conn slack-response)
-      (slack-callback-step1 conn slack-response))))
+      (slack-callback-step1 conn slack-response from-settings))))
 
 (defn refresh-token
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."

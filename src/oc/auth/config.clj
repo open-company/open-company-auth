@@ -71,11 +71,11 @@
 (defonce slack-user-scope "identity.basic,identity.team,identity.avatar,identity.email")
 (defonce slack-unfurl-scope "links:read,links:write")
 (defonce slack-comment-scope "users:read,users:read.email,team:read,chat:write:user,channels:read,channels:history")
+(defonce slack-unfurl-scope "links:read,links:write")
 (defonce slack-bot-scope (str slack-comment-scope
                               ","
                               slack-unfurl-scope
                               ",bot,chat:write:bot"))
-(defonce slack-user-scope (str slack-comment-scope "," slack-unfurl-scope))
 
 ;; ----- Email -----
 

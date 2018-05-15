@@ -13,6 +13,7 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
+            [oc.auth.representations.slack-auth :as slack-auth]
             [oc.auth.resources.user :as user-res]))
 
 (def slack-props [:name :slack-id :slack-org-id])
@@ -60,10 +61,12 @@
                                    (s/blank? (:last-name user)))
                                  (conj with-password-required :name-required)
                                  with-password-required)]
-    {:links [(user-link (:user-id user))
+    {:links (conj
+             slack-auth/auth-settings
+             (user-link (:user-id user))
              refresh-link
              teams-link
-             email-rep/auth-link]  ; auth-link used for email verification w/ token
+             email-rep/auth-link)  ; auth-link used for email verification w/ token
      :status with-name-required}))
 
 (defn- admin-action-link
