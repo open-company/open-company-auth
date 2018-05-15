@@ -46,10 +46,25 @@
 
 (def teams-link (hateoas/collection-link "/teams" {:accept mt/team-collection-media-type}))
 
-(defn authed-settings [user-id] {:links [(user-link user-id)
-                                         refresh-link
-                                         teams-link
-                                         email-rep/auth-link]}) ; auth-link used for email verification w/ token
+(defn authed-settings
+  "Status can be an array of:
+    :password-required user has an empty password
+    :name-required user has empty first-name and empty last-name
+    nothing if the user is good to go"
+  [user]
+  (let [with-password-required (if (and (s/blank? (:password-hash user))
+                                        (= (:auth-source user) "email"))
+                                 [:password-required]
+                                 [])
+        with-name-required (if (and (s/blank? (:first-name user))
+                                   (s/blank? (:last-name user)))
+                                 (conj with-password-required :name-required)
+                                 with-password-required)]
+    {:links [(user-link (:user-id user))
+             refresh-link
+             teams-link
+             email-rep/auth-link]  ; auth-link used for email verification w/ token
+     :status with-name-required}))
 
 (defn- admin-action-link
   "If a user is an admin, a link to remove them, if not, a link to add them"
