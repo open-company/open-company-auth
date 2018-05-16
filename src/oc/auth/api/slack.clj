@@ -23,7 +23,7 @@
 (defn- clean-slack-user
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
-  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :logo-url :redirect :state-slack-org-id :error))
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :logo-url :slack-domain :redirect :state-slack-org-id :error))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -37,21 +37,35 @@
     (or email ; return it if we already had it
       (:email response))))
 
-(defn- logo-url-for
-  "Get the logo for the Slack org with team.info if we don't already have it."
-  [{slack-token :slack-token logo-url :logo-url}]
-  (let [response (when-not logo-url (slack-lib/get-team-info slack-token)) ; get team.info if we need it
-        icon (:icon response)
+(defn- logo-url-from-response
+  [response]
+  (let [icon (:icon response)
         image-default (:image-default icon)]
-    (or logo-url ; return it if we already had it
-      (when-not image-default ; don't return the Slack default
-        (or ; use the highest resolution we have
-          (:image_230 icon)
-          (:image_132 icon)
-          (:image_88 icon)
-          (:image_44 icon)
-          (:image_34 icon)
-          nil))))) ; give up
+    (when-not image-default ; don't return the Slack default
+      (or ; use the highest resolution we have
+        (:image_230 icon)
+        (:image_132 icon)
+        (:image_88 icon)
+        (:image_44 icon)
+        (:image_34 icon)
+        nil)))) ; give up
+
+(defn- team-info-for
+  "Get the logo for the Slack org with team.info if we don't already have it."
+  [{slack-token :slack-token logo-url :logo-url slack-domain :slack-domain :as slack-user}]
+  (timbre/info "Retrieving Slack team info for" (:slack-org-id slack-user))
+  (let [update-team-data? (or (not slack-domain)
+                              (not logo-url))
+        response (when update-team-data?
+                  (slack-lib/get-team-info slack-token)) ; get team.info if we need it
+        updated-logo-url (if update-team-data?
+                          (logo-url-from-response response)
+                          logo-url)
+        updated-slack-domain (if update-team-data?
+                               (:domain response)
+                               slack-domain)]
+    {:slack-domain updated-slack-domain
+     :logo-url updated-logo-url})) ; give up
 
 ;; ----- Actions -----
 
@@ -60,16 +74,19 @@
   [conn {slack-org-id :slack-org-id :as slack-user}]
   (timbre/info "Creating new Slack org for:" slack-org-id)
   (slack-org-res/create-slack-org! conn 
-    (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :logo-url :bot]))))
+    (slack-org-res/->slack-org (select-keys slack-user [:slack-org-id :slack-org-name :logo-url :slack-domain :bot]))))
 
 (defn- update-slack-org-for
   "Update the existing Slack org for the specified Slack user."
-  [conn slack-user {slack-org-id :slack-org-id :as existing-slack-org}]
+  [conn slack-user {slack-org-id :slack-org-id logo-url :logo-url slack-domain :slack-domain
+    :as existing-slack-org}]
   (timbre/info "Updating Slack org:" slack-org-id)
-  (let [slack-logo-url (or (:logo-url slack-user) (:logo-url existing-slack-org))
+  (let [updated-logo-url (or (:logo-url slack-user) logo-url)
+        updated-slack-domain (or (:slack-domain slack-user) slack-domain)
         updated-slack-org (merge existing-slack-org (select-keys slack-user [:slack-org-name :bot]))
-        slack-org-with-logo (assoc updated-slack-org :logo-url slack-logo-url)]
-    (slack-org-res/update-slack-org! conn slack-org-id slack-org-with-logo)))
+        updated-team-info (merge updated-slack-org {:logo-url updated-logo-url
+                                                    :slack-domain updated-slack-domain})]
+    (slack-org-res/update-slack-org! conn slack-org-id updated-team-info)))
 
 (defn- create-team-for
   "Create a new team for the specified Slack user."
@@ -199,9 +216,11 @@
 
             ;; Get existing Slack org for this auth sequence, or create one if it's never been seen before
             existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
+            slack-team-info (when-not existing-slack-org
+                             (team-info-for slack-user))
             slack-org (if existing-slack-org
                           (update-slack-org-for conn slack-user existing-slack-org) ; update the Slack org
-                          (create-slack-org-for conn slack-user)) ; create new Slack org
+                          (create-slack-org-for conn (merge slack-user slack-team-info))) ; create new Slack org
 
             ;; Create a new user map if we don't have an existing user
             new-user (when-not existing-user (user-res/->user (clean-slack-user slack-user)))
@@ -215,8 +234,7 @@
             
             ;; Create a new team if we're creating a new user and have no team(s) already for this Slack org
             new-team (when (and new-user (empty? relevant-teams))
-                        (let [logo-url (logo-url-for slack-user)]
-                          (create-team-for conn (assoc slack-user :logo-url logo-url) (:user-id new-user))))
+                       (create-team-for conn (assoc slack-user :logo-url (:logo-url slack-team-info)) (:user-id new-user)))
             
             ;; Final set of teams relevant to this Slack org
             teams (if new-team [new-team] relevant-teams)
