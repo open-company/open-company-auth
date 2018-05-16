@@ -87,6 +87,7 @@
   {:name (:name slack-org)
    :slack-org-id slack-org-id
    :logo-url (:logo-url slack-org)
+   :slack-domain (:slack-domain slack-org)
    :links links}))
 
 (defn render-team
