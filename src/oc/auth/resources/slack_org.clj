@@ -17,7 +17,8 @@
   :name lib-schema/NonBlankStr
   (schema/optional-key :bot-user-id) lib-schema/NonBlankStr
   (schema/optional-key :bot-token) lib-schema/NonBlankStr
-  :logo-url (schema/maybe schema/Str)
+  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :slack-domain) (schema/maybe schema/Str)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 
@@ -136,7 +137,8 @@
          (every? #(or (string? %) (keyword? %)) additional-keys)]}
   (if (empty? slack-org-ids)
     []
-    (db-common/read-resources-by-primary-keys conn table-name slack-org-ids (concat [:slack-org-id :logo-url :name] additional-keys)))))
+    (db-common/read-resources-by-primary-keys conn table-name slack-org-ids
+     (concat [:slack-org-id :logo-url :slack-domain :name] additional-keys)))))
 
 ;; ----- Armageddon -----
 
