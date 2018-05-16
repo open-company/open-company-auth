@@ -279,27 +279,28 @@
                  (let [claims (:claims decoded-token) ;; check if super user
                        slack-user-id (:slack-user-id claims)
                        slack-team-id (:slack-team-id claims)]
-                   (when-let* [magic-token (:super-user claims)
-                               user0 (user-res/get-user-by-slack-id
-                                      conn
-                                      slack-team-id
-                                      slack-user-id)
-                               admin-teams (user-res/admin-of
-                                            conn
-                                            (:user-id user0))
-                               user (assoc user0 :admin admin-teams)
-                               jwt-user (user-rep/jwt-props-for user :slack)
-                               utoken (jwtoken/generate conn jwt-user)]
-                              (let [slack-user
-                                    ((keyword slack-team-id)
-                                     (:slack-users jwt-user))
-                                    token-user (-> jwt-user
-                                                   (assoc :auth-source
-                                                     (name (:auth-source jwt-user)))
-                                                   (assoc :slack-id
-                                                     (:id slack-user))
-                                                   (assoc :slack-token
-                                                     (:token slack-user)))]
+                   (when (:super-user claims)
+                     (when-let* [user0 (user-res/get-user-by-slack-id
+                                        conn
+                                        slack-team-id
+                                        slack-user-id)
+                                 admin-teams (user-res/admin-of
+                                              conn
+                                              (:user-id user0))
+                                 user (assoc user0 :admin admin-teams)
+                                 jwt-user (user-rep/jwt-props-for user :slack)
+                                 utoken (jwtoken/generate conn jwt-user)
+                                 slack-user
+                                 ((keyword slack-team-id)
+                                  (:slack-users jwt-user))
+                                 token-user (-> jwt-user
+                                              (assoc :auth-source
+                                                (name (:auth-source jwt-user)))
+                                              (assoc :slack-id
+                                                (:id slack-user))
+                                              (assoc :slack-token
+                                                (:token slack-user)))]
+                                (timbre/debug utoken token-user)
                                 ;; generated token
                                 {:jwtoken utoken :user token-user})))))))})
   
