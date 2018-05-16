@@ -33,10 +33,6 @@
     {:auth-source "slack"
     :authentication "oauth"}))
 
-(defn user-link
-  ([] (user-link nil))
-  ([state] (slack-link "bot" config/slack-user-scope state)))
-
 (defn bot-link 
   ([] (bot-link nil))
   ([state] (slack-link "bot" config/slack-bot-scope state)))
