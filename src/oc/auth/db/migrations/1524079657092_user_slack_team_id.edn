@@ -1,0 +1,18 @@
+(ns oc.auth.db.migrations.user-slack-team-id
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.config :as config]
+            [oc.auth.resources.user :as u]))
+
+(defn up [conn]
+  (println "Creating index on table: " u/table-name)
+  (println (m/create-compound-index conn u/table-name "user-slack-team-id"
+             (r/fn [row]
+               (r/branch (r/has-fields row "slack-users")
+                 (r/map (r/keys (r/get-field row "slack-users"))
+                   (r/fn [slack-team-id]
+                         [slack-team-id
+                          (r/get-field row ["slack-users" slack-team-id "id"])]))
+                 []))
+             {:multi true}))
+  true) ; return true on success

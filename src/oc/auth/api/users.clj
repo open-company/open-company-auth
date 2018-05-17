@@ -13,6 +13,7 @@
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]
+            [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.api.slack :as slack-api]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
@@ -268,11 +269,40 @@
 
   ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
   :initialize-context (by-method {
-    :get (fn [ctx] (if-let* [token (api-common/get-token (get-in ctx [:request :headers]))
-                             claims (:claims (jwt/decode token))]
-                      (when (and (jwt/check-token token config/passphrase) ; we signed it
-                            (nil? (schema/check jwt/Claims claims))) ; claims are valid
-                        {:jwtoken token :user claims})))})
+    :get (fn [ctx]
+           (let [token (api-common/get-token (get-in ctx [:request :headers]))
+                 decoded-token (jwt/decode token)]
+             ;; We signed the token
+             (when (jwt/check-token token config/passphrase)
+               (if (nil? (schema/check jwt/Claims (:claims decoded-token))) ; claims are valid
+                 {:jwtoken token :user (:claims decoded-token)}
+                 (let [claims (:claims decoded-token) ;; check if super user
+                       slack-user-id (:slack-user-id claims)
+                       slack-team-id (:slack-team-id claims)]
+                   (when (:super-user claims)
+                     (when-let* [user0 (user-res/get-user-by-slack-id
+                                        conn
+                                        slack-team-id
+                                        slack-user-id)
+                                 admin-teams (user-res/admin-of
+                                              conn
+                                              (:user-id user0))
+                                 user (assoc user0 :admin admin-teams)
+                                 jwt-user (user-rep/jwt-props-for user :slack)
+                                 utoken (jwtoken/generate conn jwt-user)
+                                 slack-user
+                                 ((keyword slack-team-id)
+                                  (:slack-users jwt-user))
+                                 token-user (-> jwt-user
+                                              (assoc :auth-source
+                                                (name (:auth-source jwt-user)))
+                                              (assoc :slack-id
+                                                (:id slack-user))
+                                              (assoc :slack-token
+                                                (:token slack-user)))]
+                                (timbre/debug utoken token-user)
+                                ;; generated token
+                                {:jwtoken utoken :user token-user})))))))})
   
   :allowed-methods [:options :get]
 
