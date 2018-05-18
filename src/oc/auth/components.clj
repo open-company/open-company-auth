@@ -3,6 +3,8 @@
             [taoensso.timbre :as timbre]
             [org.httpkit.server :as httpkit]
             [oc.lib.db.pool :as pool]
+            [oc.lib.sqs :as sqs]
+            [oc.auth.async.slack-router :as slack-router]
             [oc.auth.config :as c]))
 
 (defrecord HttpKit [options handler server]
@@ -41,9 +43,31 @@
   (stop [component]
     (dissoc component :handler)))
 
-(defn auth-system [{:keys [port handler-fn]}]
+(defrecord SlackRouter [slack-router-fn]
+  component/Lifecycle
+
+  (start [component]
+    (timbre/info "[slack-router] starting...")
+    (slack-router/start)
+    (timbre/info "[slack-router] started")
+    (assoc component :slack-router true))
+
+  (stop [{:keys [slack-router] :as component}]
+    (if slack-router
+      (do
+        (timbre/info "[slack-router] stopping...")
+        (slack-router/stop)
+        (timbre/info "[slack-router] stopped")
+        (dissoc component :slack-router))
+      component)))
+
+(defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler]}]
   (component/system-map
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
+   :slack-router (component/using
+                  (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
+                  [])
+   :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
    :handler (component/using
              (map->Handler {:handler-fn handler-fn})
              [:db-pool])

@@ -22,7 +22,8 @@
     [oc.auth.api.entry-point :as entry-point-api]
     [oc.auth.api.slack :as slack-api]
     [oc.auth.api.users :as users-api]
-    [oc.auth.api.teams :as teams-api]))
+    [oc.auth.api.teams :as teams-api]
+    [oc.auth.async.slack-router :as slack-router]))
 
 ;; ----- Unhandled Exceptions -----
 
@@ -57,6 +58,7 @@
     "Database: " c/db-name "\n"
     "Database pool: " c/db-pool-size "\n"
     "AWS SQS email queue: " c/aws-sqs-email-queue "\n"
+    "AWS SQS email queue: " c/aws-sqs-slack-router-auth-queue "\n"
     "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
     "Sentry: " c/dsn "\n\n"
@@ -88,6 +90,10 @@
 
   ;; Start the system
   (-> {:handler-fn app :port port}
+      :sqs-queue c/aws-sqs-slack-router-auth-queue
+      :slack-sqs-msg-handler slack-router/sqs-handler
+      :sqs-creds {:access-key c/aws-access-key-id
+                  :secret-key c/aws-secret-access-key}
       components/auth-system
       component/start)
 
