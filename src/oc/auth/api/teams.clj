@@ -435,7 +435,7 @@
 
   ;; Actions
   :delete! (fn [ctx]
-             (when (:has-org? ctx)               
+             (when (:has-org? ctx)
                (team-res/remove-slack-org conn team-id slack-org-id)
                (slack-org-res/delete-slack-org! conn slack-org-id)))
 

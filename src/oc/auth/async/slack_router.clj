@@ -6,7 +6,10 @@
    [clojure.core.async :as async :refer (<!! >!!)]
    [cheshire.core :as json]
    [oc.lib.sqs :as sqs]
+   [oc.lib.db.pool :as pool]
    [oc.auth.config :as config]
+   [oc.auth.resources.team :as team-res]
+   [oc.auth.resources.slack-org :as slack-res]
    [taoensso.timbre :as timbre]))
 
 ;; ----- core.async -----
@@ -37,13 +40,12 @@
     'event_id' 'Ev5B8YSYQ6',
     'event_time' 1494281750}
   "
-  [body]
+  [db-pool body]
   (let [type (:type body)
         token (:token body)
         event (:event body)
         channel (:channel event)
         thread (:thread_ts event)]
-    (timbre/debug type event)
     ;; Token check
     (if-not (= token config/slack-verification-token)
 
@@ -52,11 +54,17 @@
 
       ;; Token check is A-OK
       (when (= type "event_callback")
-        (let [event (get body "event")
-              event-type (get event "type")]
-          
+        (let [event-type (:type event)]
           (when (= event-type "tokens_revoked")
-            (timbre/debug "TOKENS REVOKED: " event)))))))
+            (let [slack-team-id (:team_id body)]
+              (pool/with-pool [conn db-pool]
+                (let [team (:team-id (first
+                                      (team-res/list-teams-by-index
+                                         conn
+                                         :slack-orgs
+                                         slack-team-id)))]
+                  (team-res/remove-slack-org conn team slack-team-id)
+                  (slack-res/delete-slack-org! conn slack-team-id))))))))))
 
 ;; ----- SQS handling -----
 
@@ -83,7 +91,7 @@
 
 (defn- slack-router-loop
   "Start a core.async consumer of the slack router channel."
-  []
+  [db-pool]
   (reset! slack-router-go true)
   (async/go (while @slack-router-go
       (timbre/info "Waiting for message on slack router channel...")
@@ -94,7 +102,7 @@
           (try
             (when (:Message msg) ;; data change SNS message
               (let [msg-parsed (json/parse-string (:Message msg) true)]
-                (slack-event msg-parsed)))
+                (slack-event db-pool msg-parsed)))
             (timbre/trace "Processing complete.")
             (catch Exception e
               (timbre/error e))))))))
@@ -103,9 +111,10 @@
 
 (defn start
  "Stop the core.async slack router channel consumer."
-  []
-  (timbre/info "Starting slack router...")
-  (slack-router-loop))
+ [sys]
+ (let [db-pool (-> sys :db-pool :pool)]
+   (timbre/info "Starting slack router...")
+   (slack-router-loop db-pool)))
 
 (defn stop
  "Stop the core.async slack router channel consumer."

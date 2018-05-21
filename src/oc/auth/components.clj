@@ -48,7 +48,7 @@
 
   (start [component]
     (timbre/info "[slack-router] starting...")
-    (slack-router/start)
+    (slack-router/start component)
     (timbre/info "[slack-router] started")
     (assoc component :slack-router true))
 
@@ -66,7 +66,7 @@
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
    :slack-router (component/using
                   (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
-                  [])
+                  [:db-pool])
    :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
    :handler (component/using
              (map->Handler {:handler-fn handler-fn})
