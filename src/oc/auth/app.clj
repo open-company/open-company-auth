@@ -89,11 +89,13 @@
     (timbre/merge-config! {:level (keyword c/log-level)}))
 
   ;; Start the system
-  (-> {:handler-fn app :port port}
-      :sqs-queue c/aws-sqs-slack-router-auth-queue
-      :slack-sqs-msg-handler slack-router/sqs-handler
-      :sqs-creds {:access-key c/aws-access-key-id
-                  :secret-key c/aws-secret-access-key}
+  (-> {:handler-fn app
+       :port port
+       :sqs-queue c/aws-sqs-slack-router-auth-queue
+       :slack-sqs-msg-handler slack-router/sqs-handler
+       :sqs-creds {:access-key c/aws-access-key-id
+                   :secret-key c/aws-secret-access-key}
+       }
       components/auth-system
       component/start)
 
