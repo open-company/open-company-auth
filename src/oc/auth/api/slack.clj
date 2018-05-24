@@ -11,6 +11,7 @@
             [oc.lib.jwt :as lib-jwt]
             [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.lib.slack :as slack]
+            [oc.auth.lib.sqs :as sqs]
             [oc.auth.config :as config]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
@@ -195,14 +196,19 @@
                                               (clean-user)
                                               (assoc :admin (user-res/admin-of conn (:user-id user)))
                                               (assoc :slack-id (:slack-id slack-response))
-                                              (assoc :slack-token (:slack-token slack-response))) :slack)]
+                                              (assoc :slack-token (:slack-token slack-response))) :slack)
+          bots-for-user (lib-jwt/bots-for conn jwt-user)]
       ;; Send welcome message via bot service.
-      (sqs/send! sqs/SlackWelcome
-                 (sqs/->slack-welcome {})
+      (sqs/send! sqs/BotTrigger
+                 (sqs/->slack-welcome
+                  {:id (:slack-id slack-response)
+                   :slack-org-id (:slack-org-id slack-response)
+                   :token (:bot-token slack-org)
+                   :bot-user-id (:bot-user-id slack-org)})
                  config/aws-sqs-bot-queue)
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect :team
-        (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
+        (jwtoken/generate conn (assoc jwt-user :slack-bots bots-for-user))
         (:last-token-at user)))))
 
 (defn- slack-callback-step1
