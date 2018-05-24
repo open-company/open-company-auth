@@ -58,13 +58,15 @@
           (when (= event-type "tokens_revoked")
             (let [slack-team-id (:team_id body)]
               (pool/with-pool [conn db-pool]
-                (let [team (:team-id (first
-                                      (team-res/list-teams-by-index
-                                         conn
-                                         :slack-orgs
-                                         slack-team-id)))]
-                  (team-res/remove-slack-org conn team slack-team-id)
-                  (slack-res/delete-slack-org! conn slack-team-id))))))))))
+                (let [teams (team-res/list-teams-by-index
+                             conn
+                             :slack-orgs
+                             slack-team-id)]
+                  (doseq [team teams]
+                    (team-res/remove-slack-org conn
+                                               (:team-id team)
+                                               slack-team-id)
+                    (slack-res/delete-slack-org! conn slack-team-id)))))))))))
 
 ;; ----- SQS handling -----
 
