@@ -62,12 +62,11 @@
                              conn
                              :slack-orgs
                              slack-team-id)]
+                  (slack-res/delete-slack-org! conn slack-team-id)
                   (doseq [team teams]
                     (team-res/remove-slack-org conn
                                                (:team-id team)
-                                               slack-team-id)
-                    (slack-res/delete-slack-org! conn slack-team-id)))))))))))
-
+                                               slack-team-id)))))))))))
 ;; ----- SQS handling -----
 
 (defn- read-message-body
