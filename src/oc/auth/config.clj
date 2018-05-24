@@ -59,6 +59,7 @@
 
 (defonce aws-sqs-bot-queue (env :aws-sqs-bot-queue))
 (defonce aws-sqs-email-queue (env :aws-sqs-email-queue))
+(defonce aws-sqs-slack-router-auth-queue (env :aws-sqs-slack-router-auth-queue))
 
 ;; ----- JWT -----
 
@@ -68,6 +69,7 @@
 
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
+(defonce slack-verification-token (env :open-company-slack-verification-token))
 (defonce slack-user-scope "identity.basic,identity.team,identity.avatar,identity.email")
 (defonce slack-comment-scope "users:read,users:read.email,team:read,channels:read,channels:history")
 (defonce slack-unfurl-scope "links:read,links:write")

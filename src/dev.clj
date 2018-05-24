@@ -4,6 +4,7 @@
             [oc.auth.config :as c]
             [oc.auth.app :as app]
             [oc.lib.db.pool :as pool]
+            [oc.auth.async.slack-router :as slack-router]
             [oc.auth.components :as components]))
 
 (def system nil)
@@ -12,8 +13,13 @@
 (defn init
   ([] (init c/auth-server-port))
   ([port]
-  (alter-var-root #'system (constantly (components/auth-system {:handler-fn app/app
-                                                                :port port})))))
+   (alter-var-root #'system (constantly (components/auth-system
+                                         {:handler-fn app/app
+                                          :sqs-queue c/aws-sqs-slack-router-auth-queue
+                                          :slack-sqs-msg-handler slack-router/sqs-handler
+                                          :sqs-creds {:access-key c/aws-access-key-id
+                                                      :secret-key c/aws-secret-access-key}
+                                          :port port})))))
 
 (defn bind-conn! []
   (alter-var-root #'conn (constantly (pool/claim (get-in system [:db-pool :pool])))))
