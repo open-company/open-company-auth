@@ -196,6 +196,10 @@
                                               (assoc :admin (user-res/admin-of conn (:user-id user)))
                                               (assoc :slack-id (:slack-id slack-response))
                                               (assoc :slack-token (:slack-token slack-response))) :slack)]
+      ;; Send welcome message via bot service.
+      (sqs/send! sqs/SlackWelcome
+                 (sqs/->slack-welcome {})
+                 config/aws-sqs-bot-queue)
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect :team
         (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
@@ -285,7 +289,9 @@
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
-
+        ;; when from-settings and bot has been added send welcome message.
+        (when from-settings
+          (timbre/debug slack-org bot-only?))
         (if from-settings
           ;; When we are authing a user for a Slack team w/o the bot installed, we redirect to the
           ;; bot access directly

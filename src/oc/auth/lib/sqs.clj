@@ -72,6 +72,10 @@
     :org-logo-height schema/Int
   }))
 
+(def SlackWelcome
+  "A Slack bot trigger to send a welcome to carrot slack app message."
+  (merge BotTrigger {:note schema/Str}))
+
 ;; ----- SQS Message Creation -----
 
 (schema/defn ^:always-validate ->email-invite :- EmailInvite
@@ -115,6 +119,23 @@
     :url config/ui-server-url
     :receiver {:slack-org-id (:slack-org-id payload)
                :type receiver
+               :id (:slack-id payload)}
+    :bot {:token (:bot-token payload)
+          :id (:bot-user-id payload)}
+  })
+
+(schema/defn ^:always-validate ->slack-welcome :- SlackWelcome
+  [payload]
+  {:pre [(map? payload)
+         (schema/validate lib-schema/NonBlankStr (:slack-id payload))
+         (schema/validate lib-schema/NonBlankStr (:slack-org-id payload))
+         (schema/validate lib-schema/NonBlankStr (:bot-token payload))
+         (schema/validate lib-schema/NonBlankStr (:bot-user-id payload))]}
+  {
+    :type :welcome
+    :note (or (:note payload) "")
+    :receiver {:slack-org-id (:slack-org-id payload)
+               :type :channel
                :id (:slack-id payload)}
     :bot {:token (:bot-token payload)
           :id (:bot-user-id payload)}
