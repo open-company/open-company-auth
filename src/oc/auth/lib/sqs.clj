@@ -131,7 +131,7 @@
   {
     :type welcome
     :receiver {:slack-org-id (:slack-org-id payload)
-               :type :channel
+               :type :user
                :id (:id payload)}
     :bot {:token (:token payload)
           :id (:bot-user-id payload)}
