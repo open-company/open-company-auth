@@ -77,7 +77,7 @@
 
 (def ignored-properties
   "Properties of a resource that are ignored during an update."
-  (clojure.set/union reserved-properties #{:teams :one-time-token :status}))
+  (clojure.set/union reserved-properties #{:teams :one-time-token :status :email}))
 
 ;; ----- Utility functions -----
 
