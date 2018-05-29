@@ -10,6 +10,7 @@
 (def invite "invite")
 (def reset "reset")
 (def verify "verify")
+(def welcome "welcome")
 
 ;; Bot receiver type
 (def receiver :user)
@@ -47,7 +48,7 @@
 (def BotTrigger 
   "All Slack bot triggers have the following properties."
   {
-    :type (schema/enum invite)
+    :type (schema/enum invite welcome)
     :bot {
        :token lib-schema/NonBlankStr
        :id lib-schema/NonBlankStr
@@ -117,6 +118,22 @@
                :type receiver
                :id (:slack-id payload)}
     :bot {:token (:bot-token payload)
+          :id (:bot-user-id payload)}
+  })
+
+(schema/defn ^:always-validate ->slack-welcome :- BotTrigger
+  [payload]
+  {:pre [(map? payload)
+         (schema/validate lib-schema/NonBlankStr (:id payload))
+         (schema/validate lib-schema/NonBlankStr (:slack-org-id payload))
+         (schema/validate lib-schema/NonBlankStr (:token payload))
+         (schema/validate lib-schema/NonBlankStr (:bot-user-id payload))]}
+  {
+    :type welcome
+    :receiver {:slack-org-id (:slack-org-id payload)
+               :type :user
+               :id (:id payload)}
+    :bot {:token (:token payload)
           :id (:bot-user-id payload)}
   })
 
