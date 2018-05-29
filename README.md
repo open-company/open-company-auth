@@ -173,6 +173,12 @@ A secret is shared between the [Storage service](https://github.com/open-company
 
 A [Slack App](https://api.slack.com/apps) needs to be created for OAuth authentication. For local development, create a Slack app with a Redirect URI of `http://localhost:3003/slack-oauth` and get the client ID and secret from the Slack app you create.
 
+An [AWS SQS queue](https://aws.amazon.com/sqs/) is used to pass messages to the OpenCompany Authentication service from the [OpenCompany Slack Router service](https://github.com/open-company/open-company-slack-router) and to pass messages from the OpenCompany Authentication service to the [OpenCompany Bot](https://github.com/open-company/open-company-bot) and [OpenCompany Email service](https://github.com/open-company/open-company-email). Setup SQS Queues and key/secret access to the queue using the AWS Web Console or API.
+
+You will also need to subscribe the SQS `aws-sqs-slack-router-auth-queue` queue to the [Slack Router service](https://github.com/open-company/open-company-slack-router) SNS topic. To do this you will need to go to the AWS console and follow these instruction:
+
+Go to the AWS SQS Console and select the SQS queue configured above. From the 'Queue Actions' dropdown, select 'Subscribe Queue to SNS Topic'. Select the SNS topic you've configured your Slack Router service instance to publish to, and click the 'Subscribe' button.
+
 Make sure you update the `CHANGE-ME` items in the section of the `project.clj` that looks like this to contain your actual JWT, Slack, and AWS secrets:
 
 ```clojure
@@ -187,12 +193,14 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :open-company-slack-client-secret "CHANGE-ME"
     :aws-access-key-id "CHANGE-ME"
     :aws-secret-access-key "CHANGE-ME"
+    :aws-sqs-bot-queue "CHANGE-ME"
+    :aws-sqs-email-queue "CHANGE-ME"
+    :aws-sqs-slack-router-auth-queue "CHANGE-ME"
     :log-level "debug"
   }
 ```
 
-You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and
-`AWS_ACCESS_KEY_ID`, etc. Use environmental variables to provide production secrets when running in production.
+You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and `AWS_ACCESS_KEY_ID`, etc. Use environmental variables to provide production secrets when running in production.
 
 
 ## Usage
