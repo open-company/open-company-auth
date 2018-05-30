@@ -58,10 +58,10 @@
                               (not logo-url))
         response (when update-team-data?
                   (slack-lib/get-team-info slack-token)) ; get team.info if we need it
-        updated-logo-url (if update-team-data?
+        updated-logo-url (or
                           (logo-url-from-response response)
                           logo-url)
-        updated-slack-domain (if update-team-data?
+        updated-slack-domain (or
                                (:domain response)
                                slack-domain)]
     {:slack-domain updated-slack-domain
