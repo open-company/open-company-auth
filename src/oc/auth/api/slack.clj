@@ -227,11 +227,11 @@
 
             ;; Get existing Slack org for this auth sequence, or create one if it's never been seen before
             existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
-            slack-team-info (when-not existing-slack-org
-                             (team-info-for slack-user))
+            slack-team-info (team-info-for slack-user)
+            updated-slack-team-info (merge slack-user slack-team-info)
             slack-org (if existing-slack-org
-                          (update-slack-org-for conn slack-user existing-slack-org) ; update the Slack org
-                          (create-slack-org-for conn (merge slack-user slack-team-info))) ; create new Slack org
+                          (update-slack-org-for conn updated-slack-team-info existing-slack-org) ; update the Slack org
+                          (create-slack-org-for conn updated-slack-team-info)) ; create new Slack org
 
             ;; Create a new user map if we don't have an existing user
             new-user (when-not existing-user (user-res/->user (clean-slack-user slack-user)))
