@@ -113,7 +113,7 @@
     :org-logo-height (or (:logo-height payload) 0)
     :first-name (or (:first-name payload) "")
     :note (or (:note payload) "")
-    :url config/ui-server-url
+    :url (str config/ui-server-url "/sign-up/slack")
     :receiver {:slack-org-id (:slack-org-id payload)
                :type receiver
                :id (:slack-id payload)}
