@@ -77,6 +77,19 @@
                               ","
                               slack-unfurl-scope
                               ",bot,chat:write:bot"))
+;; ----- Google Oauth -----
+(defonce google-login-uri "https://accounts.google.com")
+(defonce google
+  {:authorization-uri (str google-login-uri "/o/oauth2/auth")
+   :access-token-uri (str google-login-uri "/o/oauth2/token")
+   :redirect-uri (env :open-company-google-redirect-uri)
+   :client-id (env :open-company-google-client-id)
+   :client-secret (env :open-company-google-client-secret)
+   :access-query-param :access_token
+   :scope ["https://www.googleapis.com/auth/userinfo.email"]
+   :grant-type "authorization_code"
+   :access-type "online"
+   :approval_prompt ""})
 
 ;; ----- Email -----
 

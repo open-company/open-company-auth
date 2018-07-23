@@ -21,6 +21,7 @@
     [oc.auth.config :as c]
     [oc.auth.api.entry-point :as entry-point-api]
     [oc.auth.api.slack :as slack-api]
+    [oc.auth.api.google :as google-api]
     [oc.auth.api.users :as users-api]
     [oc.auth.api.teams :as teams-api]
     [oc.auth.async.slack-router :as slack-router]))
@@ -47,6 +48,7 @@
     (GET "/---500-test---" [] {:body "Testing bad things." :status 500})
     (entry-point-api/routes sys)
     (slack-api/routes sys)
+    (google-api/routes sys)
     (users-api/routes sys)
     (teams-api/routes sys)))
 
