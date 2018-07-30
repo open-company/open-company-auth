@@ -14,6 +14,7 @@
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.representations.slack-auth :as slack-auth]
+            [oc.auth.representations.google-auth :as google-auth]
             [oc.auth.resources.user :as user-res]))
 
 (def slack-props [:name :slack-id :slack-org-id])
@@ -63,6 +64,7 @@
                                  with-password-required)]
     {:links (conj
              slack-auth/auth-settings
+             google-auth/auth-settings
              (user-link (:user-id user))
              refresh-link
              teams-link

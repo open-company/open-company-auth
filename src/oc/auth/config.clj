@@ -79,8 +79,9 @@
                               ",bot,chat:write:bot"))
 ;; ----- Google Oauth -----
 (defonce google-login-uri "https://accounts.google.com")
-(defonce google
-  {:authorization-uri (str google-login-uri "/o/oauth2/auth")
+(defonce google  
+  {:oauth-token-uri (str auth-server-url "/google/oauth")
+   :authorization-uri (str google-login-uri "/o/oauth2/auth")
    :access-token-uri (str google-login-uri "/o/oauth2/token")
    :redirect-uri (env :open-company-google-redirect-uri)
    :client-id (env :open-company-google-client-id)

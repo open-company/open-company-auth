@@ -2,7 +2,7 @@
   "Liberator API for Google oauth2"
   (:require [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
-            [ring.util.response :as response]            
+            [ring.util.response :as response]
             [clj-oauth2.client :as oauth2]
             [cheshire.core :as json]
             [oc.lib.db.pool :as pool]
@@ -12,6 +12,7 @@
   (oauth2/make-auth-request config/google))
 
 (defn- google-access-token [params]
+  (timbre/debug params config/google auth-req)
   (oauth2/get-access-token config/google params auth-req))
 
 (defn- google-user-email [access-token]
@@ -32,5 +33,8 @@
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
-      (OPTIONS "/google/oauth" {params :params} (pool/with-pool [conn db-pool] (google-callback conn params)))
-      (GET "/google/oauth" {params :params} (pool/with-pool [conn db-pool] (google-callback conn params))))))
+     (GET "/google/oauth" {params :params}
+       (pool/with-pool [conn db-pool]
+         (response/redirect (:uri auth-req))))
+     (GET "/google/oauth/callback" {params :params}
+       (pool/with-pool [conn db-pool] (google-callback conn params))))))
