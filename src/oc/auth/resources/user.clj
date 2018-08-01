@@ -51,7 +51,8 @@
           :digest-frequency (schema/pred #(digest-frequency (keyword %)))
 
           (schema/optional-key :last-token-at) lib-schema/ISO8601}
-         lib-schema/slack-users))
+         lib-schema/slack-users
+         lib-schema/google-users))
 
 (def User "User resource as stored in the DB."
   (merge UserCommon {
@@ -66,6 +67,8 @@
     (schema/optional-key :slack-id) schema/Str
     (schema/optional-key :slack-token) schema/Str
     (schema/optional-key :slack-bots) jwt/SlackBots
+    (schema/optional-key :google-id) schema/Str
+    (schema/optional-key :google-token) jwt/GoogleToken
     (schema/optional-key :created-at) lib-schema/ISO8601
     (schema/optional-key :updated-at) lib-schema/ISO8601}))
 

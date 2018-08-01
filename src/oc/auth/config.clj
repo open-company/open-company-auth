@@ -80,14 +80,17 @@
 ;; ----- Google Oauth -----
 (defonce google-login-uri "https://accounts.google.com")
 (defonce google  
-  {:oauth-token-uri (str auth-server-url "/google/oauth")
+  {:success-uri "/google/lander"
+   :oauth-token-uri (str auth-server-url "/google/oauth")
    :authorization-uri (str google-login-uri "/o/oauth2/auth")
    :access-token-uri (str google-login-uri "/o/oauth2/token")
    :redirect-uri (env :open-company-google-redirect-uri)
    :client-id (env :open-company-google-client-id)
    :client-secret (env :open-company-google-client-secret)
    :access-query-param :access_token
-   :scope ["https://www.googleapis.com/auth/userinfo.email"]
+   ;; scopes https://developers.google.com/identity/protocols/googlescopes#oauth2v2
+   :scope ["https://www.googleapis.com/auth/userinfo.email",
+           "https://www.googleapis.com/auth/userinfo.profile"]
    :grant-type "authorization_code"
    :access-type "online"
    :approval_prompt ""})
