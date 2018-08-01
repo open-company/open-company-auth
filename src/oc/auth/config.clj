@@ -79,7 +79,7 @@
                               ",bot,chat:write:bot"))
 ;; ----- Google Oauth -----
 (defonce google-login-uri "https://accounts.google.com")
-(defonce google  
+(defonce google
   {:success-uri "/google/lander"
    :oauth-token-uri (str auth-server-url "/google/oauth")
    :authorization-uri (str google-login-uri "/o/oauth2/auth")
