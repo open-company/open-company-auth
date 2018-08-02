@@ -42,8 +42,7 @@
 (defn- create-user-for
   [conn new-user]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
-  (user-res/create-user! conn (-> new-user
-                                (assoc :status :active))))
+  (user-res/create-user! conn (assoc new-user :status :active)))
 
 (def auth-req
   (oauth2/make-auth-request config/google))
