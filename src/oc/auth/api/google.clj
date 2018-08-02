@@ -32,7 +32,6 @@
 
 (defn- clean-google-user
   [google-user token]
-  (timbre/debug google-user)
   {:first-name (:given_name google-user)
    :last-name (:family_name google-user)
    :avatar-url (:picture google-user)
@@ -82,11 +81,6 @@
                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
                                                (assoc :google-id (:id user-info))
                                                (assoc :google-token token)) :google)]
-        (timbre/debug user-info)
-        (timbre/debug existing-user)
-        (timbre/debug new-user)
-        (timbre/debug user)
-        (timbre/debug jwt-user)
         (redirect-to-web-ui (:success-uri config/google)
                             :google
                             (jwtoken/generate conn jwt-user)
