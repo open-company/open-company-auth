@@ -16,7 +16,7 @@
             [oc.auth.representations.slack-auth :as slack-auth]
             [oc.auth.resources.user :as user-res]))
 
-(def slack-props [:name :slack-id :slack-org-id])
+(def slack-props [:name :slack-id :slack-org-id :slack-display-name])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-frequency :digest-medium :timezone
                :created-at :updated-at :slack-users])
@@ -106,7 +106,9 @@
         slack-props (if slack?
                       (-> jwt-props
                         (assoc :slack-id (:slack-id user))
-                        (assoc :slack-token (:slack-token user)))
+                        (assoc :slack-token (:slack-token user))
+                        ; "-" for backward compatability w/ old JWTokens
+                        (assoc :slack-display-name (or (:slack-display-name user) "-")))
                       jwt-props)
         bot-props (if slack-bots?
                     (assoc slack-props :slack-bots (:slack-bots user))
