@@ -167,7 +167,8 @@
   "Given a Slack bot token, list the user roster for the Slack org, excluding restricted, deleted and bots users."
   [bot-token]
   (timbre/info "Lookup Slack user list for bot token:" bot-token)
-  (let [users (slack/slack-request conn "users.list")]
+  (let [conn (merge slack-connection {:token bot-token})
+        users (slack/slack-request conn "users.list")]
     (if (:ok users)
       (let [members (:members users)
             current-users (filter #(not (or (:deleted %)
@@ -200,8 +201,7 @@
   "
   [user-token email]
   (timbre/info "Lookup Slack user by email:" email " with user token:" user-token)
-  (let [conn (merge slack-connection {:token user-token})
-        info (slack-lib/slack-api "users.lookupByEmail" {:token user-token
+  (let [info (slack-lib/slack-api "users.lookupByEmail" {:token user-token
                                                          :email email})]
     (if (:ok info)
       {:title (-> info :user :profile :title)
