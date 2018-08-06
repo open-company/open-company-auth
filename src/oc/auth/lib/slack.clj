@@ -202,11 +202,17 @@
   [user-token email]
   (timbre/info "Lookup Slack user by email:" email " with user token:" user-token)
   (let [info (slack-lib/slack-api "users.lookupByEmail" {:token user-token
-                                                         :email email})]
+                                                         :email email})
+        slack-display-name (-> info :user :profile :display_name_normalized)
+        slack-real-name (-> info :user :profile :real_name_normalized)
+        display-name (cond
+                        (not (s/blank? slack-display-name)) slack-display-name
+                        (not (s/blank? slack-real-name)) slack-real-name
+                        :else "-")] ; can't be blank
     (if (:ok info)
       {:title (-> info :user :profile :title)
        :timezone (-> info :user :tz)
-       :display-name (-> info :user :profile :display_name_normalized)}
+       :display-name display-name}
       (do (timbre/warn "User profile could not be retrieved by email."
                        {:response info :user-token user-token})
           false))))
