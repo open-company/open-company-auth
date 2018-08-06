@@ -107,7 +107,8 @@
                       (-> jwt-props
                         (assoc :slack-id (:slack-id user))
                         (assoc :slack-token (:slack-token user))
-                        (assoc :slack-display-name (:slack-display-name user)))
+                        ; "-" for backward compatability w/ old JWTokens
+                        (assoc :slack-display-name (or (:slack-display-name user) "-")))
                       jwt-props)
         bot-props (if slack-bots?
                     (assoc slack-props :slack-bots (:slack-bots user))
