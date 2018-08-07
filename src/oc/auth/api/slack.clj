@@ -224,7 +224,7 @@
               (timbre/error "No user found for user-id" user-id "during Slack org add of:" slack-response))
 
             ;; Get user Slack profile
-            user-profile (slack/user-profile (:slack-token slack-user) (:email slack-user))
+            user-profile (or (slack/user-profile (:slack-token slack-user) (:email slack-user)) {:display-name "-"})
 
             ;; Get existing teams for auth sequence
             target-team (when team-id (team-res/get-team conn team-id)) ; OC team that Slack is being added to
