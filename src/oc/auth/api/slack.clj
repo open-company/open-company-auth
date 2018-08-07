@@ -23,7 +23,8 @@
 (defn- clean-slack-user
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
-  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :team-id :logo-url :slack-domain :redirect :state-slack-org-id :error))
+  (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :display-name
+                     :team-id :logo-url :slack-domain :redirect :state-slack-org-id :error))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -222,6 +223,9 @@
             _error (when (and user-id (not existing-user)) ; shouldn't have a Slack org being done by non-existent user
               (timbre/error "No user found for user-id" user-id "during Slack org add of:" slack-response))
 
+            ;; Get user Slack profile
+            user-profile (slack/user-profile (:slack-token slack-user) (:email slack-user))
+
             ;; Get existing teams for auth sequence
             target-team (when team-id (team-res/get-team conn team-id)) ; OC team that Slack is being added to
 
@@ -234,7 +238,7 @@
                           (create-slack-org-for conn updated-slack-team-info)) ; create new Slack org
 
             ;; Create a new user map if we don't have an existing user
-            new-user (when-not existing-user (user-res/->user (clean-slack-user slack-user)))
+            new-user (when-not existing-user (user-res/->user (clean-slack-user (merge slack-user user-profile))))
 
             ;; Get the relevant teams
             relevant-teams (if team-id ; if we're adding a Slack org to an existing OC team
@@ -265,6 +269,7 @@
             ; new Slack team
             new-slack-user {(keyword (:slack-org-id slack-user)) {:id (:slack-id slack-user)
                                                                   :slack-org-id (:slack-org-id slack-user)
+                                                                  :display-name (:display-name user-profile)
                                                                   :token (:slack-token slack-user)}}
 
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
@@ -278,7 +283,9 @@
                                                 (clean-user)
                                                 (assoc :admin (user-res/admin-of conn (:user-id user)))
                                                 (assoc :slack-id (:slack-id slack-user))
-                                                (assoc :slack-token (:slack-token slack-user))) :slack)
+                                                (assoc :slack-token (:slack-token slack-user))
+                                                (assoc :slack-display-name (:display-name user-profile)))
+                                              :slack)
 
             ;; Determine where we redirect them to
             bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))

@@ -45,6 +45,8 @@
           :last-name schema/Str
           :avatar-url (schema/maybe schema/Str)
 
+          (schema/optional-key :title) schema/Str
+
           (schema/optional-key :timezone) schema/Str ; want it missing at first so we can default it on the client
 
           :digest-medium (schema/pred #(digest-medium (keyword %)))
@@ -64,8 +66,9 @@
   (merge UserCommon {
     :admin (schema/conditional sequential? [lib-schema/UniqueID] :else schema/Bool)
     (schema/optional-key :status) (schema/pred #(statuses (keyword %)))
-    (schema/optional-key :slack-id) schema/Str
-    (schema/optional-key :slack-token) schema/Str
+    (schema/optional-key :slack-id) lib-schema/NonBlankStr
+    (schema/optional-key :slack-token) lib-schema/NonBlankStr
+    (schema/optional-key :slack-display-name) lib-schema/NonBlankStr
     (schema/optional-key :slack-bots) jwt/SlackBots
     (schema/optional-key :google-id) schema/Str
     (schema/optional-key :google-token) jwt/GoogleToken
@@ -76,7 +79,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create or update."
-  #{:user-id :password :password-hash :created-at :udpated-at :links})
+  #{:user-id :password :password-hash :created-at :udpated-at :links :slack-display-name})
 
 (def ignored-properties
   "Properties of a resource that are ignored during an update."
