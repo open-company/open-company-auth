@@ -1,4 +1,4 @@
-/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of Dec. 18, 2017 */
+/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of Jul. 30, 2018 */
 0-mail.com
 027168.com
 0815.su
@@ -362,6 +362,7 @@ bluehyppo.com
 bluemail.ch
 bluemail.dk
 bluesfan.com
+blueyonder.co.uk
 blushmail.com
 blutig.me
 bmlsports.net
@@ -713,7 +714,6 @@ discard.ga
 discard.gq
 disciples.com
 discofan.com
-discovery.com
 discoverymail.com
 disign-concept.eu
 disign-revelation.com
@@ -1436,7 +1436,6 @@ ilovejesus.com
 ilovetocollect.net
 ilse.nl
 imaginemail.com
-imail.org
 imail.ru
 imailbox.com
 imap-mail.com
@@ -3443,6 +3442,7 @@ nospamthanks.info
 nowhere.org
 ntelos.net
 ntlhelp.net
+ntlworld.com
 ntscan.com
 null.net
 nullbox.info
@@ -3916,7 +3916,6 @@ singapore.com
 singles4jesus.com
 singmail.com
 singnet.com.sg
-singpost.com
 sinnlos-mail.de
 siteposter.net
 skafan.com
@@ -4427,6 +4426,7 @@ vipmail.ru
 virgilio.it
 virgin.net
 virginbroadband.com.au
+virginmedia.com
 virtualmail.com
 visitmail.com
 visitweb.com
@@ -4531,7 +4531,6 @@ wilemail.com
 will-hier-weg.de
 windowslive.com
 windrivers.net
-windstream.com
 windstream.net
 wingnutz.com
 winmail.com.au
