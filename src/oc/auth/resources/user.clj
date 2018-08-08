@@ -45,9 +45,9 @@
           :last-name schema/Str
           :avatar-url (schema/maybe schema/Str)
 
-          (schema/optional-key :title) schema/Str
+          (schema/optional-key :title) (schema/maybe schema/Str)
 
-          (schema/optional-key :timezone) schema/Str ; want it missing at first so we can default it on the client
+          (schema/optional-key :timezone) (schema/maybe schema/Str) ; want it missing at first so we can default it on the client
 
           :digest-medium (schema/pred #(digest-medium (keyword %)))
           :digest-frequency (schema/pred #(digest-frequency (keyword %)))
