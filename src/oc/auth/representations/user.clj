@@ -22,7 +22,7 @@
                :digest-frequency :digest-medium :timezone
                :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :google-id :google-token :google-domain])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))

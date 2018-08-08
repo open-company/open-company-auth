@@ -79,7 +79,9 @@
                                                (clean-user)
                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
                                                (assoc :google-id (:id user-info))
+                                               (assoc :google-domain (:hd user-info))
                                                (assoc :google-token token)) :google)]
+        (timbre/debug jwt-user)
         (redirect-to-web-ui (:success-uri config/google)
                             :google
                             (jwtoken/generate conn jwt-user)

@@ -71,6 +71,7 @@
     (schema/optional-key :slack-display-name) lib-schema/NonBlankStr
     (schema/optional-key :slack-bots) jwt/SlackBots
     (schema/optional-key :google-id) schema/Str
+    (schema/optional-key :google-domain) schema/Str
     (schema/optional-key :google-token) jwt/GoogleToken
     (schema/optional-key :created-at) lib-schema/ISO8601
     (schema/optional-key :updated-at) lib-schema/ISO8601}))
