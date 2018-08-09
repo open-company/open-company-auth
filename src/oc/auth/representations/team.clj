@@ -6,7 +6,8 @@
             [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
-            [oc.auth.representations.slack-auth :as slack]))
+            [oc.auth.representations.slack-auth :as slack]
+            [oc.auth.representations.google-auth :as google]))
 
 (def representation-props [:team-id :logo-url :name :users :created-at :updated-at])
 
@@ -40,6 +41,9 @@
 (defn add-slack-bot-link [team-id]
   (slack/bot-link team-id))
 
+(defn add-google-auth-link [team-id]
+  (google/auth-link team-id))
+
 (defn roster-link [team-id]
   (hateoas/link-map "roster" hateoas/GET (str (url team-id) "/roster") {:accept mt/user-collection-media-type}))
 
@@ -61,6 +65,7 @@
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)
+      (add-google-auth-link team-id)
       (delete-link team-id)
       (roster-link team-id)
       (channels-link team-id)]))))

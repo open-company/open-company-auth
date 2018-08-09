@@ -9,6 +9,7 @@
             [oc.auth.representations.user :as user-rep]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.email-auth :as email-auth]
+            [oc.auth.representations.google-auth :as google-auth]
             [oc.auth.representations.slack-auth :as slack-auth]))
 
 ;; ----- Representations -----
@@ -25,7 +26,8 @@
     ;; not auth'd, give them both email and Slack settings
     (json/generate-string
       {:links (conj (concat email-auth/auth-settings
-                            slack-auth/auth-settings)
+                            slack-auth/auth-settings
+                            google-auth/auth-settings)
                     user-rep/refresh-link)}
       {:pretty config/pretty?})))
 

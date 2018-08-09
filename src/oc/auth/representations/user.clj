@@ -14,6 +14,7 @@
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.email-auth :as email-rep]
             [oc.auth.representations.slack-auth :as slack-auth]
+            [oc.auth.representations.google-auth :as google-auth]
             [oc.auth.resources.user :as user-res]))
 
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name])
@@ -63,6 +64,7 @@
                                  with-password-required)]
     {:links (conj
              slack-auth/auth-settings
+             google-auth/auth-settings
              (user-link (:user-id user))
              refresh-link
              teams-link
@@ -115,8 +117,14 @@
                     slack-props)
         slack-users-props (if slack-users?
                             (assoc bot-props :slack-users (:slack-users user))
-                            bot-props)]
-    (-> slack-users-props
+                            bot-props)
+        google-users-props (if (:google-id user)
+                             (-> slack-users-props
+                               (assoc :google-id (:google-id user))
+                               (assoc :google-domain (:google-domain user))
+                               (assoc :google-token (:google-token user)))
+                            slack-users-props)]
+    (-> google-users-props
       (assoc :name (jwt/name-for user))
       (assoc :auth-source source)
       (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))

@@ -36,6 +36,8 @@
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
     [org.julienxx/clj-slack "0.5.6" :exclusions [clj-http org.clojure/data.json]]
+    ;; For google oauth2
+    [stuarth/clj-oauth2 "0.3.2"]
     ;; Security library https://github.com/funcool/buddy
     [buddy "2.0.0"]
     ;; Authentication for ring https://github.com/funcool/buddy-auth
@@ -50,7 +52,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.16.12" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.13" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
