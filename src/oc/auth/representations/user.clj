@@ -22,7 +22,7 @@
                :digest-frequency :digest-medium :timezone
                :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :google-id :google-token :google-domain])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
@@ -117,8 +117,14 @@
                     slack-props)
         slack-users-props (if slack-users?
                             (assoc bot-props :slack-users (:slack-users user))
-                            bot-props)]
-    (-> slack-users-props
+                            bot-props)
+        google-users-props (if (:google-id user)
+                             (-> slack-users-props
+                               (assoc :google-id (:google-id user))
+                               (assoc :google-domain (:google-domain user))
+                               (assoc :google-token (:google-token user)))
+                            slack-users-props)]
+    (-> google-users-props
       (assoc :name (jwt/name-for user))
       (assoc :auth-source source)
       (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
