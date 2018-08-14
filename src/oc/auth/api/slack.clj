@@ -13,6 +13,7 @@
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.config :as config]
+            [oc.auth.async.notification :as notification]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.slack-org :as slack-org-res]
@@ -102,9 +103,11 @@
   "Create a new user for the specified Slack user."
   [conn new-user teams]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
-  (user-res/create-user! conn (-> new-user
-                                (assoc :status :active)
-                                (assoc :teams (map :team-id teams)))))
+  (let [user (user-res/create-user! conn (-> new-user
+                                          (assoc :status :active)
+                                          (assoc :teams (map :team-id teams))))]
+    (notification/send-trigger! (notification/->trigger user))
+    user))
 
 (defun- add-teams 
   "Recursive function to add team access to the user"

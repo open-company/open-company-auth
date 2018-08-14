@@ -5,6 +5,7 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.sqs :as sqs]
             [oc.auth.async.slack-router :as slack-router]
+            [oc.auth.async.notification :as notification]
             [oc.auth.config :as c]))
 
 (defrecord HttpKit [options handler server]
@@ -61,6 +62,24 @@
         (dissoc component :slack-router))
       component)))
 
+(defrecord AsyncConsumers []
+  component/Lifecycle
+
+  (start [component]
+    (timbre/info "[async-consumers] starting")
+    (notification/start) ; core.async channel consumer for notification events
+    (timbre/info "[async-consumers] started")
+    (assoc component :async-consumers true))
+
+  (stop [{:keys [async-consumers] :as component}]
+    (if async-consumers
+      (do
+        (timbre/info "[async-consumers] stopping")
+        (notification/stop) ; core.async channel consumer for notification events
+        (timbre/info "[async-consumers] stopped")
+        (dissoc component :async-consumers))
+    component)))
+
 (defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler]}]
   (component/system-map
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
@@ -68,6 +87,9 @@
                   (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
                   [:db-pool])
    :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
+   :async-consumers (component/using
+                     (map->AsyncConsumers {})
+                     [])
    :handler (component/using
              (map->Handler {:handler-fn handler-fn})
              [:db-pool])
