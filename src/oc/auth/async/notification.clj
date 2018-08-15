@@ -68,8 +68,12 @@
 
 (defn ->trigger
   [user]
-  (let [fixed-user (assoc user :name
-                          (str (:first-name user) " " (:last-name user)))]
+  (let [full-name (str (:first-name user) " " (:last-name user))
+        name (if (clojure.string/blank? full-name)
+               ;; email users don't have a name yet
+               "New User" ;; use temporary name for SNS message schema
+               full-name)
+        fixed-user (assoc user :name name)]
     {:notification-type :add
      :resource-type :user
      :content {:new fixed-user}
