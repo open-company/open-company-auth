@@ -81,8 +81,7 @@
 
 (schema/defn ^:always-validate send-trigger! [trigger :- UserTrigger]
   (when-not (clojure.string/blank? config/aws-sns-auth-topic-arn)
-    (do
-      (>!! notification-chan trigger))))
+    (>!! notification-chan trigger)))
 
 ;; ----- Component start/stop -----
 
