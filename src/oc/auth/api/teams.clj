@@ -49,7 +49,6 @@
     ((set (:admins team)) user-id)
     false))
 
-
 (defn- valid-team-update? [conn team-id team-props]
   (if-let [team (team-res/get-team conn team-id)]
     (let [updated-team (merge team (team-res/clean team-props))]
