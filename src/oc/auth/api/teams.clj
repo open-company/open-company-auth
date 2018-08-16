@@ -49,6 +49,7 @@
     ((set (:admins team)) user-id)
     false))
 
+
 (defn- valid-team-update? [conn team-id team-props]
   (if-let [team (team-res/get-team conn team-id)]
     (let [updated-team (merge team (team-res/clean team-props))]
@@ -283,7 +284,11 @@
   ;; Authorization
   :allowed? (by-method {
     :options true 
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))}) ; team admins only
+    :post (fn [ctx] (do
+                      (timbre/debug ctx)
+                      (and (or (allow-team-admins conn (:user ctx) team-id)
+                               (not (-> ctx :data :admin)))
+                           (allow-team-members conn (:user ctx) team-id))))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
