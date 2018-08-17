@@ -61,6 +61,7 @@
 (defonce aws-sqs-email-queue (env :aws-sqs-email-queue))
 (defonce aws-sqs-slack-router-auth-queue (env :aws-sqs-slack-router-auth-queue))
 
+(defonce aws-sns-auth-topic-arn (env :aws-sns-auth-topic-arn))
 ;; ----- JWT -----
 
 (defonce passphrase (env :open-company-auth-passphrase))

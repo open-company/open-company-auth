@@ -15,6 +15,7 @@
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.api.slack :as slack-api]
+            [oc.auth.async.notification :as notification]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.media-types :as mt]
@@ -104,6 +105,8 @@
                  config/aws-sqs-email-queue
                  (if (not= (keyword (:status created-user)) :pending) 900 0))
       (timbre/info "Sent email verification for:" user-id "(" email ")")
+      (timbre/info "Sending notification to SNS topic for:" user-id "(" email ")")
+      (notification/send-trigger! (notification/->trigger created-user))
       {:new-user (assoc created-user :admin admin-teams)})
     
     (do

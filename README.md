@@ -179,6 +179,9 @@ You will also need to subscribe the SQS `aws-sqs-slack-router-auth-queue` queue 
 
 Go to the AWS SQS Console and select the SQS queue configured above. From the 'Queue Actions' dropdown, select 'Subscribe Queue to SNS Topic'. Select the SNS topic you've configured your Slack Router service instance to publish to, and click the 'Subscribe' button.
 
+An [AWS SNS](https://aws.amazon.com/sns/) pub/sub topic is used to push user events to interested listeners, such as the [OpenCompany Storage service](https://github.com/open-company/open-company-storage). To take advantage of this capability, configure the `aws-sns-auth-topic-arn` with the ARN (Amazon Resource Name) of an SNS topic you setup in AWS. Then follow the instructions in the other services to subscribe to the SNS topic with an SQS queue.
+
+
 Make sure you update the `CHANGE-ME` items in the section of the `project.clj` that looks like this to contain your actual JWT, Slack, and AWS secrets:
 
 ```clojure
@@ -196,6 +199,7 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :aws-sqs-bot-queue "CHANGE-ME"
     :aws-sqs-email-queue "CHANGE-ME"
     :aws-sqs-slack-router-auth-queue "CHANGE-ME"
+    :aws-sns-auth-topic-arn "CHANGE-ME"
     :log-level "debug"
   }
 ```

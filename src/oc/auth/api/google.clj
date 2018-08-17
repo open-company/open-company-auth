@@ -10,6 +10,7 @@
             [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.resources.user :as user-res]
             [oc.auth.config :as config]
+            [oc.auth.async.notification :as notification]
             [oc.auth.representations.user :as user-rep]))
 
 (defn- redirect-to-web-ui
@@ -42,7 +43,10 @@
 (defn- create-user-for
   [conn new-user]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
-  (user-res/create-user! conn (assoc new-user :status :active)))
+  (let [user (user-res/create-user! conn (assoc new-user :status :active))
+        trigger (notification/->trigger user)]
+    (notification/send-trigger! trigger)
+    user))
 
 (def auth-req
   (oauth2/make-auth-request config/google))
