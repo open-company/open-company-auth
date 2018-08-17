@@ -74,6 +74,7 @@
   "HATEOAS links for a team resource for a regular team member."
   [{team-id :team-id :as team}]
   (assoc team :links [(roster-link team-id)
+                      (invite-user-link team-id)
                       (channels-link team-id)]))
 
 (defn- email-domain

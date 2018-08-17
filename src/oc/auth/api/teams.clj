@@ -283,7 +283,9 @@
   ;; Authorization
   :allowed? (by-method {
     :options true 
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))}) ; team admins only
+    :post (fn [ctx] (and (or (allow-team-admins conn (:user ctx) team-id)
+                             (not (-> ctx :data :admin)))
+                         (allow-team-members conn (:user ctx) team-id)))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
