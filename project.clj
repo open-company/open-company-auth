@@ -2,8 +2,8 @@
   :description "OpenCompany Auth Service"
   :url "https://github.com/open-company/open-company-auth"
   :license {
-    :name "Mozilla Public License v2.0"
-    :url "http://www.mozilla.org/MPL/2.0/"
+    :name "GNU Affero General Public License Version 3"
+    :url "https://www.gnu.org/licenses/agpl-3.0.en.html"
   }
 
   :min-lein-version "2.7.1"
