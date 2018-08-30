@@ -1,6 +1,6 @@
 # [OpenCompany](https://github.com/open-company) Authentication Service
 
-[![MPL License](http://img.shields.io/badge/license-MPL-blue.svg?style=flat)](https://www.mozilla.org/MPL/2.0/)
+[![AGPL License](http://img.shields.io/badge/license-AGPL-blue.svg?style=flat)](https://www.gnu.org/licenses/agpl-3.0.en.html)
 [![Build Status](https://travis-ci.org/open-company/open-company-auth.svg)](https://travis-ci.org/open-company/open-company-auth)
 [![Dependencies Status](https://versions.deps.co/open-company/open-company-auth/status.svg)](https://versions.deps.co/open-company/open-company-auth)
 
