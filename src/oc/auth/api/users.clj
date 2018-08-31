@@ -256,7 +256,7 @@
                         (or (allow-superuser-token ctx)
                             (api-common/read-token
                              (get-in ctx [:request :headers])
-                             config/passphrase))
+                             config/passphrase)))
   ;; Authorization
   :allowed? (by-method {
     :options true
@@ -333,7 +333,6 @@
                                                 (:id slack-user))
                                               (assoc :slack-token
                                                 (:token slack-user)))]
-                                (timbre/debug utoken token-user)
                                 ;; generated token
                                 {:jwtoken utoken :user token-user})))))))})
   
