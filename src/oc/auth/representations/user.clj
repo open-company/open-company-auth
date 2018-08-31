@@ -17,7 +17,7 @@
             [oc.auth.representations.google-auth :as google-auth]
             [oc.auth.resources.user :as user-res]))
 
-(def slack-props [:name :slack-id :slack-org-id :slack-display-name])
+(def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-frequency :digest-medium :timezone
                :created-at :updated-at :slack-users])

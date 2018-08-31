@@ -59,6 +59,7 @@
 (def User "User resource as stored in the DB."
   (merge UserCommon {
     :status (schema/pred #(statuses (keyword %)))
+    (schema/optional-key :slack-bots) (schema/maybe jwt/SlackBots)
     :created-at lib-schema/ISO8601
     :updated-at lib-schema/ISO8601}))
 

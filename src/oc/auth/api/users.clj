@@ -53,16 +53,31 @@
           (timbre/info "Failed to auth:" email) 
           false)))))
 
-(defn- allow-user-and-team-admins [conn {accessing-user-id :user-id} accessed-user-id]
-  (or
-    ;; JWToken user-id matches URL user-id, user accessing themself
-    (= accessing-user-id accessed-user-id)
-
-    ;; check if the accessing user is an admin of any of the accessed user's teams
-    (if-let* [accessed-user (user-res/get-user conn accessed-user-id)
-              teams (team-res/list-teams-by-ids conn (:teams accessed-user) [:admins])]
-      (some #((set (:admins %)) accessing-user-id) teams)
+(defn- allow-superuser-token
+  [ctx]
+  (let [token (api-common/get-token (get-in ctx [:request :headers]))]
+    (if-let [decoded-token (jwt/decode token)]
+      (do
+        (if (and (jwt/check-token token config/passphrase)    ;; We signed the token
+                 (:super-user (:claims decoded-token)))
+          {:jwtoken decoded-token :user (:claims decoded-token)}
+          false))
       false)))
+
+(defn- allow-user-and-team-admins [conn ctx accessed-user-id]
+  (let [accessing-user-id (:user-id (:user ctx))]
+    (or (contains? (:claims (:jwtoken ctx)) :super-user)
+        (or
+         ;; JWToken user-id matches URL user-id, user accessing themself
+         (= accessing-user-id accessed-user-id)
+
+         ;; check if the accessing user is an admin of any of the accessed user's teams
+         (if-let* [accessed-user (user-res/get-user conn accessed-user-id)
+                   teams (team-res/list-teams-by-ids conn
+                                                     (:teams accessed-user)
+                                                     [:admins])]
+                  (some #((set (:admins %)) accessing-user-id) teams)
+                  false)))))
 
 (defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
@@ -237,12 +252,18 @@
                           :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))
                           :delete true})
 
+  :initialize-context (fn [ctx]
+                        (or (allow-superuser-token ctx)
+                            (api-common/read-token
+                             (get-in ctx [:request :headers])
+                             config/passphrase))
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :get (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
-    :patch (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))
-    :delete (fn [ctx] (allow-user-and-team-admins conn (:user ctx) user-id))})
+    :get (fn [ctx]
+           (allow-user-and-team-admins conn ctx user-id))
+    :patch (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
+    :delete (fn [ctx] (allow-user-and-team-admins conn ctx user-id))})
 
   ;; Validations
   :processable? (by-method {
@@ -252,9 +273,18 @@
     :delete true})
 
   ;; Existentialism
-  :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id) (user-res/get-user conn user-id))]
-                        {:existing-user user}
-                        false))
+  :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
+                                        (user-res/get-user conn user-id))]
+                       (let [bots-user (if (-> ctx
+                                               :jwtoken
+                                               :claims
+                                               :super-user)
+                                         (assoc user
+                                           :slack-bots
+                                           (jwt/bots-for conn user))
+                                         user)]
+                         {:existing-user bots-user})
+                       false))
 
   ;; Acctions
   :patch! (fn [ctx] (update-user conn ctx user-id))
