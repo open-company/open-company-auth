@@ -57,11 +57,10 @@
   [ctx]
   (let [token (api-common/get-token (get-in ctx [:request :headers]))]
     (if-let [decoded-token (jwt/decode token)]
-      (do
-        (if (and (jwt/check-token token config/passphrase)    ;; We signed the token
-                 (:super-user (:claims decoded-token)))
-          {:jwtoken decoded-token :user (:claims decoded-token)}
-          false))
+      (if (and (jwt/check-token token config/passphrase)    ;; We signed the token
+               (:super-user (:claims decoded-token)))
+        {:jwtoken decoded-token :user (:claims decoded-token)}
+        false)
       false)))
 
 (defn- allow-user-and-team-admins [conn ctx accessed-user-id]
