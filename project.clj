@@ -2,8 +2,8 @@
   :description "OpenCompany Auth Service"
   :url "https://github.com/open-company/open-company-auth"
   :license {
-    :name "Mozilla Public License v2.0"
-    :url "http://www.mozilla.org/MPL/2.0/"
+    :name "GNU Affero General Public License Version 3"
+    :url "https://www.gnu.org/licenses/agpl-3.0.en.html"
   }
 
   :min-lein-version "2.7.1"
@@ -18,12 +18,12 @@
     [org.clojure/tools.cli "0.3.7"]
     [http-kit "2.3.0"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-devel "1.7.0-RC1"]
+    [ring/ring-devel "1.7.0-RC2"]
     ;; Web application library https://github.com/ring-clojure/ring
     ;; NB: clj-time pulled in by oc.lib
     ;; NB: joda-time pulled in by oc.lib via clj-time
     ;; NB: commons-codec pulled in by oc.lib
-    [ring/ring-core "1.7.0-RC1" :exclusions [clj-time joda-time commons-codec]]
+    [ring/ring-core "1.7.0-RC2" :exclusions [clj-time joda-time commons-codec]]
     ;; CORS library https://github.com/jumblerg/ring.middleware.cors
     [jumblerg/ring.middleware.cors "1.0.1"]
     ;; Ring logging https://github.com/nberger/ring-logger-timbre
@@ -52,7 +52,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.16.13" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.14" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -87,7 +87,7 @@
         ;; NB: clj-time is pulled in by oc.lib
         ;; NB: joda-time is pulled in by oc.lib via clj-time
         ;; NB: commons-codec pulled in by oc.lib
-        [midje "1.9.2" :exclusions [joda-time clj-time commons-codec]] 
+        [midje "1.9.3-alpha1" :exclusions [joda-time clj-time commons-codec]] 
         ;; Test Ring requests https://github.com/weavejester/ring-mock
         [ring-mock "0.1.5"]
       ]
@@ -102,7 +102,7 @@
         [lein-kibit "0.1.6" :exclusions [org.clojure/clojure rewrite-clj org.clojure/tools.reader]]
         ;; Dependency of lein-kibit and lein-zprint https://github.com/xsc/rewrite-clj
         ;; NB: org.clojure/tools.reader pulled in manually
-        [rewrite-clj "0.6.0" :exclusions [org.clojure/tools.reader]]
+        [rewrite-clj "0.6.1" :exclusions [org.clojure/tools.reader]]
         ;; Not used directly, dependency of lein-kibit and rewrite-clj https://github.com/clojure/tools.reader
         [org.clojure/tools.reader "1.3.0"]
       ]
@@ -138,7 +138,7 @@
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-spell "0.1.0"]
         ;; Dead code finder https://github.com/venantius/yagni
-        [venantius/yagni "0.1.4" :exclusions [org.clojure/clojure]]
+        [venantius/yagni "0.1.6" :exclusions [org.clojure/clojure]]
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
