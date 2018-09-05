@@ -189,7 +189,8 @@
   "Given the email address of the user, retrieve them from the database, or return nil if user doesn't exist."
   [conn email :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (first (db-common/read-resources conn table-name "email" email)))
+  (let [loweremail (clojure.string/lower-case email)]
+    (first (db-common/read-resources conn table-name "loweremails" loweremail))))
 
 (schema/defn ^:always-validate get-user-by-token :- (schema/maybe User)
   "Given the one-time-use token of the user, retrieve them from the database, or return nil if user doesn't exist."

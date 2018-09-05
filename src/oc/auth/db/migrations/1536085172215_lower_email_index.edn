@@ -1,0 +1,17 @@
+(ns oc.auth.db.migrations.lower-email-index
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.resources.user :as u]
+            [oc.auth.config :as config]))
+
+(defn up [conn]
+  (println "Creating index loweremail ")
+  (println (-> (r/table u/table-name)
+               (r/index-create "loweremails"
+                               (r/fn [row]
+                                     (r/downcase (r/get-field row :email))))
+               (r/run conn)))
+  (println (-> (r/table u/table-name)
+               (r/index-wait "loweremails")
+               (r/run conn)))
+  true) ; return true on success
