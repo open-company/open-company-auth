@@ -101,9 +101,12 @@
 
 (defn- create-user-for
   "Create a new user for the specified Slack user."
-  [conn new-user teams]
+  [conn new-user teams slack-org]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
-  (let [user (user-res/create-user! conn (-> new-user
+  (let [new-user-digest (if (contains? slack-org :bot-token)
+                          (assoc new-user :digest-medium :slack)
+                          new-user)
+        user (user-res/create-user! conn (-> new-user-digest
                                           (assoc :status :active)
                                           (assoc :teams (map :team-id teams))))]
     (notification/send-trigger! (notification/->trigger user))
@@ -180,12 +183,11 @@
           new-slack-user {(keyword (:slack-org-id slack-response)) {:id (:slack-id slack-response)
                                                                     :slack-org-id (:slack-org-id slack-response)
                                                                     :token (:slack-token slack-response)}}
-
+          slack-user-u (update-in user [:slack-users] merge new-slack-user)
           ;; Add or update the Slack users list of the user
           updated-slack-user (user-res/update-user! conn
                                                     (:user-id user)
-                                                    (update-in user [:slack-users] merge new-slack-user))
-
+                                                    (assoc slack-user-u :digest-medium :slack))
           ;; Create a JWToken from the user for the response
           jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                               (clean-user)
@@ -267,20 +269,25 @@
                               (add-teams conn existing-user additional-team-ids))) ; add additional teams to the user
 
             ;; Final user
-            user (or updated-user (create-user-for conn new-user teams)) ; create new user if needed
+            user (or updated-user (create-user-for conn new-user teams slack-org)) ; create new user if needed
 
             ; new Slack team
             new-slack-user {(keyword (:slack-org-id slack-user)) {:id (:slack-id slack-user)
                                                                   :slack-org-id (:slack-org-id slack-user)
                                                                   :display-name (:display-name user-profile)
                                                                   :token (:slack-token slack-user)}}
-
+            ;; Determine where we redirect them to
+            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
+            redirect-arg (if bot-only? :bot :team)
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
+            slack-user-u (update-in user [:slack-users] merge new-slack-user)
+            slack-user-digest (if (= redirect-arg :bot)
+                                (assoc slack-user-u :digest-medium :slack)
+                                slack-user-u)
             updated-slack-user (do (user-res/activate! conn (:user-id user)) ; no longer :pending (if they were)
                                    (user-res/update-user! conn
                                                           (:user-id user)
-                                                          (update-in user [:slack-users] merge new-slack-user)))
-            
+                                                          slack-user-digest))
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                                 (clean-user)
@@ -288,11 +295,7 @@
                                                 (assoc :slack-id (:slack-id slack-user))
                                                 (assoc :slack-token (:slack-token slack-user))
                                                 (assoc :slack-display-name (:display-name user-profile)))
-                                              :slack)
-
-            ;; Determine where we redirect them to
-            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
-            redirect-arg (if bot-only? :bot :team)]
+                                              :slack)]
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
