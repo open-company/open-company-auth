@@ -13,17 +13,17 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.10.0-alpha6"]
+    [org.clojure/clojure "1.10.0-alpha7"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.3.7"]
     [http-kit "2.3.0"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-devel "1.7.0-RC2"]
+    [ring/ring-devel "1.7.0"]
     ;; Web application library https://github.com/ring-clojure/ring
     ;; NB: clj-time pulled in by oc.lib
     ;; NB: joda-time pulled in by oc.lib via clj-time
     ;; NB: commons-codec pulled in by oc.lib
-    [ring/ring-core "1.7.0-RC2" :exclusions [clj-time joda-time commons-codec]]
+    [ring/ring-core "1.7.0" :exclusions [clj-time joda-time commons-codec]]
     ;; CORS library https://github.com/jumblerg/ring.middleware.cors
     [jumblerg/ring.middleware.cors "1.0.1"]
     ;; Ring logging https://github.com/nberger/ring-logger-timbre

@@ -53,15 +53,12 @@
           (timbre/info "Failed to auth:" email) 
           false)))))
 
-(defn- allow-superuser-token
-  [ctx]
-  (if-let [token (api-common/get-token (get-in ctx [:request :headers]))]
-    (if-let [decoded-token (jwt/decode token)]
-      (if (and (jwt/check-token token config/passphrase)    ;; We signed the token
-               (:super-user (:claims decoded-token)))
-        {:jwtoken decoded-token :user (:claims decoded-token)}
-        false)
-      false)
+(defn- allow-superuser-token [ctx]
+  (if-let* [token (api-common/get-token (get-in ctx [:request :headers]))
+            decoded-token (jwt/decode token)
+            _true? (and (jwt/check-token token config/passphrase) ;; We signed the token
+                        (:super-user (:claims decoded-token)))] ;; And granted super-user perm
+    {:jwtoken decoded-token :user (:claims decoded-token)}
     false))
 
 (defn- allow-user-and-team-admins [conn ctx accessed-user-id]
@@ -275,14 +272,10 @@
   ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
                                         (user-res/get-user conn user-id))]
-                       (let [bots-user (if (-> ctx
-                                               :jwtoken
-                                               :claims
-                                               :super-user)
-                                         (assoc user
-                                           :slack-bots
-                                           (jwt/bots-for conn user))
-                                         user)]
+                       ;; super-user gets slack bots property as well
+                       (let [bots-user (if (-> ctx :jwtoken :claims :super-user)
+                                          (assoc user :slack-bots (jwt/bots-for conn user))
+                                          user)]
                          {:existing-user bots-user})
                        false))
 
