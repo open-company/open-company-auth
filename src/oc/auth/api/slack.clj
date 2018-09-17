@@ -14,6 +14,7 @@
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.config :as config]
             [oc.auth.async.notification :as notification]
+            [oc.auth.async.slack-api-calls :as slack-api-calls]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.slack-org :as slack-org-res]
@@ -195,6 +196,9 @@
                                               (assoc :slack-id (:slack-id slack-response))
                                               (assoc :slack-token (:slack-token slack-response))) :slack)
           bots-for-user (lib-jwt/bots-for conn jwt-user)]
+      ;; Gather all slack users display names
+      (doseq [team teams]
+        (slack-api-calls/gather-display-names team slack-org))
       ;; Send welcome message via bot service.
       (sqs/send! sqs/BotTrigger
                  (sqs/->slack-welcome
@@ -302,6 +306,8 @@
 
         ;; All done, send them back to the OC Web UI with a JWToken
         (when (= redirect-arg :bot)
+          ;; Gather all slack users display names
+          (slack-api-calls/gather-display-names team-id slack-org)
           ;; when the bot has been added send welcome message.
           (sqs/send! sqs/BotTrigger
                      (sqs/->slack-welcome
