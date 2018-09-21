@@ -6,6 +6,7 @@
             [oc.lib.sqs :as sqs]
             [oc.auth.async.slack-router :as slack-router]
             [oc.auth.async.notification :as notification]
+            [oc.auth.async.slack-api-calls :as slack-api-calls]
             [oc.auth.config :as c]))
 
 (defrecord HttpKit [options handler server]
@@ -68,6 +69,7 @@
   (start [component]
     (timbre/info "[async-consumers] starting")
     (notification/start) ; core.async channel consumer for notification events
+    (slack-api-calls/start component)
     (timbre/info "[async-consumers] started")
     (assoc component :async-consumers true))
 
@@ -76,6 +78,7 @@
       (do
         (timbre/info "[async-consumers] stopping")
         (notification/stop) ; core.async channel consumer for notification events
+        (slack-api-calls/stop)
         (timbre/info "[async-consumers] stopped")
         (dissoc component :async-consumers))
     component)))
@@ -89,7 +92,7 @@
    :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
    :async-consumers (component/using
                      (map->AsyncConsumers {})
-                     [])
+                     [:db-pool])
    :handler (component/using
              (map->Handler {:handler-fn handler-fn})
              [:db-pool])
