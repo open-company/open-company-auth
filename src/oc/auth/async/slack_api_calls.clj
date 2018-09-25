@@ -22,7 +22,7 @@
       (let [slack-user ((keyword (:slack-org-id slack-org)) (:slack-users user))
             slack-user-info (slack-lib/get-user-info (:bot-token slack-org)
                                                      (:id slack-user))
-            display-name (if (not (empty? (:display_name slack-user-info)))
+            display-name (if-not (clojure.string/blank? (:display_name slack-user-info))
                            (:display_name slack-user-info)
                            (:name slack-user-info))]
         (user/update-user! conn
