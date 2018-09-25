@@ -281,7 +281,7 @@
                                                                   :display-name (:display-name user-profile)
                                                                   :token (:slack-token slack-user)}}
             ;; Determine where we redirect them to
-            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)))
+            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)) (not (clojure.string/includes? redirect "add=team")))
             redirect-arg (if bot-only? :bot :team)
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
             slack-user-u (update-in user [:slack-users] merge new-slack-user)
