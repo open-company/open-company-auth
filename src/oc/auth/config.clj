@@ -78,7 +78,7 @@
 (defonce slack-bot-scope (str slack-comment-scope
                               ","
                               slack-unfurl-scope
-                              ",bot,chat:write:bot"))
+                              ",commands,bot,chat:write:bot"))
 ;; ----- Google Oauth -----
 (defonce google-login-uri "https://accounts.google.com")
 (defonce google
