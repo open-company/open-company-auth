@@ -14,6 +14,7 @@
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.lib.jwtoken :as jwtoken]
+            [oc.auth.lib.google :as google]
             [oc.auth.api.slack :as slack-api]
             [oc.auth.async.notification :as notification]
             [oc.auth.resources.team :as team-res]
@@ -356,7 +357,10 @@
                         "slack" (slack-api/refresh-token conn (:existing-user ctx)
                                                               (-> ctx :user :slack-id)
                                                               (-> ctx :user :slack-token))
-        
+                        "google" (let [user (:existing-user ctx)]
+                                   (if (google/refresh-token conn user)
+                                     (user-rep/auth-response conn user :google)
+                                     (api-common/unauthorized-response)))
                         ;; What token is this?
                         (api-common/unauthorized-response))))
 
