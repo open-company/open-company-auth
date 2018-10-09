@@ -1,13 +1,11 @@
 (ns oc.auth.api.google
   "Liberator API for Google oauth2"
   (:require [taoensso.timbre :as timbre]
-            [clojure.walk :refer (keywordize-keys)]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
-            [clj-oauth2.client :as oauth2]
-            [cheshire.core :as json]
             [oc.lib.db.pool :as pool]
             [oc.auth.lib.jwtoken :as jwtoken]
+            [oc.auth.lib.google :as google]
             [oc.auth.resources.user :as user-res]
             [oc.auth.config :as config]
             [oc.auth.async.notification :as notification]
@@ -48,23 +46,12 @@
     (notification/send-trigger! trigger)
     user))
 
-(def auth-req
-  (oauth2/make-auth-request config/google))
-
-(defn- google-access-token [params]
-  (oauth2/get-access-token config/google (keywordize-keys params) auth-req))
-
-(defn- google-user-info [access-token]
-  (let [response (oauth2/get "https://www.googleapis.com/oauth2/v1/userinfo"
-                             {:oauth2 access-token})]
-    (keywordize-keys (json/parse-string (:body response)))))
-
 (defn- google-callback
   [conn params]
   (timbre/info "Google Callback")
-  (let [token (google-access-token params)]
+  (let [token (google/access-token params)]
     (when token
-      (let [user-info (google-user-info token)
+      (let [user-info (google/user-info token)
             email (:email user-info)
             existing-user (user-res/get-user-by-email conn email)
             new-user (when-not existing-user
@@ -96,6 +83,6 @@
     (compojure/routes
      (GET "/google/oauth" {params :params}
        (pool/with-pool [conn db-pool]
-         (response/redirect (:uri auth-req))))
+         (response/redirect (:uri google/auth-req))))
      (GET "/google/oauth/callback" {params :params}
        (pool/with-pool [conn db-pool] (google-callback conn params))))))
