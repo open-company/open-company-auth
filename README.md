@@ -161,9 +161,7 @@ If you run Linux on your development environment (good for you, hardcore!) you c
 
 RethinkDB [isn't supported on Windows](https://github.com/rethinkdb/rethinkdb/issues/1100) directly. If you are stuck on Windows, you can run Linux in a virtualized environment to host RethinkDB.
 
-#### Required Secrets
-
-A secret is shared between the [Storage service](https://github.com/open-company/open-company-storage) and the Auth service for creating and validating [JSON Web Tokens](https://jwt.io/).
+#### Configuration
 
 A [Slack App](https://api.slack.com/apps) needs to be created for OAuth authentication. For local development, create a Slack app with a Redirect URI of `http://localhost:3003/slack-oauth` and get the client ID and secret from the Slack app you create.
 
@@ -199,6 +197,10 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
 ```
 
 You can also override these settings with environmental variables in the form of `OPEN_COMPANY_AUTH_PASSPHRASE` and `AWS_ACCESS_KEY_ID`, etc. Use environmental variables to provide production secrets when running in production.
+
+##### Shared Secrets
+
+A secret, `open-company-auth-passphrase`, is shared between the OpenCompany services for creating and validating [JSON Web Tokens](https://jwt.io/).
 
 
 ## Usage
