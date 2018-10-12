@@ -48,7 +48,8 @@
     [clj-http "3.9.1"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "0.2.6"]
-    
+    ;; String library
+    [funcool/cuerdas "2.0.6"]
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
