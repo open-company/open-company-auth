@@ -87,7 +87,7 @@
     :to (:email payload)
     :from (or from "")
     :from-avatar (or from-avatar "")
-    :note (or (str/strip-tags (:note payload) ["script" "style"]) "")
+    :note (or (str/strip-tags (:note payload) ["script" "style" "input"]) "")
     :reply-to (or reply-to "")
     :first-name (or (:first-name payload) "")
     :org-name (or (:org-name payload) "")
@@ -113,7 +113,7 @@
     :org-logo-width (or (:logo-width payload) 0)
     :org-logo-height (or (:logo-height payload) 0)
     :first-name (or (:first-name payload) "")
-    :note (or (str/strip-tags (:note payload) ["script" "style"]) "")
+    :note (or (str/strip-tags (:note payload) ["script" "style" "input"]) "")
     :url (str config/ui-server-url "/sign-up/slack")
     :receiver {:slack-org-id (:slack-org-id payload)
                :type receiver
