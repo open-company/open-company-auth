@@ -3,8 +3,8 @@
             [amazonica.aws.sqs :as sqs]
             [taoensso.timbre :as timbre]
             [schema.core :as schema]
-            [cuerdas.core :as str]
             [oc.lib.schema :as lib-schema]
+            [oc.lib.text :as str]
             [oc.auth.config :as config]))
 
 ;; SQS message types
@@ -87,7 +87,7 @@
     :to (:email payload)
     :from (or from "")
     :from-avatar (or from-avatar "")
-    :note (or (str/strip-tags (:note payload) ["script" "style" "input"]) "")
+    :note (or (str/strip-xss-tags (:note payload)) "")
     :reply-to (or reply-to "")
     :first-name (or (:first-name payload) "")
     :org-name (or (:org-name payload) "")
@@ -113,7 +113,7 @@
     :org-logo-width (or (:logo-width payload) 0)
     :org-logo-height (or (:logo-height payload) 0)
     :first-name (or (:first-name payload) "")
-    :note (or (str/strip-tags (:note payload) ["script" "style" "input"]) "")
+    :note (or (str/strip-xss-tags (:note payload)) "")
     :url (str config/ui-server-url "/sign-up/slack")
     :receiver {:slack-org-id (:slack-org-id payload)
                :type receiver
