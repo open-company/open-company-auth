@@ -4,8 +4,7 @@
             [clojure.walk :refer (keywordize-keys)]
             [cheshire.core :as json]
             [clj-oauth2.client :as oauth2]
-            [oc.auth.config :as config]
-            [oc.auth.resources.user :as user-res]))
+            [oc.auth.config :as config]))
 
 (def auth-req
   (oauth2/make-auth-request config/google))

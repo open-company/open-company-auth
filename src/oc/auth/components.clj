@@ -83,6 +83,10 @@
         (dissoc component :async-consumers))
     component)))
 
+(defn db-only-auth-system [_opts]
+  (component/system-map
+   :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
+
 (defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler]}]
   (component/system-map
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
