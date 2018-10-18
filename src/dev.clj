@@ -21,14 +21,24 @@
                                                       :secret-key c/aws-secret-access-key}
                                           :port port})))))
 
+(defn init-db []
+  (alter-var-root #'system (constantly (components/db-only-auth-system {}))))
+
 (defn bind-conn! []
   (alter-var-root #'conn (constantly (pool/claim (get-in system [:db-pool :pool])))))
 
-(defn start []
+(defn- start⬆ []
   (alter-var-root #'system component/start))
 
 (defn stop []
   (alter-var-root #'system (fn [s] (when s (component/stop s)))))
+
+(defn go-db []
+  (init-db)
+  (start⬆)
+  (bind-conn!)
+  (println (str "A DB connection is available with: conn\n"
+                "When you're ready to stop the system, just type: (stop)\n")))
 
 (defn go
 
@@ -36,7 +46,7 @@
   
   ([port]
   (init port)
-  (start)
+  (start⬆)
   (bind-conn!)
   (app/echo-config port)
   (println (str "Now serving auth from the REPL.\n"

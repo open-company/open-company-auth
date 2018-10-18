@@ -48,11 +48,10 @@
     [clj-http "3.9.1"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "0.2.6"]
-    
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.16.15" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.16" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -186,7 +185,7 @@
   :repl-options {
     :welcome (println (str "\n" (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"
                       "OpenCompany Auth REPL\n"
-                      "\nReady to do your bidding... I suggest (go) or (go <port>) as your first command.\n"))
+                      "\nReady to do your bidding... I suggest (go) or (go <port>) or (go-db) as your first command.\n"))
       :init-ns dev
   }
 
