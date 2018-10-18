@@ -1,4 +1,4 @@
-/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of Jul. 30, 2018 */
+/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of Oct. 2, 2018 */
 0-mail.com
 027168.com
 0815.su
@@ -56,6 +56,7 @@
 30minutesmail.com
 3126.com
 321media.com
+33mail.com
 37.com
 3ammagazine.com
 3dmail.com
@@ -72,7 +73,6 @@
 4warding.org
 4x4man.com
 50mail.com
-5iron.com
 60minutemail.com
 6ip.us
 6mail.cf
@@ -203,6 +203,7 @@ antwerpen.com
 anymoment.com
 anytimenow.com
 aol.com
+aon.at
 apexmail.com
 apmail.com
 apollo.lv
@@ -1795,6 +1796,7 @@ mail.by
 mail.co.za
 mail.com
 mail.com.tr
+mail.de
 mail.ee
 mail.entrepeneurmag.com
 mail.freetown.com
@@ -3122,9 +3124,9 @@ mailhaven.com
 mailhood.com
 mailimate.com
 mailinatar.com
+mailinator.com
 mailinator.org
 mailinator.us
-mailinator.com
 mailinblack.com
 mailingaddress.org
 mailingweb.com
@@ -4359,6 +4361,7 @@ unforgettable.com
 uni.de
 unican.es
 unihome.com
+unitybox.de
 universal.pt
 uno.ee
 uno.it
@@ -4730,3 +4733,4 @@ zydecofan.com
 zzn.com
 zzom.co.uk
 zzz.com
+zzz.pl
