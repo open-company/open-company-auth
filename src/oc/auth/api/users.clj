@@ -359,7 +359,11 @@
                                                               (-> ctx :user :slack-token))
                         "google" (let [user (:existing-user ctx)]
                                    (if (google/refresh-token conn user)
-                                     (user-rep/auth-response conn user :google)
+                                     (user-rep/auth-response
+                                       conn
+                                       (assoc user :slack-bots
+                                              (jwt/bots-for conn user))
+                                       :google)
                                      (api-common/unauthorized-response)))
                         ;; What token is this?
                         (api-common/unauthorized-response))))
