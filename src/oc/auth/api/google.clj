@@ -4,6 +4,7 @@
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
             [oc.lib.db.pool :as pool]
+            [oc.lib.jwt :as jwt]
             [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.lib.google :as google]
             [oc.auth.resources.user :as user-res]
@@ -69,6 +70,9 @@
             jwt-user (user-rep/jwt-props-for (-> updated-google-user
                                                (clean-user)
                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                               ;; include slack bot info
+                                               (assoc :slack-bots
+                                                 (jwt/bots-for conn user))
                                                (assoc :google-id (:id user-info))
                                                (assoc :google-domain (:hd user-info))
                                                (assoc :google-token token)) :google)]
