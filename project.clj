@@ -13,11 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-<<<<<<< HEAD
-    [org.clojure/clojure "1.10.0-beta2"]
-=======
     [org.clojure/clojure "1.10.0-RC1"]
->>>>>>> mainline
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.4.1"]
     [http-kit "2.3.0"] ; Web client/server http://http-kit.org/
