@@ -137,6 +137,15 @@
     false))
 
 ;; ----- User CRUD -----
+(def default-user-image "/img/ML/happy_face_red.svg")
+(def other-user-images
+ ["/img/ML/happy_face_green.svg"
+  "/img/ML/happy_face_blue.svg"
+  "/img/ML/happy_face_purple.svg"
+  "/img/ML/happy_face_yellow.svg"])
+
+(defn random-user-image []
+  (first (shuffle (vec (conj other-user-images default-user-image)))))
 
 (schema/defn ^:always-validate ->user :- User
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
@@ -156,7 +165,7 @@
         (update :email #(or % ""))
         (update :first-name #(or % ""))
         (update :last-name #(or % ""))
-        (update :avatar-url #(or % ""))
+        (update :avatar-url #(or % (random-user-image)))
         (update :digest-frequency #(or % :daily))
         (update :digest-medium #(or % :email)) ; lowest common denominator
         (assoc :status :pending)
