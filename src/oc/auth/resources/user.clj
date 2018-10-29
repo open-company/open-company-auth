@@ -137,15 +137,15 @@
     false))
 
 ;; ----- User CRUD -----
-(def default-user-image "/img/ML/happy_face_red.svg")
-(def other-user-images
- ["/img/ML/happy_face_green.svg"
+(def user-images
+ ["/img/ML/happy_face_red.svg")
+  "/img/ML/happy_face_green.svg"
   "/img/ML/happy_face_blue.svg"
   "/img/ML/happy_face_purple.svg"
   "/img/ML/happy_face_yellow.svg"])
 
 (defn random-user-image []
-  (first (shuffle (vec (conj other-user-images default-user-image)))))
+  (first (shuffle (vec user-images))))
 
 (schema/defn ^:always-validate ->user :- User
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
