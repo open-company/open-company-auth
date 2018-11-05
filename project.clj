@@ -165,7 +165,7 @@
         (require '[aprint.core :refer (aprint ap)]
                  '[clojure.stacktrace :refer (print-stack-trace)]
                  '[clj-time.core :as t]
-                 '[clj-time.format :as format]
+                 '[clj-time.format :as f]
                  '[clojure.string :as s]
                  '[rethinkdb.query :as r]
                  '[schema.core :as schema]
