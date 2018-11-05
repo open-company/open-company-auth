@@ -28,7 +28,7 @@
   "
   #{:pending :unverified :active})
 
-(def digest-medium #{:email :slack})
+(def digest-medium #{:email :slack :in-app})
 
 (def digest-frequency #{:daily :weekly :never})
 
