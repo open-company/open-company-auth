@@ -85,7 +85,7 @@
   ;; An already active team member... who is inviting this person, yoh?
   ([_conn _sender team user :guard #(= :active (keyword (:status %))) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
-  true)
+  false)
   
   ;; No user yet, email invite
   ([conn sender team nil member? admin? invite :guard :email]
