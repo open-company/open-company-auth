@@ -479,8 +479,15 @@
           uninvited-slack-emails (clojure.set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
           ;; Slack users not in OC (from their email)
           uninvited-slack-users (map (fn [email] (some #(when (= (:email %) email) %) slack-users)) uninvited-slack-emails)
+          uninvited-slack-users-with-status (map #(assoc % :status :uninvited) uninvited-slack-users)
+          ;; Find all users that are coming from Slack and add the missing data (like slack-org-id slack-id slack-display-name)
+          oc-emails-from-slack (clojure.set/intersection slack-emails oc-emails)
+          ;; Slack users in OC (add slack needed data)
+          pending-users-from-slack (map (fn [email] (some #(when (and (= (:email %) email) (= (:status %) "pending")) %) oc-users-with-slack)) oc-emails-from-slack)
+          pending-users-with-slack-data (map (fn [user] (merge (first (filterv #(= (:email %) (:email user)) slack-users)) user)) pending-users-from-slack)
+          oc-users-not-from-slack (filterv (fn [user] (every? #(not= (:email %) (:email user)) pending-users-from-slack)) oc-users-with-slack)
           ;; OC users and univited Slack users (w/ status of uninvited) together gives us all the users
-          all-users (concat oc-users-with-slack (map #(assoc % :status :uninvited) uninvited-slack-users))]
+          all-users (remove empty? (concat oc-users-not-from-slack pending-users-with-slack-data uninvited-slack-users-with-status))]
       (user-rep/render-user-list team-id all-users))))
 
 ;; A resource for Slack channels for a particular team
