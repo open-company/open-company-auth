@@ -94,7 +94,7 @@
     (timbre/info "Creating user:" email "for team:" team-id)
     (if-let [new-user (user-res/create-user! conn
                         (user-res/->user (-> invite
-                          (dissoc :admin :org-name :logo-url :logo-width :logo-height :note)
+                          (dissoc :admin :org-name :logo-url :logo-width :logo-height :note :slack-id :slack-org-id)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
@@ -143,11 +143,20 @@
   ;; Non-active team member, needs a Slack invite/re-invite
   ([conn sender team user :guard #(not= :active (keyword (:status %))) true _admin? invite :guard :slack-id]
   (let [user-id (:user-id user)
-        slack-id (:slack-id invite)]
+        slack-id (:slack-id invite)
+        slack-invite (-> invite
+                      (dissoc :email)
+                      (merge {:first-name (:first-name user)
+                              :from-id (:slack-id sender)}))
+        add-bot? (not (contains? slack-invite :bot-token))
+        slack-org (when add-bot?
+                    (slack-org-res/get-slack-org conn (:slack-org-id invite)))
+        fixed-slack-invite (if add-bot?
+                             (merge slack-invite {:bot-token (:bot-token slack-org) :bot-user-id (:bot-user-id slack-org)})
+                             slack-invite)]
     (timbre/info "Sending Slack invitation to user:" user-id "at:" slack-id)
     (sqs/send! sqs/SlackInvite
-      (sqs/->slack-invite (merge invite {:first-name (:first-name user)
-                                         :from-id (:slack-id sender)})
+      (sqs/->slack-invite fixed-slack-invite
         (:first-name sender))
       config/aws-sqs-bot-queue)
     user))
