@@ -137,6 +137,7 @@
     false))
 
 ;; ----- User CRUD -----
+
 (def user-images
  ["/img/ML/happy_face_red.svg"
   "/img/ML/happy_face_green.svg"
