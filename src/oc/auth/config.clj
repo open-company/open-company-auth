@@ -79,6 +79,7 @@
                               ","
                               slack-unfurl-scope
                               ",commands,bot,chat:write:bot"))
+
 ;; ----- Google Oauth -----
 (defonce google-login-uri "https://accounts.google.com")
 (defonce google
