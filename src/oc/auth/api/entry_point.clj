@@ -3,6 +3,9 @@
   (:require [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [liberator.core :refer (defresource)]
             [cheshire.core :as json]
+            [taoensso.timbre :as timbre]
+            [clojure.walk :refer (keywordize-keys)]
+            [oc.lib.jwt :as jwt]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
@@ -14,7 +17,7 @@
 
 ;; ----- Representations -----
 
-(defn- render-entry-point [conn {:keys [user] :as _ctx}]
+(defn- render-entry-point [conn {:keys [user] :as ctx}]
 
   (if user
     
@@ -24,12 +27,16 @@
       {:pretty config/pretty?})
     
     ;; not auth'd, give them both email and Slack settings
-    (json/generate-string
-      {:links (conj (concat email-auth/auth-settings
-                            slack-auth/auth-settings
-                            google-auth/auth-settings)
-                    user-rep/refresh-link)}
-      {:pretty config/pretty?})))
+    (let [request (keywordize-keys (:request ctx))
+          id-token (:id-token (:params request))] ;; check params
+      ;; decode token and return id
+      (json/generate-string
+       {:token-info (jwt/decode-id-token (:id-token (:params request)) config/passphrase)
+        :links (conj (concat email-auth/auth-settings
+                             slack-auth/auth-settings
+                             google-auth/auth-settings)
+                     user-rep/refresh-link)}
+       {:pretty config/pretty?}))))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
