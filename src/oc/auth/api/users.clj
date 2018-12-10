@@ -329,7 +329,7 @@
                                               ((keyword slack-team-id) (:slack-users jwt-user)))
                                  slack-data-map (when is-slack-user?
                                                   {:slack-id (:id slack-user)
-                                                   :token slack-user})
+                                                   :slack-token (:token slack-user)})
                                  token-user (-> jwt-user
                                               (assoc :auth-source (name auth-source))
                                               (merge slack-data-map))]
