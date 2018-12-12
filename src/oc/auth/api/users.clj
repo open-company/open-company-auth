@@ -304,31 +304,38 @@
                (if (nil? (schema/check jwt/Claims (:claims decoded-token))) ; claims are valid
                  {:jwtoken token :user (:claims decoded-token)}
                  (let [claims (:claims decoded-token) ;; check if super user
+                       user-id (:user-id claims)
                        slack-user-id (:slack-user-id claims)
                        slack-team-id (:slack-team-id claims)]
                    (when (:super-user claims)
-                     (when-let* [user0 (user-res/get-user-by-slack-id
-                                        conn
-                                        slack-team-id
-                                        slack-user-id)
-                                 admin-teams (user-res/admin-of
-                                              conn
-                                              (:user-id user0))
-                                 user (assoc user0 :admin admin-teams)
-                                 jwt-user (user-rep/jwt-props-for user :slack)
-                                 utoken (jwtoken/generate conn jwt-user)
-                                 slack-user
-                                 ((keyword slack-team-id)
-                                  (:slack-users jwt-user))
+                     (let [auth-source (if slack-user-id
+                                         :slack
+                                         :email)
+                           user-data (if user-id
+                                       (user-res/get-user conn user-id)
+                                       (user-res/get-user-by-slack-id
+                                            conn
+                                            slack-team-id
+                                            slack-user-id))]
+                       (when user-data
+                         (when-let* [admin-teams (user-res/admin-of
+                                                  conn
+                                                  (:user-id user-data))
+                                     user (assoc user-data :admin admin-teams)
+                                     jwt-user (user-rep/jwt-props-for user auth-source)
+                                     utoken (jwtoken/generate conn jwt-user)]
+                           (let [is-slack-user? (= auth-source :slack)
+                                 slack-user (when is-slack-user?
+                                              ((keyword slack-team-id) (:slack-users jwt-user)))
+                                 slack-data-map (when is-slack-user?
+                                                  {:slack-id (:id slack-user)
+                                                   :slack-token (:token slack-user)})
                                  token-user (-> jwt-user
-                                              (assoc :auth-source
-                                                (name (:auth-source jwt-user)))
-                                              (assoc :slack-id
-                                                (:id slack-user))
-                                              (assoc :slack-token
-                                                (:token slack-user)))]
-                                ;; generated token
-                                {:jwtoken utoken :user token-user})))))))})
+                                              (assoc :auth-source (name auth-source))
+                                              (merge slack-data-map))]
+                             (when token-user
+                               ;; generated token
+                               {:jwtoken utoken :user token-user})))))))))))})
   
   :allowed-methods [:options :get]
 
