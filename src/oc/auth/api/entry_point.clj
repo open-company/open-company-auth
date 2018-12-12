@@ -26,11 +26,10 @@
       {:pretty config/pretty?})
     
     ;; not auth'd, give them both email and Slack settings
-    (let [request (keywordize-keys (:request ctx))
-          id-token (:id-token (:params request))] ;; check params
+    (let [id-token (:id-token ctx)] ;; check params
       ;; decode token and return id
       (json/generate-string
-       {:token-info (jwt/decode-id-token (:id-token (:params request)) config/passphrase)
+       {:token-info (jwt/decode-id-token id-token config/passphrase)
         :links (conj (concat email-auth/auth-settings
                              slack-auth/auth-settings
                              google-auth/auth-settings)
