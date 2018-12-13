@@ -3,7 +3,6 @@
   (:require [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [liberator.core :refer (defresource)]
             [cheshire.core :as json]
-            [clojure.walk :refer (keywordize-keys)]
             [oc.lib.jwt :as jwt]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
