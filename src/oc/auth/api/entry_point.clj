@@ -44,7 +44,7 @@
   :allowed-methods [:options :get]
 
   :authorized? true
-  :allowed? (fn [ctx] (api-common/allow-anonymous ctx))
+  :allowed? (fn [ctx] (api-common/allow-id-token ctx))
   
   ;; Media type client accepts
   :available-media-types ["application/json"]
