@@ -3,7 +3,6 @@
   (:require [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [liberator.core :refer (defresource)]
             [cheshire.core :as json]
-            [oc.lib.jwt :as jwt]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.auth.config :as config]
@@ -28,7 +27,7 @@
     (let [id-token (:id-token ctx)] ;; check params
       ;; decode token and return id
       (json/generate-string
-       {:token-info (jwt/decode-id-token id-token config/passphrase)
+       {:token-info id-token
         :links (conj (concat email-auth/auth-settings
                              slack-auth/auth-settings
                              google-auth/auth-settings)
