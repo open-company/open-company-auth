@@ -14,7 +14,7 @@
 
 ;; ----- Representations -----
 
-(defn- render-entry-point [conn {:keys [user] :as ctx}]
+(defn- render-entry-point [conn {:keys [user] :as _ctx}]
 
   (if user
     
@@ -24,15 +24,12 @@
       {:pretty config/pretty?})
     
     ;; not auth'd, give them both email and Slack settings
-    (let [id-token (:id-token ctx)] ;; check params
-      ;; decode token and return id
-      (json/generate-string
-       {:token-info id-token
-        :links (conj (concat email-auth/auth-settings
-                             slack-auth/auth-settings
-                             google-auth/auth-settings)
-                     user-rep/refresh-link)}
-       {:pretty config/pretty?}))))
+    (json/generate-string
+      {:links (conj (concat email-auth/auth-settings
+                            slack-auth/auth-settings
+                            google-auth/auth-settings)
+                    user-rep/refresh-link)}
+      {:pretty config/pretty?})))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
