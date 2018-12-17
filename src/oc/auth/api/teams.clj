@@ -205,7 +205,7 @@
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 (defresource team-list [conn]
-  (api-common/authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+  (api-common/jwt-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :get]
 
