@@ -105,7 +105,9 @@
   [conn new-user teams slack-org]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
   (let [new-user-digest (if (contains? slack-org :bot-token)
-                          (assoc new-user :digest-medium :slack)
+                          (merge new-user {:digest-medium :slack
+                                           :notification-medium :slack
+                                           :reminder-medium :slack})
                           new-user)
         user (user-res/create-user! conn (-> new-user-digest
                                           (assoc :status :active)
@@ -188,7 +190,9 @@
           ;; Add or update the Slack users list of the user
           updated-slack-user (user-res/update-user! conn
                                                     (:user-id user)
-                                                    (assoc slack-user-u :digest-medium :slack))
+                                                    (merge slack-user-u {:digest-medium :slack
+                                                                         :notification-medium :slack
+                                                                         :reminder-medium :slack}))
           ;; Create a JWToken from the user for the response
           jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                               (clean-user)
@@ -286,7 +290,9 @@
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
             slack-user-u (update-in user [:slack-users] merge new-slack-user)
             slack-user-digest (if (= redirect-arg :bot)
-                                (assoc slack-user-u :digest-medium :slack)
+                                (merge slack-user-u {:digest-medium :slack
+                                                     :notification-medium :slack
+                                                     :reminder-medium :slack})
                                 slack-user-u)
             updated-slack-user (do (user-res/activate! conn (:user-id user)) ; no longer :pending (if they were)
                                    (user-res/update-user! conn
