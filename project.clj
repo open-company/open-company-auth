@@ -138,7 +138,7 @@
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-spell "0.1.0"]
         ;; Dead code finder https://github.com/venantius/yagni
-        [venantius/yagni "0.1.6" :exclusions [org.clojure/clojure]]
+        [venantius/yagni "0.1.7" :exclusions [org.clojure/clojure]]
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
@@ -209,9 +209,12 @@
 
   :eastwood {
     ;; Disable some linters that are enabled by default
-    :exclude-linters [:constant-test :wrong-arity]
+    ;; contant-test - just seems mostly ill-advised, logical constants are useful in something like a `->cond` 
+    ;; wrong-arity - unfortunate, but it's failing on 3/arity of sqs/send-message
+    ;; implicit-dependencies - uhh, just seems dumb
+    :exclude-linters [:constant-test :wrong-arity :implicit-dependencies]
     ;; Enable some linters that are disabled by default
-    :add-linters [:unused-namespaces :unused-private-vars]
+    :add-linters [:unused-namespaces :unused-private-vars] ; :unused-locals]
 
     ;; Exclude testing namespaces
     :tests-paths ["test"]
