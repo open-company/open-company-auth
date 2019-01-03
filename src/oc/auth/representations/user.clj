@@ -61,14 +61,20 @@
         with-name-required (if (and (s/blank? (:first-name user))
                                    (s/blank? (:last-name user)))
                                  (conj with-password-required :name-required)
-                                 with-password-required)]
-    {:links (conj
-             slack-auth/auth-settings
-             google-auth/auth-settings
-             (user-link (:user-id user))
-             refresh-link
-             teams-link
-             email-rep/auth-link)  ; auth-link used for email verification w/ token
+                                 with-password-required)
+        auth-links (conj
+                     (concat
+                      slack-auth/auth-settings
+                      google-auth/auth-settings)
+                     email-rep/auth-link)  ; auth-link used for email verification w/ token
+        jwt-links (conj
+                   [(user-link (:user-id user))]
+                   refresh-link
+                   teams-link)]
+    {:links (concat
+             auth-links
+             (when-not (:id-token user)
+               jwt-links))
      :status with-name-required}))
 
 (defn- admin-action-link

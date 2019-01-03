@@ -13,7 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.10.0-RC5"]
+    [org.clojure/clojure "1.10.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.4.1"]
     [http-kit "2.4.0-alpha2"] ; Web client/server http://http-kit.org/
@@ -52,7 +52,7 @@
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
 
-    [open-company/lib "0.16.29" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.32" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
