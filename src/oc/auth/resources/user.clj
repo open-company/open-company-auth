@@ -29,6 +29,7 @@
   #{:pending :unverified :active})
 
 (def mediums #{:email :slack :in-app})
+(def digest-mediums (disj mediums :in-app))
 
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
@@ -47,7 +48,7 @@
 
           (schema/optional-key :timezone) (schema/maybe schema/Str) ; want it missing at first so we can default it on the client
 
-          :digest-medium (schema/pred #(mediums (keyword %)))
+          :digest-medium (schema/pred #(digest-mediums (keyword %)))
           :notification-medium (schema/pred #(mediums (keyword %)))
           :reminder-medium (schema/pred #(mediums (keyword %)))
 
