@@ -19,7 +19,7 @@
 
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
-               :digest-frequency :digest-medium :timezone
+               :digest-medium :notification-medium :reminder-medium :timezone
                :created-at :updated-at :slack-users])
 (def representation-props (concat slack-props oc-props))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])

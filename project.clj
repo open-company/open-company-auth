@@ -16,7 +16,7 @@
     [org.clojure/clojure "1.10.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.4.1"]
-    [http-kit "2.3.0"] ; Web client/server http://http-kit.org/
+    [http-kit "2.4.0-alpha2"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.7.1"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -35,7 +35,7 @@
     ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [org.julienxx/clj-slack "0.5.6" :exclusions [clj-http org.clojure/data.json]]
+    [org.julienxx/clj-slack "0.6.2" :exclusions [clj-http org.clojure/data.json]]
     ;; For google oauth2
     [stuarth/clj-oauth2 "0.3.2"]
     ;; Security library https://github.com/funcool/buddy
@@ -95,7 +95,7 @@
         ;; Example-based testing https://github.com/marick/lein-midje
         [lein-midje "3.2.1"]
         ;; Linter https://github.com/jonase/eastwood
-        [jonase/eastwood "0.3.1"]
+        [jonase/eastwood "0.3.4"]
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
@@ -104,7 +104,7 @@
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.1" :exclusions [org.clojure/tools.reader]]
         ;; Not used directly, dependency of lein-kibit and rewrite-clj https://github.com/clojure/tools.reader
-        [org.clojure/tools.reader "1.3.1"]
+        [org.clojure/tools.reader "1.3.2"]
       ]
     }
 
@@ -138,7 +138,7 @@
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-spell "0.1.0"]
         ;; Dead code finder https://github.com/venantius/yagni
-        [venantius/yagni "0.1.6" :exclusions [org.clojure/clojure]]
+        [venantius/yagni "0.1.7" :exclusions [org.clojure/clojure]]
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
@@ -209,9 +209,12 @@
 
   :eastwood {
     ;; Disable some linters that are enabled by default
-    :exclude-linters [:constant-test :wrong-arity]
+    ;; contant-test - just seems mostly ill-advised, logical constants are useful in something like a `->cond` 
+    ;; wrong-arity - unfortunate, but it's failing on 3/arity of sqs/send-message
+    ;; implicit-dependencies - uhh, just seems dumb
+    :exclude-linters [:constant-test :wrong-arity :implicit-dependencies]
     ;; Enable some linters that are disabled by default
-    :add-linters [:unused-namespaces :unused-private-vars]
+    :add-linters [:unused-namespaces :unused-private-vars] ; :unused-locals]
 
     ;; Exclude testing namespaces
     :tests-paths ["test"]
