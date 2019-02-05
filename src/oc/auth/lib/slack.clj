@@ -31,7 +31,9 @@
     {:user-id (db-common/unique-id)
      :slack-id (:id user-data)
      :slack-org-id (:team_id user-data)
-     :slack-display-name (:name user-data)
+     :slack-display-name (or (:display_name_normalized user-data)
+                             (:display_name user-data)
+                             (:name user-data))
      :name (:real_name user-data)
      :first-name (or (:first_name user-data)
                      (cond
