@@ -130,7 +130,7 @@
           ;; w/ identity.basic this response contains all user information we can get
           ;; so munge that into the right shape, or get user info if that doesn't work
           (let [user-info (get-user-info access-token scope slack-id)
-                non-empty-user-info (apply merge (for [[k v] user-info :when (not (nil? v))] {k v}))
+                non-empty-user-info (apply merge (for [[k v] user-info :when (not (clojure.string/blank? v))] {k v}))
                 user (if user-profile
                        (merge (coerce-to-user user-profile team-profile) non-empty-user-info)
                        user-info)]
