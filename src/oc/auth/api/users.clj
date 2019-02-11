@@ -77,11 +77,20 @@
                   (some #((set (:admins %)) accessing-user-id) teams)
                   false)))))
 
+(defn- update-user-qsg-checklist
+  "Update the :qsg-checklist property by merging the new passed data with the old present data to avoid
+  overriding all the properties on every patch."
+  [old-user-map patch-data]
+  (if (contains? patch-data :qsg-checklist)
+    (update-in patch-data [:qsg-checklist] merge (:qsg-checklist patch-data))
+    patch-data))
+
 (defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
-          updated-user (merge user (user-res/ignore-props (dissoc user-props :current-password)))]
+          updated-qsg-checklist (update-user-qsg-checklist user user-props)
+          updated-user (merge user (user-res/ignore-props (dissoc updated-qsg-checklist :current-password)))]
       (if (and (lib-schema/valid? user-res/User updated-user)
                (or (nil? new-password) ; not attempting to change password
                    (and (empty? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password

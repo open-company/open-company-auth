@@ -31,6 +31,16 @@
 (def mediums #{:email :slack :in-app})
 (def digest-mediums (disj mediums :in-app))
 
+(def QSGChecklist
+  {(schema/optional-key :show-guide?) (schema/maybe schema/Bool)
+   (schema/optional-key :invited?) (schema/maybe schema/Bool)
+   (schema/optional-key :add-post?) (schema/maybe schema/Bool)
+   (schema/optional-key :add-reminder?) (schema/maybe schema/Bool)
+   (schema/optional-key :add-section?) (schema/maybe schema/Bool)
+   (schema/optional-key :section-dialog-seen?) (schema/maybe schema/Bool)
+   (schema/optional-key :slack-dismissed?) (schema/maybe schema/Bool)
+   (schema/optional-key :guide-dismissed?) (schema/maybe schema/Bool)})
+
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
           :teams [lib-schema/UniqueID]
@@ -52,7 +62,8 @@
           :notification-medium (schema/pred #(mediums (keyword %)))
           :reminder-medium (schema/pred #(mediums (keyword %)))
 
-          (schema/optional-key :last-token-at) lib-schema/ISO8601}
+          (schema/optional-key :last-token-at) lib-schema/ISO8601
+          (schema/optional-key :qsg-checklist) QSGChecklist}
           lib-schema/slack-users
           lib-schema/google-users))
 
