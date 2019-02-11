@@ -148,7 +148,7 @@
   {:pre [(map? user)]}
   (let [user-id (:user-id user)]
     (-> user
-      (select-keys (concat representation-props [:admin? :status]))
+      (select-keys (concat representation-props [:admin?]))
       (user-collection-links team-id))))
 
 (schema/defn ^:always-validate render-user :- schema/Str
@@ -170,5 +170,5 @@
        :collection {:version hateoas/json-collection-version
                     :href url
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
-                    :items (map #(select-keys % (conj representation-props :status)) users)}}
+                    :items (map #(select-keys % representation-props) users)}}
       {:pretty config/pretty?})))
