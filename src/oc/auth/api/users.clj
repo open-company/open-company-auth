@@ -125,7 +125,7 @@
       (sqs/send! sqs/TokenAuth
                  (sqs/->token-auth {:type :verify :email email :token (:one-time-token created-user)})
                  config/aws-sqs-email-queue
-                 (if (not= (keyword (:status created-user)) :pending) 900 0))
+                 (if (not= (keyword (:status created-user)) :pending) 120 0))
       (timbre/info "Sent email verification for:" user-id "(" email ")")
       (timbre/info "Sending notification to SNS topic for:" user-id "(" email ")")
       (notification/send-trigger! (notification/->trigger created-user))
