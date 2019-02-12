@@ -5,7 +5,7 @@
             [oc.auth.config :as config]))
 
 (defn up [conn]
-  (println "Creating index loweremail ")
+  (println "Creating index loweremail...")
   (println (-> (r/table u/table-name)
                (r/index-create "loweremails"
                                (r/fn [row]

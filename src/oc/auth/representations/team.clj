@@ -42,7 +42,7 @@
   (slack/bot-link team-id))
 
 (defn add-google-auth-link [team-id]
-  (google/auth-link team-id))
+  (google/auth-link "authenticate" team-id))
 
 (defn roster-link [team-id]
   (hateoas/link-map "roster" hateoas/GET (str (url team-id) "/roster") {:accept mt/user-collection-media-type}))

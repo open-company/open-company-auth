@@ -23,13 +23,14 @@
 ;; ----- Validations -----
 
 (defn malformed-email-domain?
-  "Read in the body param from the request and make sure it's a non-blank string
+  "Read in the body param from the request and make sure it's valid JSON,
+  get the email domain from it and make sure it's a non-blank string
   that corresponds to an email domain. Otherwise just indicate it's malformed."
   [ctx]
   (try
-    (if-let* [domain (slurp (get-in ctx [:request :body]))
-              valid? (lib-schema/valid-email-domain? domain)]
-      [false {:data domain}]
+    (if-let* [json-payload (-> ctx (api-common/malformed-json? false) second :data)
+              valid? (lib-schema/valid-email-domain? (:email-domain json-payload))]
+      [false {:data json-payload}]
       true)
     (catch Exception e
       (do (timbre/warn "Request body not processable as an email domain: " e)
@@ -394,28 +395,31 @@
     :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
-  :processable? (fn [ctx] (team-res/allowed-email-domain? (:data ctx))) ; check for blacklisted email domain
+  :processable? (fn [ctx] (team-res/allowed-email-domain? (:email-domain (:data ctx)))) ; check for blacklisted email domain
 
   ;; Existentialism
   :exists? (by-method {
     :post (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
-                        {:existing-team true :existing-domain ((set (:email-domains team)) (:data ctx))}
-                        false))
+                      {:existing-team team
+                       :existing-domain ((set (:email-domains team)) (:email-domain (:data ctx)))}
+                      false))
     :delete (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
                                 exists? ((set (:email-domains team)) domain)]
-                        {:existing-team true :existing-domain true}
+                        {:existing-team team :existing-domain true}
                         false))}) ; team or email domain doesn't exist
 
   ;; Actions
   :post! (fn [ctx] (when (and (:existing-team ctx) (not (:existing-domain ctx)))
-                    {:updated-team (team-res/add-email-domain conn team-id (:data ctx))}))
+                      (if (:pre-flight (:data ctx))
+                        {:pre-flight true :updated-team (:existing-team ctx)}
+                        {:updated-team (team-res/add-email-domain conn team-id (:email-domain (:data ctx)))})))
   :delete! (fn [ctx] (when (:existing-domain ctx)
-                    {:updated-team (team-res/remove-email-domain conn team-id domain)}))
+                      {:updated-team (team-res/remove-email-domain conn team-id domain)}))
   
   ;; Responses
   :respond-with-entity? false
   :handle-unprocessable-entity (fn [ctx] (api-common/text-response "Email domain not allowed." 409))
-  :handle-created (fn [ctx] (if (or (:updated-team ctx) (:existing-domain ctx))
+  :handle-created (fn [ctx] (if (or (:updated-team ctx) (:pre-flight ctx) (:existing-domain ctx))
                               (api-common/blank-response)
                               (api-common/missing-response)))
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))

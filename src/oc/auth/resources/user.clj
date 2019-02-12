@@ -28,9 +28,8 @@
   "
   #{:pending :unverified :active})
 
-(def digest-medium #{:email :slack :in-app})
-
-(def digest-frequency #{:daily :weekly :never})
+(def mediums #{:email :slack :in-app})
+(def digest-mediums (disj mediums :in-app))
 
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
@@ -49,12 +48,13 @@
 
           (schema/optional-key :timezone) (schema/maybe schema/Str) ; want it missing at first so we can default it on the client
 
-          :digest-medium (schema/pred #(digest-medium (keyword %)))
-          :digest-frequency (schema/pred #(digest-frequency (keyword %)))
+          :digest-medium (schema/pred #(digest-mediums (keyword %)))
+          :notification-medium (schema/pred #(mediums (keyword %)))
+          :reminder-medium (schema/pred #(mediums (keyword %)))
 
           (schema/optional-key :last-token-at) lib-schema/ISO8601}
-         lib-schema/slack-users
-         lib-schema/google-users))
+          lib-schema/slack-users
+          lib-schema/google-users))
 
 (def User "User resource as stored in the DB."
   (merge UserCommon {
@@ -167,8 +167,9 @@
         (update :first-name #(or % ""))
         (update :last-name #(or % ""))
         (update :avatar-url #(or % (random-user-image)))
-        (update :digest-frequency #(or % :daily))
         (update :digest-medium #(or % :email)) ; lowest common denominator
+        (update :notification-medium #(or % :email)) ; lowest common denominator
+        (update :reminder-medium #(or % :email)) ; lowest common denominator
         (assoc :status :pending)
         (assoc :created-at ts)
         (assoc :updated-at ts)))))

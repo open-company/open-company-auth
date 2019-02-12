@@ -1,0 +1,33 @@
+(ns oc.auth.db.migrations.new-medium-settings
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.lib.db.common :as db-common]
+            [oc.auth.config :as config]
+            [oc.auth.resources.user :as user-res]))
+
+(defn up [conn]
+
+  (println "Removing index...")
+  (println (m/remove-index conn user-res/table-name "digest-frequency"))
+
+  (let [users (db-common/read-resources conn user-res/table-name)]
+    (println "Updating" (count users) "existing users...")
+
+    ;; Remove :digest-frequency prop
+    (println "Remove digest-frequency from existing users...")
+    (-> (r/table user-res/table-name)
+      (r/replace (r/fn [e]
+        (r/without e [:digest-frequency])))
+      (r/run conn))
+
+    ;; Set the 2 new medium properties to the value of the existing one
+    (println "Add new properties to existing users...")
+    (doseq [{:keys [digest-medium] :as user} users]
+      (-> (r/table user-res/table-name)
+        (r/get (user-res/primary-key user))
+        (r/update (r/fn [resource]
+          {:notification-medium digest-medium
+           :reminder-medium digest-medium}))
+        (r/run conn))))
+
+  true) ; return true on success
