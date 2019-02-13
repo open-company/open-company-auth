@@ -40,7 +40,6 @@
    (schema/optional-key :add-section?) (schema/maybe schema/Bool)
    (schema/optional-key :section-dialog-seen?) (schema/maybe schema/Bool)
    (schema/optional-key :slack-dismissed?) (schema/maybe schema/Bool)
-   (schema/optional-key :start-fresh-dismissed?) (schema/maybe schema/Bool)
    (schema/optional-key :guide-dismissed?) (schema/maybe schema/Bool)
    (schema/optional-key :tooltip-shown?) (schema/maybe schema/Bool)})
 
