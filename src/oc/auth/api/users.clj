@@ -126,13 +126,7 @@
              (sqs/->token-auth {:type :verify
                                 :email (:email user)
                                 :token (:one-time-token user)})
-             config/aws-sqs-email-queue
-             ;; Delay only if user is unverified (active but with unverified email)
-             ;; and we are not resending the verification email
-             (if (and (not= (keyword (:status user)) :pending)
-                      (not resend?))
-                120
-                0))
+             config/aws-sqs-email-queue)
   (timbre/info (str (if resend? "Re-sent" "Sent") " email verification for:" (:user-id user) "(" (:email user) ")")))
 
 (defn- resend-verification-email [conn ctx user-id]
