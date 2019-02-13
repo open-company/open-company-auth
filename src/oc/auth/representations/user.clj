@@ -44,6 +44,9 @@
 
 (defn- remove-link [user-id] (hateoas/remove-link (url user-id) {} {:ref mt/user-media-type}))
 
+(defn- resend-verification-email-link [user-id]
+  (hateoas/link-map "resend-verification" hateoas/POST (str (url user-id) "/verify") {}))
+
 (def refresh-link (hateoas/link-map "refresh" hateoas/GET "/users/refresh" {:accept jwt/media-type}))
 
 (def teams-link (hateoas/collection-link "/teams" {:accept mt/team-collection-media-type}))
@@ -103,7 +106,8 @@
       (partial-update-link user-id)
       refresh-link
       (delete-link user-id)
-      teams-link])))
+      teams-link
+      (resend-verification-email-link user-id)])))
 
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]
