@@ -32,7 +32,8 @@
 (def digest-mediums (disj mediums :in-app))
 
 (def QSGChecklist
-  {(schema/optional-key :show-guide?) (schema/maybe schema/Bool)
+  {(schema/optional-key :should-show-qsg?) (schema/maybe schema/Bool)
+   (schema/optional-key :show-guide?) (schema/maybe schema/Bool)
    (schema/optional-key :invited?) (schema/maybe schema/Bool)
    (schema/optional-key :add-post?) (schema/maybe schema/Bool)
    (schema/optional-key :add-reminder?) (schema/maybe schema/Bool)
@@ -40,7 +41,8 @@
    (schema/optional-key :section-dialog-seen?) (schema/maybe schema/Bool)
    (schema/optional-key :slack-dismissed?) (schema/maybe schema/Bool)
    (schema/optional-key :start-fresh-dismissed?) (schema/maybe schema/Bool)
-   (schema/optional-key :guide-dismissed?) (schema/maybe schema/Bool)})
+   (schema/optional-key :guide-dismissed?) (schema/maybe schema/Bool)
+   (schema/optional-key :tooltip-shown?) (schema/maybe schema/Bool)})
 
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
