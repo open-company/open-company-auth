@@ -41,6 +41,7 @@
    (schema/optional-key :see-digest-sample?) (schema/maybe schema/Bool)
    (schema/optional-key :slack-dismissed?) (schema/maybe schema/Bool)
    (schema/optional-key :carrot-video-dismissed?) (schema/maybe schema/Bool)
+   (schema/optional-key :guide-dismissed?) (schema/maybe schema/Bool)
    (schema/optional-key :tooltip-shown?) (schema/maybe schema/Bool)})
 
 (def ^:private UserCommon
