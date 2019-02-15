@@ -45,6 +45,7 @@
   (schema/optional-key :logo-height) (schema/maybe schema/Int)
   (schema/optional-key :first-name) (schema/maybe schema/Str)
   (schema/optional-key :last-name) (schema/maybe schema/Str)
+  (schema/optional-key :avatar-url) (schema/maybe schema/Str)
   (schema/optional-key :note) (schema/maybe schema/Str)
   (schema/optional-key :email) (schema/maybe lib-schema/EmailAddress)})
 
