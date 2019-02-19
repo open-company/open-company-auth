@@ -5,6 +5,7 @@
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
             [ring.util.response :as response]
+            [clojure.string :as s]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.lib.slack :as slack-lib]
@@ -226,9 +227,9 @@
   (if-let* [slack-response (when-not (or error (false? (first response))) response)
             email (email-for slack-response)
             slack-user (assoc slack-response :email email)]
-      
       ;; got an auth'd user back from Slack
-      (let [
+      (let [;; Get the existing slack org if present
+            existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
             ;; Get existing user by user ID or by email
             existing-user (if user-id
                             (user-res/get-user conn user-id)
@@ -237,21 +238,24 @@
               (timbre/error "No user found for user-id" user-id "during Slack org add of:" slack-response))
 
             ;; Get user Slack profile
-            user-profile (or (slack/user-profile (:slack-token slack-user) (:email slack-user)) {:display-name "-"})
+            user-profile (or ;; First try to load the user profile with the bot, if no bot try with the user token
+                             ;; even if it will be rejected because we don't have the users:read.email scope
+                          (slack/user-profile (or (:bot-token existing-slack-org) (:slack-token slack-user)) (:email slack-user))
+                          {:display-name (or (:display-name slack-user) "-")})
 
             ;; Get existing teams for auth sequence
             target-team (when team-id (team-res/get-team conn team-id)) ; OC team that Slack is being added to
 
-            ;; Get existing Slack org for this auth sequence, or create one if it's never been seen before
-            existing-slack-org (slack-org-res/get-slack-org conn (:slack-org-id slack-user)) ; existing Slack org?
+            ;; Upsert the slack org in the DB
             slack-team-info (team-info-for slack-user)
             updated-slack-team-info (merge slack-user slack-team-info)
             slack-org (if existing-slack-org
                           (update-slack-org-for conn updated-slack-team-info existing-slack-org) ; update the Slack org
                           (create-slack-org-for conn updated-slack-team-info)) ; create new Slack org
-
+            ;; Clean the Slack user properties to merge into the Carrot user if needed
+            cleaned-user-props (clean-slack-user (merge slack-user user-profile))
             ;; Create a new user map if we don't have an existing user
-            new-user (when-not existing-user (user-res/->user (clean-slack-user (merge slack-user user-profile))))
+            new-user (when-not existing-user (user-res/->user cleaned-user-props))
 
             ;; Get the relevant teams
             relevant-teams (if team-id ; if we're adding a Slack org to an existing OC team
@@ -277,7 +281,22 @@
                               (add-teams conn existing-user additional-team-ids))) ; add additional teams to the user
 
             ;; Final user
-            user (or updated-user (create-user-for conn new-user teams slack-org)) ; create new user if needed
+            user (if updated-user
+                  ;; Complete the user data with the Slack user data only if user is still pending, ie first Slack onboard
+                  (if (= (keyword (:status updated-user)) :pending)
+                    (merge updated-user {:first-name (or (:first-name updated-user) (:first-name cleaned-user-props))
+                                         :last-name (or (:last-name updated-user) (:last-name cleaned-user-props))
+                                         :title (or (:title updated-user) (:title cleaned-user-props))
+                                                     ;; Replace our default avatars with the Slack avatar only if
+                                                     ;; user is still pending and has an avatar on Slack
+                                         :avatar-url (if (and (or (s/starts-with? (:avatar-url updated-user) "/img/ML/")
+                                                                  (s/blank? (:avatar-url updated-user)))
+                                                              (not (s/blank? (:avatar-url cleaned-user-props))))
+                                                       (:avatar-url cleaned-user-props)
+                                                       (:avatar-url updated-user))
+                                         :timezone (or (:timezone updated-user) (:timezone cleaned-user-props))})
+                    updated-user)
+                  (create-user-for conn new-user teams slack-org)) ; create new user if needed
 
             ; new Slack team
             new-slack-user {(keyword (:slack-org-id slack-user)) {:id (:slack-id slack-user)
@@ -285,11 +304,11 @@
                                                                   :display-name (:display-name user-profile)
                                                                   :token (:slack-token slack-user)}}
             ;; Determine where we redirect them to
-            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)) (not (clojure.string/includes? redirect "add=team")))
+            bot-only? (and target-team ((set (:slack-orgs target-team)) (:slack-org-id slack-org)) (not (s/includes? redirect "add=team")))
             redirect-arg (if bot-only? :bot :team)
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
             slack-user-u (update-in user [:slack-users] merge new-slack-user)
-            slack-user-digest (if (= redirect-arg :bot)
+            slack-user-digest (if (or (:bot-token slack-org) (= redirect-arg :bot))
                                 (merge slack-user-u {:digest-medium :slack
                                                      :notification-medium :slack
                                                      :reminder-medium :slack})
