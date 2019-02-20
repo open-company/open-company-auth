@@ -31,7 +31,9 @@
     {:user-id (db-common/unique-id)
      :slack-id (:id user-data)
      :slack-org-id (:team_id user-data)
-     :slack-display-name (:name user-data)
+     :slack-display-name (or (:display_name_normalized user-data)
+                             (:display_name user-data)
+                             (:name user-data))
      :name (:real_name user-data)
      :first-name (or (:first_name user-data)
                      (cond
@@ -41,7 +43,8 @@
      :last-name (or (:last_name user-data)
                     (if splittable-name? (last split-name) ""))
      :timezone (:tz user-data)
-     :title (:title user-data)
+     :title (or (:title user-data)
+                (get-in user-data [:profile :title]))
      :avatar-url (or (:image_512 user-data)
                      (:image_192 user-data)
                      (:image_72 user-data)
@@ -127,9 +130,15 @@
           ;; valid response and access token
           ;; w/ identity.basic this response contains all user information we can get
           ;; so munge that into the right shape, or get user info if that doesn't work
-          (let [user (if user-profile
-                        (coerce-to-user user-profile team-profile)
-                        (get-user-info access-token scope slack-id))]
+          (let [user-info (try
+                            (get-user-info access-token scope slack-id)
+                            (catch Exception e
+                              (timbre/info e)
+                              {}))
+                non-empty-user-info (apply merge (for [[k v] user-info :when (not (clojure.string/blank? v))] {k v}))
+                user (if user-profile
+                       (merge (coerce-to-user user-profile team-profile) non-empty-user-info)
+                       user-info)]
             ;; return user and Slack org info
             (merge user slack-org splitted-state {:bot slack-bot :slack-token access-token}))
 
