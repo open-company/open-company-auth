@@ -217,6 +217,13 @@
         (jwtoken/generate conn (assoc jwt-user :slack-bots bots-for-user))
         (:last-token-at user)))))
 
+(defn- update-user-avatar-if-needed [old-user-avatar slack-user-avatar]
+  (if (and (or (s/starts-with? old-user-avatar "/img/ML/")
+               (s/blank? old-user-avatar))
+           (not (s/blank? slack-user-avatar)))
+    slack-user-avatar
+    old-user-avatar))
+
 (defn- slack-callback-step1
   "
   First step of slack oauth, if the user is authing and the team has no bot installed we redirect him to the
@@ -289,13 +296,9 @@
                                          :title (or (:title updated-user) (:title cleaned-user-props))
                                                      ;; Replace our default avatars with the Slack avatar only if
                                                      ;; user is still pending and has an avatar on Slack
-                                         :avatar-url (if (and (or (s/starts-with? (:avatar-url updated-user) "/img/ML/")
-                                                                  (s/blank? (:avatar-url updated-user)))
-                                                              (not (s/blank? (:avatar-url cleaned-user-props))))
-                                                       (:avatar-url cleaned-user-props)
-                                                       (:avatar-url updated-user))
+                                         :avatar-url (update-user-avatar-if-needed (:avatar-url updated-user) (:avatar-url cleaned-user-props))
                                          :timezone (or (:timezone updated-user) (:timezone cleaned-user-props))})
-                    updated-user)
+                    (assoc updated-user :avatar-url (update-user-avatar-if-needed (:avatar-url updated-user) (:avatar-url cleaned-user-props))))
                   (create-user-for conn new-user teams slack-org)) ; create new user if needed
 
             ; new Slack team
