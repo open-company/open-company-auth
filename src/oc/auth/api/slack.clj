@@ -298,7 +298,7 @@
                                                      ;; user is still pending and has an avatar on Slack
                                          :avatar-url (update-user-avatar-if-needed (:avatar-url updated-user) (:avatar-url cleaned-user-props))
                                          :timezone (or (:timezone updated-user) (:timezone cleaned-user-props))})
-                    (updated-in updated-user :avatar-url update-user-avatar-if-needed (:avatar-url cleaned-user-props)))
+                    (update-in updated-user [:avatar-url] update-user-avatar-if-needed (:avatar-url cleaned-user-props)))
                   (create-user-for conn new-user teams slack-org)) ; create new user if needed
 
             ; new Slack team
