@@ -16,7 +16,7 @@
     [org.clojure/clojure "1.10.0"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.4.1"]
-    [http-kit "2.4.0-alpha2"] ; Web client/server http://http-kit.org/
+    [http-kit "2.4.0-alpha3"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.7.1"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -43,7 +43,7 @@
     ;; Authentication for ring https://github.com/funcool/buddy-auth
     [buddy/buddy-auth "2.1.0"]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "0.4.13"]
+    [zprint "0.4.15"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     [clj-http "3.9.1"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
@@ -52,7 +52,7 @@
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
 
-    [open-company/lib "0.16.32" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.16.37" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -70,7 +70,7 @@
   ]
 
   :plugins [
-    [lein-ring "0.12.4"]
+    [lein-ring "0.12.5"]
     [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
@@ -87,7 +87,7 @@
         ;; NB: clj-time is pulled in by oc.lib
         ;; NB: joda-time is pulled in by oc.lib via clj-time
         ;; NB: commons-codec pulled in by oc.lib
-        [midje "1.9.4" :exclusions [joda-time clj-time commons-codec]] 
+        [midje "1.9.6" :exclusions [joda-time clj-time commons-codec]] 
         ;; Test Ring requests https://github.com/weavejester/ring-mock
         [ring-mock "0.1.5"]
       ]
@@ -95,7 +95,7 @@
         ;; Example-based testing https://github.com/marick/lein-midje
         [lein-midje "3.2.1"]
         ;; Linter https://github.com/jonase/eastwood
-        [jonase/eastwood "0.3.4"]
+        [jonase/eastwood "0.3.5"]
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
@@ -142,7 +142,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "0.3.13" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "0.3.15" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 
