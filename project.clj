@@ -35,7 +35,7 @@
     ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [org.julienxx/clj-slack "0.6.2" :exclusions [clj-http org.clojure/data.json]]
+    [org.julienxx/clj-slack "0.6.3" :exclusions [clj-http org.clojure/data.json]]
     ;; For google oauth2
     [stuarth/clj-oauth2 "0.3.2"]
     ;; Security library https://github.com/funcool/buddy
@@ -48,10 +48,10 @@
     [clj-http "3.9.1"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "0.2.6"]
+
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-
     [open-company/lib "0.16.36" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
@@ -70,7 +70,7 @@
   ]
 
   :plugins [
-    [lein-ring "0.12.4"]
+    [lein-ring "0.12.5"]
     [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 

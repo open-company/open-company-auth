@@ -20,7 +20,7 @@
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-medium :notification-medium :reminder-medium :timezone
-               :created-at :updated-at :slack-users])
+               :created-at :updated-at :slack-users :status :qsg-checklist])
 (def representation-props (concat slack-props oc-props))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
@@ -43,6 +43,9 @@
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id) {:ref mt/user-media-type}))
 
 (defn- remove-link [user-id] (hateoas/remove-link (url user-id) {} {:ref mt/user-media-type}))
+
+(defn- resend-verification-email-link [user-id]
+  (hateoas/link-map "resend-verification" hateoas/POST (str (url user-id) "/verify") {}))
 
 (def refresh-link (hateoas/link-map "refresh" hateoas/GET "/users/refresh" {:accept jwt/media-type}))
 
@@ -103,7 +106,8 @@
       (partial-update-link user-id)
       refresh-link
       (delete-link user-id)
-      teams-link])))
+      teams-link
+      (resend-verification-email-link user-id)])))
 
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]
@@ -148,7 +152,7 @@
   {:pre [(map? user)]}
   (let [user-id (:user-id user)]
     (-> user
-      (select-keys (concat representation-props [:admin? :status]))
+      (select-keys (concat representation-props [:admin?]))
       (user-collection-links team-id))))
 
 (schema/defn ^:always-validate render-user :- schema/Str
@@ -170,5 +174,5 @@
        :collection {:version hateoas/json-collection-version
                     :href url
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
-                    :items (map #(select-keys % (conj representation-props :status)) users)}}
+                    :items (map #(select-keys % representation-props) users)}}
       {:pretty config/pretty?})))

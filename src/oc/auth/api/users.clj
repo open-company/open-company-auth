@@ -3,7 +3,7 @@
   (:require [clojure.string :as s]
             [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes ANY)]
+            [compojure.core :as compojure :refer (defroutes ANY OPTIONS POST)]
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
             [schema.core :as schema]
@@ -77,11 +77,20 @@
                   (some #((set (:admins %)) accessing-user-id) teams)
                   false)))))
 
+(defn- update-user-qsg-checklist
+  "Update the :qsg-checklist property by merging the new passed data with the old present data to avoid
+  overriding all the properties on every patch."
+  [old-user-map patch-data]
+  (if (contains? patch-data :qsg-checklist)
+    (update-in patch-data [:qsg-checklist] merge (:qsg-checklist patch-data))
+    patch-data))
+
 (defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
-          updated-user (merge user (user-res/ignore-props (dissoc user-props :current-password)))]
+          updated-qsg-checklist (update-user-qsg-checklist user user-props)
+          updated-user (merge user (user-res/ignore-props (dissoc updated-qsg-checklist :current-password)))]
       (if (and (lib-schema/valid? user-res/User updated-user)
                (or (nil? new-password) ; not attempting to change password
                    (and (empty? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
@@ -105,6 +114,37 @@
 
 ;; ----- Actions -----
 
+(defn- can-resend-verificaiton-email? [conn user-id]
+  (if-let* [user (user-res/get-user conn user-id)
+            _is_not_active (not= (keyword (:status user)) :active)]
+    true
+    false))
+
+(defn- send-verification-email [user & [resend?]]
+  (timbre/info (str (if resend? "Re-sending" "Sending") " email verification request for:" (:user-id user) "(" (:email user) ")"))
+  (sqs/send! sqs/TokenAuth
+             (sqs/->token-auth {:type :verify
+                                :email (:email user)
+                                :token (:one-time-token user)})
+             config/aws-sqs-email-queue)
+  (timbre/info (str (if resend? "Re-sent" "Sent") " email verification for:" (:user-id user) "(" (:email user) ")")))
+
+(defn- resend-verification-email [conn ctx user-id]
+  (timbre/info "Resending verificaiton email:" (:email (:existing-user ctx)))
+  (let [user (:existing-user ctx)
+        has-one-time-token? (not (s/blank? (:one-time-token user)))]
+    (when-not has-one-time-token?
+      (timbre/info "Adding one-time-token for:" user-id "(" (:email user) ")"))
+    (let [new-one-time-token (when-not has-one-time-token?
+                                (str (java.util.UUID/randomUUID)))]
+      (when-not has-one-time-token?
+        (timbre/info "Sending password reset request for:" user-id "(" (:email user) ")"))
+      (let [updated-user (if has-one-time-token?
+                            user
+                            (user-res/add-token conn user-id new-one-time-token))]
+        (send-verification-email updated-user true)
+        {:updated-user updated-user}))))
+
 (defn- create-user [conn {email :email password :password :as user-props}]
   (timbre/info "Creating user:" email)
   (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
@@ -112,12 +152,7 @@
             admin-teams (user-res/admin-of conn user-id)]
     (do
       (timbre/info "Created user:" email)
-      (timbre/info "Sending email verification request for:" user-id "(" email ")")
-      (sqs/send! sqs/TokenAuth
-                 (sqs/->token-auth {:type :verify :email email :token (:one-time-token created-user)})
-                 config/aws-sqs-email-queue
-                 (if (not= (keyword (:status created-user)) :pending) 900 0))
-      (timbre/info "Sent email verification for:" user-id "(" email ")")
+      (send-verification-email created-user)
       (timbre/info "Sending notification to SNS topic for:" user-id "(" email ")")
       (notification/send-trigger! (notification/->trigger created-user))
       {:new-user (assoc created-user :admin admin-teams)})
@@ -237,16 +272,24 @@
 (defresource user [conn user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
-  :allowed-methods [:options :get :patch :delete]
+  :allowed-methods [:options :get :post :patch :delete]
 
   ;; Media type client accepts
   :available-media-types [mt/user-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
+
+  :malformed? (by-method {
+    :options false
+    :get false
+    :post false
+    :patch (fn [ctx] (api-common/malformed-json? ctx))
+    :delete false})
   
   ;; Media type client sends
   :known-content-type? (by-method {
                           :options true
                           :get true
+                          :post true
                           :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))
                           :delete true})
 
@@ -258,8 +301,8 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :get (fn [ctx]
-           (allow-user-and-team-admins conn ctx user-id))
+    :get (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
+    :post (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
     :patch (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
     :delete (fn [ctx] (allow-user-and-team-admins conn ctx user-id))})
 
@@ -267,6 +310,7 @@
   :processable? (by-method {
     :get true
     :options true
+    :post (fn [ctx] (can-resend-verificaiton-email? conn user-id))
     :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))
     :delete true})
 
@@ -281,12 +325,14 @@
                        false))
 
   ;; Acctions
+  :post! (fn [ctx] (resend-verification-email conn ctx user-id))
   :patch! (fn [ctx] (update-user conn ctx user-id))
   :delete! (fn [_] (delete-user conn user-id))
 
   ;; Responses
   :handle-ok (by-method {
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
+    :post (fn [ctx] (api-common/blank-response))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-response (schema/check user-res/User (:user-update ctx)))))
@@ -388,7 +434,7 @@
   :malformed? (by-method {
     :options false
     :post (fn [ctx] (malformed-email? ctx))
-    :delete false})  
+    :delete false})
   :known-content-type? (by-method {
     :options true
     :post (fn [ctx] (api-common/known-content-type? ctx "text/x-email"))})
@@ -417,4 +463,9 @@
       (ANY "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
       (ANY "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
       ;; user operations
-      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
+      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      ;; Resend verification email api
+      (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
