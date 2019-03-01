@@ -35,7 +35,7 @@
     ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [org.julienxx/clj-slack "0.6.2" :exclusions [clj-http org.clojure/data.json]]
+    [org.julienxx/clj-slack "0.6.3" :exclusions [clj-http org.clojure/data.json]]
     ;; For google oauth2
     [stuarth/clj-oauth2 "0.3.2"]
     ;; Security library https://github.com/funcool/buddy

@@ -466,4 +466,6 @@
       (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       ;; Resend verification email api
       (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
+      (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
