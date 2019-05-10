@@ -191,7 +191,7 @@
           ;; Add or update the Slack users list of the user
           updated-slack-user (user-res/update-user! conn
                                                     (:user-id user)
-                                                    (merge slack-user-u {:digest-medium :slack
+                                                    (merge slack-user-u {:digest-medium :email
                                                                          :notification-medium :slack
                                                                          :reminder-medium :slack}))
           ;; Create a JWToken from the user for the response
@@ -312,7 +312,7 @@
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
             slack-user-u (update-in user [:slack-users] merge new-slack-user)
             slack-user-digest (if (or (:bot-token slack-org) (= redirect-arg :bot))
-                                (merge slack-user-u {:digest-medium :slack
+                                (merge slack-user-u {:digest-medium :email
                                                      :notification-medium :slack
                                                      :reminder-medium :slack})
                                 slack-user-u)
