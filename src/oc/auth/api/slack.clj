@@ -60,8 +60,11 @@
   (timbre/info "Retrieving Slack team info for" (:slack-org-id slack-user))
   (let [update-team-data? (or (not slack-domain)
                               (not logo-url))
-        response (when update-team-data?
-                  (slack-lib/get-team-info slack-token)) ; get team.info if we need it
+        response (when update-team-data? ; get team.info if we need it
+                   (try
+                    (slack-lib/get-team-info slack-token)
+                    (catch Exception e ; may not have sufficient scope to make this call (need bot perms)
+                      (timbre/info e))))
         updated-logo-url (or
                           (logo-url-from-response response)
                           logo-url)
@@ -69,7 +72,7 @@
                                (:domain response)
                                slack-domain)]
     {:slack-domain updated-slack-domain
-     :logo-url updated-logo-url})) ; give up
+     :logo-url updated-logo-url}))
 
 ;; ----- Actions -----
 
