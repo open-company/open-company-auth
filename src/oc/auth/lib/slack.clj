@@ -210,8 +210,10 @@
   "
   [user-token email]
   (timbre/info "Lookup Slack user by email:" email " with user token:" user-token)
-  (let [info (slack-lib/slack-api "users.lookupByEmail" {:token user-token
-                                                         :email email})
+  (let [info (try
+               (slack-lib/slack-api "users.lookupByEmail" {:token user-token
+                                                           :email email})
+               (catch Exception e {})) ; only bot installing users have the scope to make this call
         slack-display-name (-> info :user :profile :display_name_normalized)
         slack-real-name (-> info :user :profile :real_name_normalized)
         display-name (cond
