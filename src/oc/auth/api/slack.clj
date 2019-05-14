@@ -60,8 +60,11 @@
   (timbre/info "Retrieving Slack team info for" (:slack-org-id slack-user))
   (let [update-team-data? (or (not slack-domain)
                               (not logo-url))
-        response (when update-team-data?
-                  (slack-lib/get-team-info slack-token)) ; get team.info if we need it
+        response (when update-team-data? ; get team.info if we need it
+                   (try
+                    (slack-lib/get-team-info slack-token)
+                    (catch Exception e ; may not have sufficient scope to make this call (need bot perms)
+                      (timbre/info e))))
         updated-logo-url (or
                           (logo-url-from-response response)
                           logo-url)
@@ -69,7 +72,7 @@
                                (:domain response)
                                slack-domain)]
     {:slack-domain updated-slack-domain
-     :logo-url updated-logo-url})) ; give up
+     :logo-url updated-logo-url}))
 
 ;; ----- Actions -----
 
@@ -191,7 +194,7 @@
           ;; Add or update the Slack users list of the user
           updated-slack-user (user-res/update-user! conn
                                                     (:user-id user)
-                                                    (merge slack-user-u {:digest-medium :slack
+                                                    (merge slack-user-u {:digest-medium :email
                                                                          :notification-medium :slack
                                                                          :reminder-medium :slack}))
           ;; Create a JWToken from the user for the response
@@ -312,7 +315,7 @@
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
             slack-user-u (update-in user [:slack-users] merge new-slack-user)
             slack-user-digest (if (or (:bot-token slack-org) (= redirect-arg :bot))
-                                (merge slack-user-u {:digest-medium :slack
+                                (merge slack-user-u {:digest-medium :email
                                                      :notification-medium :slack
                                                      :reminder-medium :slack})
                                 slack-user-u)
