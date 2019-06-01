@@ -34,9 +34,9 @@ Prospective users of [Carrot](https://carrot.io/) should get started by going to
 
 Most of the dependencies are internal, meaning [Leiningen](https://github.com/technomancy/leiningen) will handle getting them for you. There are a few exceptions:
 
-* [Java 12](http://www.oracle.com/technetwork/java/javase/downloads/index.html) - a Java 12 JRE is needed to run Clojure
-* [Leiningen](https://github.com/technomancy/leiningen) 2.9.1+ - Clojure's build and dependency management tool
-* [RethinkDB](http://rethinkdb.com/) v2.3.6+ - a multi-modal (document, key/value, relational) open source NoSQL database
+* [Java](https://openjdk.java.net/) - a Java 12+ JRE is needed to run Clojure
+* [Leiningen](https://github.com/technomancy/leiningen) - Leiningen 2.9.1+ is a Clojure build and dependency management tool
+* [RethinkDB](http://rethinkdb.com/) - RethinkDB v2.3.6+ is a multi-modal (document, key/value, relational) open source NoSQL database
 
 #### Java
 
