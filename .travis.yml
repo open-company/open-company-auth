@@ -1,7 +1,7 @@
 language: clojure
 sudo: false
 jdk:
-- openjdk12
+- openjdk8
 lein: 2.9.1
 addons:
   rethinkdb: '2.3.6'
