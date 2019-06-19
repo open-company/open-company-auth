@@ -29,4 +29,3 @@
     (if (pos? expires-in)
       user-info
       false)))
-  

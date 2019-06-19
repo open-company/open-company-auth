@@ -50,6 +50,7 @@
 (defn- google-callback
   [conn params]
   (timbre/info "Google Callback")
+  (timbre/info params)
   (let [token (google/access-token params)]
     (when token
       (let [user-info (google/user-info token)
@@ -85,8 +86,5 @@
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
-     (GET "/google/oauth" {params :params}
-       (pool/with-pool [conn db-pool]
-         (response/redirect (:uri google/auth-req))))
      (GET "/google/oauth/callback" {params :params}
        (pool/with-pool [conn db-pool] (google-callback conn params))))))

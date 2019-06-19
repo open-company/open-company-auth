@@ -12,19 +12,19 @@
 (defn- slack-auth-url
   ([scope] (slack-auth-url scope nil))
   ([scope state]
-  {:pre [(string? scope)
-         (or (nil? state) (map? state))]}
-  (let [orig-state (:state slack)
-        slack-state (-> (merge orig-state state)
-                        oauth/encode-state-string)]
-    (str "https://slack.com/oauth/authorize?client_id="
-       config/slack-client-id
-       "&redirect_uri="
-       config/auth-server-url (:redirectURI slack)
-       "&state="
-       slack-state
-       "&scope="
-       scope))))
+   {:pre [(string? scope)
+          (or (nil? state) (map? state))]}
+   (let [orig-state (:state slack)
+         slack-state (-> (merge orig-state state)
+                         oauth/encode-state-string)]
+     (str "https://slack.com/oauth/authorize?client_id="
+          config/slack-client-id
+          "&redirect_uri="
+          config/auth-server-url (:redirectURI slack)
+          "&state="
+          slack-state
+          "&scope="
+          scope))))
 
 (defn- slack-link
   [rel scope state]
