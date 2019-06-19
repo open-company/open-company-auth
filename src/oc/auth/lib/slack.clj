@@ -1,7 +1,6 @@
 (ns oc.auth.lib.slack
   (:require [defun.core :refer (defun)]
             [clojure.string :as s]
-            [clojure.edn :as edn]
             [oc.lib.slack :as slack-lib]
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]

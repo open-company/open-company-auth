@@ -1,7 +1,6 @@
 (ns oc.auth.representations.slack-auth
   "Resource representation functions for Slack authentication."
-  (:require [clojure.string :as s]
-            [oc.lib.hateoas :as hateoas]
+  (:require [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
             [oc.auth.lib.oauth :as oauth]))
 

@@ -3,7 +3,6 @@
   (:require [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
             [oc.auth.lib.oauth :as oauth]
-            [oc.auth.lib.google :as google]
             [clj-oauth2.client :as oauth2]))
 
 (def ^:private google
