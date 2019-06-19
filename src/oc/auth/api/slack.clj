@@ -136,14 +136,14 @@
 
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('team', 'bot' or 'failed') and a JWToken."
-  ([origin redirect access]
-    (redirect-to-web-ui origin redirect access nil :not-a-new-user)) ; nil = no jwtoken
+  ([redirect-origin redirect access]
+    (redirect-to-web-ui redirect-origin redirect access nil :not-a-new-user)) ; nil = no jwtoken
 
-  ([origin redirect access jwtoken last-token-at]
+  ([redirect-origin redirect access jwtoken last-token-at]
   (let [page (or redirect "/login")
         jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
         param-concat (if (.contains page "?") "&" "?")
-        url (str (or origin config/ui-server-url) page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
+        url (str (or redirect-origin config/ui-server-url) page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
     (timbre/info "Redirecting request to:" url)
     (response/redirect (str url jwt-param)))))
 
