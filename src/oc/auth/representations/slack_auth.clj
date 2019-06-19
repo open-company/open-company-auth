@@ -2,18 +2,12 @@
   "Resource representation functions for Slack authentication."
   (:require [clojure.string :as s]
             [oc.lib.hateoas :as hateoas]
-            [oc.auth.config :as config])
-  (:import [java.util Base64]))
+            [oc.auth.config :as config]
+            [oc.auth.lib.oauth :as oauth]))
 
 (def ^:private slack
   {:redirectURI  "/slack/auth"
    :state        {:team-id "open-company-auth"}})
-
-(defn- encode-state-string
-  [data]
-  (let [encoder    (Base64/getUrlEncoder)
-        data-bytes (-> data pr-str .getBytes)]
-    (. encoder encodeToString data-bytes)))
 
 (defn- slack-auth-url
   ([scope] (slack-auth-url scope nil))
@@ -22,7 +16,7 @@
          (or (nil? state) (map? state))]}
   (let [orig-state (:state slack)
         slack-state (-> (merge orig-state state)
-                        encode-state-string)]
+                        oauth/encode-state-string)]
     (str "https://slack.com/oauth/authorize?client_id="
        config/slack-client-id
        "&redirect_uri="

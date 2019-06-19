@@ -9,8 +9,8 @@
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [oc.lib.db.common :as db-common]
-            [oc.auth.config :as config])
-  (:import [java.util Base64]))
+            [oc.auth.config :as config]
+            [oc.auth.lib.oauth :as oauth]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
@@ -101,14 +101,11 @@
         slack-org-id  (when (= (count split-state) 5) (last split-state))]
     {:team-id team-id :user-id user-id :redirect redirect :state-slack-org-id slack-org-id}))
 
-(defn- decode-state-string
+;; ¯\_(ツ)_/¯
+(defn- fixed-decode-state-string
   [state-str]
-  (let [decoder       (Base64/getUrlDecoder)
-        decoded-bytes (. decoder (decode state-str))
-        decoded-str   (String. decoded-bytes)
-        decoded-state (edn/read-string decoded-str)]
+  (let [decoded-state (oauth/decode-state-string state-str)]
     (cond-> decoded-state
-      ;; ¯\_(ツ)_/¯
       (= "open-company-auth" (:team-id decoded-state))
       (assoc :user-id nil
              :team-id nil))))
@@ -122,7 +119,7 @@
     open-company-auth:{team-id}:{user-id}:/redirect/path:{slack-org-id} second step of user auth trying to add the bot"
   [slack-code slack-state]
   (timbre/info "Processing Slack response code with Slack state:" slack-state)
-  (let [decoded-state (decode-state-string slack-state)]
+  (let [decoded-state (fixed-decode-state-string slack-state)]
     (if slack-code
       (let [response      (slack-oauth/access slack-connection
                                             config/slack-client-id
