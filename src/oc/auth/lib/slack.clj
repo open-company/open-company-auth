@@ -17,12 +17,12 @@
 
 (def ^:private slack
   {:redirectURI  "/slack/auth"
-   :state        "open-company-auth"})
+   :state        {:team-id "open-company-auth"}})
 
 (defn- coerce-to-user
   "Coerce the given map to a user."
   ([user-data] (coerce-to-user user-data nil))
-  
+
   ([user-data team-data]
   (let [user-name (or (:real_name_normalized user-data)
                       (:real_name user-data)
@@ -88,18 +88,6 @@
       (coerce-to-user (merge (:user identity) (-> identity :user :profile)))
       (timbre/warn "Access token could not be validated"
                    {:identity identity :auth-test auth-test}))))
-
-(defn- split-state
-  [slack-state]
-  (let [split-state   (s/split slack-state #":")
-        team-id       (when (or (= (count split-state) 4) (= (count split-state) 5)) (second split-state)) ; team-id from state
-        user-id       (when (or (= (count split-state) 4) (= (count split-state) 5)) (nth split-state 2)) ; user-id from state
-        redirect      (case (count split-state)
-                        5 (nth split-state 3)
-                        4 (nth split-state 3)
-                        2 (last split-state))
-        slack-org-id  (when (= (count split-state) 5) (last split-state))]
-    {:team-id team-id :user-id user-id :redirect redirect :state-slack-org-id slack-org-id}))
 
 ;; ¯\_(ツ)_/¯
 (defn- fixed-decode-state-string
