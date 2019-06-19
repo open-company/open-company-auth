@@ -15,8 +15,7 @@
    {:pre [(string? scope)
           (or (nil? state) (map? state))]}
    (let [orig-state (:state slack)
-         slack-state (-> (merge orig-state state)
-                         oauth/encode-state-string)]
+         slack-state (oauth/encode-state-string (merge orig-state state))]
      (str "https://slack.com/oauth/authorize?client_id="
           config/slack-client-id
           "&redirect_uri="

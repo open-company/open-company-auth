@@ -16,8 +16,7 @@
    {:pre [(vector? scope)
           (or (nil? state) (map? state))]}
    (let [orig-state      (:state google)
-         goog-state      (-> (merge orig-state state)
-                             oauth/encode-state-string)
+         goog-state      (oauth/encode-state-string (merge orig-state state))
          oauth-req       (oauth2/make-auth-request config/google goog-state)]
      (:uri oauth-req))))
 
