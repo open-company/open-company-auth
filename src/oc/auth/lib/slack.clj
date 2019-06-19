@@ -1,6 +1,7 @@
 (ns oc.auth.lib.slack
   (:require [defun.core :refer (defun)]
             [clojure.string :as s]
+            [clojure.edn :as edn]
             [oc.lib.slack :as slack-lib]
             [clj-slack.oauth :as slack-oauth]
             [clj-slack.auth :as slack-auth]
@@ -8,7 +9,8 @@
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [oc.lib.db.common :as db-common]
-            [oc.auth.config :as config]))
+            [oc.auth.config :as config])
+  (:import [java.util Base64]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
@@ -99,6 +101,18 @@
         slack-org-id  (when (= (count split-state) 5) (last split-state))]
     {:team-id team-id :user-id user-id :redirect redirect :state-slack-org-id slack-org-id}))
 
+(defn- decode-state-string
+  [state-str]
+  (let [decoder       (Base64/getUrlDecoder)
+        decoded-bytes (. decoder (decode state-str))
+        decoded-str   (String. decoded-bytes)
+        decoded-state (edn/read-string decoded-str)]
+    (cond-> decoded-state
+      ;; ¯\_(ツ)_/¯
+      (= "open-company-auth" (:team-id decoded-state))
+      (assoc :user-id nil
+             :team-id nil))))
+
 (defn- swap-code-for-user
   "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
   If the swap works, then test the access token to get user information.
@@ -108,7 +122,7 @@
     open-company-auth:{team-id}:{user-id}:/redirect/path:{slack-org-id} second step of user auth trying to add the bot"
   [slack-code slack-state]
   (timbre/info "Processing Slack response code with Slack state:" slack-state)
-  (let [splitted-state (split-state slack-state)]
+  (let [decoded-state (decode-state-string slack-state)]
     (if slack-code
       (let [response      (slack-oauth/access slack-connection
                                             config/slack-client-id
@@ -140,15 +154,15 @@
                        (merge (coerce-to-user user-profile team-profile) non-empty-user-info)
                        user-info)]
             ;; return user and Slack org info
-            (merge user slack-org splitted-state {:bot slack-bot :slack-token access-token}))
+            (merge user slack-org decoded-state {:bot slack-bot :slack-token access-token}))
 
           ;; invalid response or access token
           (do
             (timbre/warn "Could not swap code for token" {:oauth-response response})
-            (merge splitted-state {:error true}))))
+            (merge decoded-state {:error true}))))
       (do
         (timbre/warn "Empty slack code, user denied permission:" slack-code)
-        (merge splitted-state {:error true})))))
+        (merge decoded-state {:error true})))))
 
 (defn oauth-callback
   "Handle the callback from Slack, returning either a tuple of:

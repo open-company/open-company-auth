@@ -2,19 +2,27 @@
   "Resource representation functions for Slack authentication."
   (:require [clojure.string :as s]
             [oc.lib.hateoas :as hateoas]
-            [oc.auth.config :as config]))
+            [oc.auth.config :as config])
+  (:import [java.util Base64]))
 
 (def ^:private slack
   {:redirectURI  "/slack/auth"
-   :state        "open-company-auth"})
+   :state        {:team-id "open-company-auth"}})
 
-(defn- slack-auth-url 
+(defn- encode-state-string
+  [data]
+  (let [encoder    (Base64/getUrlEncoder)
+        data-bytes (-> data pr-str .getBytes)]
+    (. encoder encodeToString data-bytes)))
+
+(defn- slack-auth-url
   ([scope] (slack-auth-url scope nil))
   ([scope state]
   {:pre [(string? scope)
-         (or (nil? state)(string? state))]}
+         (or (nil? state) (map? state))]}
   (let [orig-state (:state slack)
-        slack-state (if state (s/join ":" [orig-state state]) orig-state)]
+        slack-state (-> (merge orig-state state)
+                        encode-state-string)]
     (str "https://slack.com/oauth/authorize?client_id="
        config/slack-client-id
        "&redirect_uri="
@@ -33,11 +41,11 @@
     {:auth-source "slack"
     :authentication "oauth"}))
 
-(defn bot-link 
+(defn bot-link
   ([] (bot-link nil))
   ([state] (slack-link "bot" config/slack-bot-scope state)))
 
-(defn auth-link 
+(defn auth-link
   ([rel] (auth-link rel nil))
   ([rel state] (slack-link rel config/slack-user-scope state)))
 
