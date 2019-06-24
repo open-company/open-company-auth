@@ -13,7 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.10.1-RC1"]
+    [org.clojure/clojure "1.10.1"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.4.2"]
     [http-kit "2.4.0-alpha4"] ; Web client/server http://http-kit.org/
@@ -43,7 +43,7 @@
     ;; Authentication for ring https://github.com/funcool/buddy-auth
     [buddy/buddy-auth "2.1.0"]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "0.4.15"]
+    [zprint "0.4.16"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     [clj-http "3.10.0"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
@@ -52,7 +52,7 @@
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
 
-    [open-company/lib "0.17.11" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.17.12" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -142,7 +142,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "0.3.15" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "0.3.16" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 
