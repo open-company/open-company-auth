@@ -2,7 +2,7 @@
   "User stored in RethinkDB."
   (:require [clojure.string :as s]
             [clojure.walk :refer (keywordize-keys)]
-            [defun.core :refer (defun)]
+            [defun.core :refer (defun defun-)]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
             [buddy.hashers :as hashers]
@@ -17,6 +17,15 @@
 (def primary-key :user-id)
 
 ;; ----- Schema -----
+
+(defun- contains-han-script)
+
+(defn- allowed-name? [name]
+  (and (string? name)
+       (not (re-matches #".*\d.*" name)) ; don't allow any numeral
+       (not (contains-han-script name)) ; don't allow HAN characters
+       (= (count name) (.codePointCount name 0 (count name))))) ; same # of characters as Unicode points
+
 
 (def statuses 
   "
