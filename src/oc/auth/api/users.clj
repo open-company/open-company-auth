@@ -445,6 +445,50 @@
   ;; Responses
   :handle-created (api-common/blank-response))
 
+;; resource for associating Expo push notification token of a specific mobile device to logged in user
+;; https://docs.expo.io/versions/latest/guides/push-notifications/
+(defresource expo-push-token [conn]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post]
+
+  :available-media-types [mt/expo-push-token-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/expo-push-token-media-type)
+
+  :known-content-type? (by-method {:options true
+                                   :post (fn [ctx] (api-common/known-content-type? ctx mt/expo-push-token-media-type))})
+
+  :initialize-context (fn [ctx]
+                        (api-common/read-token
+                         (get-in ctx [:request :headers])
+                         config/passphrase))
+
+  :allowed? (by-method {:options true
+                        :post (fn [ctx] (-> ctx :user :user-id))})
+
+  :exists? (fn [ctx]
+             (if-let [user (user-res/get-user conn (-> ctx :user :user-id))]
+               {:existing-user user}
+               false))
+
+  :malformed? (by-method {:options false
+                          :post (fn [ctx]
+                                  (if-let* [token (-> ctx :request :body slurp)
+                                            valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
+                                    [false {:expo-push-token token}]
+                                    true))})
+
+  :post! (fn [{:keys [existing-user expo-push-token] :as ctx}]
+           (timbre/info "Storing Expo push token: " expo-push-token)
+           (let [push-tokens (into #{} (:expo-push-tokens existing-user []))
+                 new-push-tokens (conj push-tokens expo-push-token)
+                 user-update {:expo-push-tokens (seq new-push-tokens)}
+                 new-ctx (assoc ctx :user-update user-update)]
+             (update-user conn new-ctx (:user-id existing-user))))
+
+  :handle-ok (by-method {:post (fn [ctx] (api-common/blank-response))})
+  )
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -462,10 +506,13 @@
       ;; token refresh request
       (ANY "/users/refresh" [] (pool/with-pool [conn db-pool] (token conn)))
       (ANY "/users/refresh/" [] (pool/with-pool [conn db-pool] (token conn)))
+      ;; Expo push notification token operations
+      (ANY "/users/expo-push-token" [] (pool/with-pool [conn db-pool] (expo-push-token conn)))
       ;; user operations
       (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       ;; Resend verification email api
       (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
       (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id))))))
+      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      )))
