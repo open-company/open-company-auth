@@ -484,7 +484,9 @@
                  new-push-tokens (conj push-tokens expo-push-token)
                  user-update {:expo-push-tokens (seq new-push-tokens)}
                  new-ctx (assoc ctx :user-update user-update)]
-             (update-user conn new-ctx (:user-id existing-user))))
+             (if (not= push-tokens new-push-tokens)
+               (update-user conn new-ctx (:user-id existing-user))
+               (timbre/info "Expo push tokens have not changed, no action taken"))))
 
   :handle-ok (by-method {:post (fn [ctx] (api-common/blank-response))})
   )
