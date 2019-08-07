@@ -206,7 +206,7 @@
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 (defresource team-list [conn]
-  (api-common/jwt-resource config/passphrase) ; verify validity and presence of required JWToken
+  (api-common/id-token-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :get]
 
@@ -215,8 +215,8 @@
   :handle-not-acceptable (api-common/only-accept 406 mt/team-collection-media-type)
   
   ;; Responses
-  :handle-ok (fn [ctx] (let [user-id (-> ctx :user :user-id)]
-                        (team-rep/render-team-list (teams-for-user conn user-id) user-id))))
+  :handle-ok (fn [ctx] (let [user (:user ctx)]
+                        (team-rep/render-team-list (teams-for-user conn (:user-id user)) user))))
 
 ;; A resource for operations on a particular team
 (defresource team [conn team-id]
@@ -460,7 +460,7 @@
 
 ;; A resource for roster of team users for a particular team
 (defresource roster [conn team-id]
-  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+  (api-common/open-company-id-token-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :get]
 

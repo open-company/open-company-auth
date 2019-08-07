@@ -71,13 +71,15 @@
                       slack-auth/auth-settings
                       google-auth/auth-settings)
                      email-rep/auth-link)  ; auth-link used for email verification w/ token
+        id-token-links [teams-link]
         jwt-links (conj
                    [(user-link (:user-id user))]
                    refresh-link
                    teams-link)]
     {:links (concat
              auth-links
-             (when-not (:id-token user)
+             (if (:id-token user)
+               id-token-links
                jwt-links))
      :status with-name-required}))
 
