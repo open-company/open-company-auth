@@ -20,7 +20,8 @@
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-medium :notification-medium :reminder-medium :timezone
-               :created-at :updated-at :slack-users :status :qsg-checklist])
+               :created-at :updated-at :slack-users :status :qsg-checklist
+               :expo-push-tokens])
 (def representation-props (concat slack-props oc-props))
 (def team-user-representation-props (concat representation-props [:admin?]))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
