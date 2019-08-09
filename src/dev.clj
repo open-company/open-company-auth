@@ -5,7 +5,8 @@
             [oc.auth.app :as app]
             [oc.lib.db.pool :as pool]
             [oc.auth.async.slack-router :as slack-router]
-            [oc.auth.components :as components]))
+            [oc.auth.components :as components]
+            [oc.auth.async.expo :as expo]))
 
 (def system nil)
 (def conn nil)
@@ -17,6 +18,8 @@
                                          {:handler-fn app/app
                                           :sqs-queue c/aws-sqs-slack-router-auth-queue
                                           :slack-sqs-msg-handler slack-router/sqs-handler
+                                          :expo-sqs-queue "carrot-local-dev-calvin-expo"
+                                          :expo-sqs-msg-handler expo/sqs-handler
                                           :sqs-creds {:access-key c/aws-access-key-id
                                                       :secret-key c/aws-secret-access-key}
                                           :port port})))))

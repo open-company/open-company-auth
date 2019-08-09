@@ -4,6 +4,7 @@
             [org.httpkit.server :as httpkit]
             [oc.lib.db.pool :as pool]
             [oc.lib.sqs :as sqs]
+            [oc.auth.async.expo :as expo]
             [oc.auth.async.slack-router :as slack-router]
             [oc.auth.async.notification :as notification]
             [oc.auth.async.slack-api-calls :as slack-api-calls]
@@ -63,6 +64,24 @@
         (dissoc component :slack-router))
       component)))
 
+(defrecord ExpoConsumer [expo-consumer-fn]
+  component/Lifecycle
+
+  (start [component]
+    (timbre/info "[expo-consumer] starting...")
+    (expo/start component)
+    (timbre/info "[expo-consumer] started")
+    (assoc component :expo-consumer true))
+
+  (stop [{:keys [expo-consumer] :as component}]
+    (if expo-consumer
+      (do
+        (timbre/info "[expo-consumer] stopping...")
+        (expo/stop)
+        (timbre/info "[expo-consumer] stopped")
+        (dissoc component :expo-consumer))
+      component)))
+
 (defrecord AsyncConsumers []
   component/Lifecycle
 
@@ -87,12 +106,17 @@
   (component/system-map
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
 
-(defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler]}]
+(defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler
+                           expo-sqs-queue expo-sqs-msg-handler]}]
   (component/system-map
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
    :slack-router (component/using
                   (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
                   [:db-pool])
+   :expo (component/using
+          (map->ExpoConsumer {:expo-consumer-fn expo-sqs-msg-handler})
+          [:db-pool])
+   :expo-sqs (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
    :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
    :async-consumers (component/using
                      (map->AsyncConsumers {})
