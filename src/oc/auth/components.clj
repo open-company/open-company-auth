@@ -113,11 +113,11 @@
    :slack-router (component/using
                   (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
                   [:db-pool])
+   :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
    :expo (component/using
           (map->ExpoConsumer {:expo-consumer-fn expo-sqs-msg-handler})
           [:db-pool])
    :expo-sqs (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
-   :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
    :async-consumers (component/using
                      (map->AsyncConsumers {})
                      [:db-pool])
