@@ -25,43 +25,52 @@
 
 ;; ----- Event handling -----
 
-(defn- get-ticket-receipts
+(defn- get-receipts
   [tickets]
   (-> (lambda/invoke-fn "expo-push-notifications-dev-getPushNotificationReceipts"
                         {:tickets tickets})
       lambda/parse-response
       :receipts))
 
+(defn- determine-bad-push-tokens
+  [push-notifications tickets receipts]
+  (let [full-tickets    (map merge push-notifications tickets)
+        by-ticket-id    (group-by (comp keyword :id) full-tickets)
+        receipt-tuples  (mapcat seq receipts)   ;; ([:receipt-x {:status "ok"}] [:receipt-y {:status "error"}])
+        bad-receipt-kv  (fn [[id data]]
+                          (when (not= "ok" (:status data))
+                            id))
+        bad-receipt-ids (keep bad-receipt-kv receipt-tuples)
+        bad-push-tokens (mapcat (comp #(map :pushToken %) by-ticket-id) bad-receipt-ids)]
+    (into #{} bad-push-tokens)))
+
 (defn- handle-expo-message
   [db-pool msg]
-  (timbre/info "Received Expo message: " msg)
-  (let [{:keys [notifications tickets]} msg]
-    (when (and (seq notifications) (seq tickets))
-      (timbre/info "Performing Expo ticket analysis to determine if push tokens need purging")
-      (let [tokens        (map :pushToken notifications)
-            receipts      (get-ticket-receipts tickets)
-            statuses      (map (comp :status first vals) receipts)
-            token->status (zipmap tokens statuses)
-            bad-status?   (fn [[tok stat]] (not= stat "ok"))
-            bad-tokens    (->> (filter bad-status? token->status)
-                               (map first))]
-        (timbre/info "Receipts: " receipts)
-        (timbre/info "Bad tokens: " (vec bad-tokens))
-        ))))
+  (let [{:keys [push-notifications tickets]} msg]
+    (when (and (seq push-notifications) (seq tickets))
+      (let [receipts (get-receipts tickets)
+            bad-push-tokens (determine-bad-push-tokens push-notifications tickets receipts)]
+        (timbre/info "Checked for bad push tokens" (merge msg {:receipts receipts}))
+        (when (not-empty bad-push-tokens)
+          (throw (ex-info "Found some bad push tokens! Dev attention required."
+                          (merge msg {:receipts receipts}))))))))
 
 (comment
 
   ;; Sample receipts
-  ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "ok"}}]
+  ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}}]
 
-  (let [{:keys [notifications tickets] :as msg}
-        {:notifications [{:pushToken "ExponentPushToken[m7WFXDHNuI8PRZPCDXUeVI]"
-                          :body "Hey there, this is Clojure!" :data {}}]
-         :tickets [{:status "ok" :id "06c938b1-aca5-47fc-8750-d23ea257bae8"}]}
-        tokens (map :pushToken notifications)
-        receipts (get-ticket-receipts tickets)
-        token->status (assoc-tokens-with-receipt-status tokens receipts)]
-    
+  (let [{:keys [push-notifications tickets] :as msg}
+        {:push-notifications [{:pushToken "ExponentPushToken[m7WFXDHNuI8PRZPCDXUeVI]"
+                               :body      "Hey there, this is Clojure!" :data {}}]
+         :tickets            [{:status "ok" :id "06c938b1-aca5-47fc-8750-d23ea257bae8"}]}
+        ;; receipts        (get-ticket-receipts tickets)
+        receipts [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}
+                   :another                              {:status "error"}
+                   :third                                {:status "error"}}
+                  {:receipt-x {:status "ok"}
+                   :receipt-y {:status "error"}}]]
+    (determine-bad-push-tokens push-notifications tickets receipts)
     )
 
   )
