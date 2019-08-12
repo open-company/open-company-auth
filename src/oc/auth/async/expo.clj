@@ -14,7 +14,8 @@
             [cheshire.core :as json]
             [taoensso.timbre :as timbre]
             [oc.lib.sqs :as sqs]
-            [oc.auth.config :as config]))
+            [oc.auth.config :as config]
+            [oc.lib.lambda.common :as lambda]))
 
 ;; ----- core.async -----
 
@@ -24,12 +25,46 @@
 
 ;; ----- Event handling -----
 
+(defn- get-ticket-receipts
+  [tickets]
+  (-> (lambda/invoke-fn "expo-push-notifications-dev-getPushNotificationReceipts"
+                        {:tickets tickets})
+      lambda/parse-response
+      :receipts))
+
 (defn- handle-expo-message
   [db-pool msg]
   (timbre/info "Received Expo message: " msg)
-  (when-let [tickets (:tickets msg)]
-    (timbre/info "Performing Expo ticket analysis to determine if push tokens need purging")
-    ))
+  (let [{:keys [notifications tickets]} msg]
+    (when (and (seq notifications) (seq tickets))
+      (timbre/info "Performing Expo ticket analysis to determine if push tokens need purging")
+      (let [tokens        (map :pushToken notifications)
+            receipts      (get-ticket-receipts tickets)
+            statuses      (map (comp :status first vals) receipts)
+            token->status (zipmap tokens statuses)
+            bad-status?   (fn [[tok stat]] (not= stat "ok"))
+            bad-tokens    (->> (filter bad-status? token->status)
+                               (map first))]
+        (timbre/info "Receipts: " receipts)
+        (timbre/info "Bad tokens: " (vec bad-tokens))
+        ))))
+
+(comment
+
+  ;; Sample receipts
+  ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "ok"}}]
+
+  (let [{:keys [notifications tickets] :as msg}
+        {:notifications [{:pushToken "ExponentPushToken[m7WFXDHNuI8PRZPCDXUeVI]"
+                          :body "Hey there, this is Clojure!" :data {}}]
+         :tickets [{:status "ok" :id "06c938b1-aca5-47fc-8750-d23ea257bae8"}]}
+        tokens (map :pushToken notifications)
+        receipts (get-ticket-receipts tickets)
+        token->status (assoc-tokens-with-receipt-status tokens receipts)]
+    
+    )
+
+  )
 
 ;; ----- SQS handling -----
 
