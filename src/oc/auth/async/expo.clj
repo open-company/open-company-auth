@@ -34,15 +34,21 @@
 
 (defn- determine-bad-push-tokens
   [push-notifications tickets receipts]
-  (let [full-tickets    (map merge push-notifications tickets)
-        by-ticket-id    (group-by (comp keyword :id) full-tickets)
-        receipt-tuples  (mapcat seq receipts)   ;; ([:receipt-x {:status "ok"}] [:receipt-y {:status "error"}])
-        bad-receipt-kv  (fn [[id data]]
-                          (when (not= "ok" (:status data))
-                            id))
-        bad-receipt-ids (keep bad-receipt-kv receipt-tuples)
-        bad-push-tokens (mapcat (comp #(map :pushToken %) by-ticket-id) bad-receipt-ids)]
-    (into #{} bad-push-tokens)))
+  (let [not-ok?                       (fn [data] (not= "ok" (:status data)))
+        ;; -- push notifications can fail when sent to Expo (determined by Expo tickets) --
+        full-tickets                  (map merge push-notifications tickets)
+        bad-tokens-from-tickets       (->> full-tickets (filter not-ok?) (map :pushToken) (into #{}))
+        ;; -- push notifications can fail when sent to Apple/Google (determined by Expo receipts) --
+        by-ticket-id                  (group-by (comp keyword :id) full-tickets)
+        receipt-tuples                (mapcat seq receipts) ;; ([:id_0 {:status "ok"}] [:id_1 {:status "error"}] ...)
+        bad-receipt-kv                (fn [[id data]] (when (not-ok? data)
+                                                        id))
+        bad-receipt-ids               (keep bad-receipt-kv receipt-tuples)
+        bad-push-tokens-from-receipts (->> bad-receipt-ids
+                                           (mapcat (comp #(map :pushToken %) by-ticket-id))
+                                           (into #{}))]
+    (into bad-tokens-from-tickets
+          bad-push-tokens-from-receipts)))
 
 (defn- handle-expo-message
   [db-pool msg]
@@ -51,7 +57,11 @@
       (let [receipts (get-receipts tickets)
             bad-push-tokens (determine-bad-push-tokens push-notifications tickets receipts)]
         (timbre/info "Checked for bad push tokens" (merge msg {:receipts receipts}))
+        ;; TODO: we don't quite have enough data to go off for how to handle errors returned by
+        ;; Expo's push notification service. For now, let's throw any bad push tokens that we detect
+        ;; so that we are notified via Sentry/Slack.
         (when (not-empty bad-push-tokens)
+          ;; TODO: delete the bad push tokens from the database
           (throw (ex-info "Found some bad push tokens! Dev attention required."
                           (merge msg {:receipts receipts}))))))))
 
@@ -61,15 +71,15 @@
   ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}}]
 
   (let [{:keys [push-notifications tickets] :as msg}
-        {:push-notifications [{:pushToken "ExponentPushToken[m7WFXDHNuI8PRZPCDXUeVI]"
-                               :body      "Hey there, this is Clojure!" :data {}}]
-         :tickets            [{:status "ok" :id "06c938b1-aca5-47fc-8750-d23ea257bae8"}]}
-        ;; receipts        (get-ticket-receipts tickets)
-        receipts [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}
-                   :another                              {:status "error"}
-                   :third                                {:status "error"}}
-                  {:receipt-x {:status "ok"}
-                   :receipt-y {:status "error"}}]]
+        {:push-notifications [{:pushToken "TOKEN_A"}
+                              {:pushToken "TOKEN_B"}
+                              {:pushToken "TOKEN_C"}]
+         :tickets            [{:status "ok" :id "ID_A"}
+                              {:status "ok" :id "ID_B"}
+                              {:status "error" :id "ID_C"}]}
+        receipts [{:ID_A {:status "ok"}
+                   :ID_B {:status "error"}}
+                  {:ID_C {:status "ok"}}]]
     (determine-bad-push-tokens push-notifications tickets receipts)
     )
 
