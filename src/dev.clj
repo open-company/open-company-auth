@@ -18,7 +18,7 @@
                                          {:handler-fn app/app
                                           :sqs-queue c/aws-sqs-slack-router-auth-queue
                                           :slack-sqs-msg-handler slack-router/sqs-handler
-                                          :expo-sqs-queue "carrot-local-dev-calvin-expo"
+                                          :expo-sqs-queue c/aws-sqs-expo-queue
                                           :expo-sqs-msg-handler expo/sqs-handler
                                           :sqs-creds {:access-key c/aws-access-key-id
                                                       :secret-key c/aws-secret-access-key}

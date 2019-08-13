@@ -27,7 +27,7 @@
 
 (defn- get-receipts
   [tickets]
-  (-> (lambda/invoke-fn "expo-push-notifications-dev-getPushNotificationReceipts"
+  (-> (lambda/invoke-fn (str config/aws-lambda-expo-prefix "getPushNotificationReceipts")
                         {:tickets tickets})
       lambda/parse-response
       :receipts))
