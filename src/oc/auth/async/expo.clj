@@ -15,7 +15,10 @@
             [taoensso.timbre :as timbre]
             [oc.lib.sqs :as sqs]
             [oc.auth.config :as config]
-            [oc.lib.lambda.common :as lambda]))
+            [oc.lib.lambda.common :as lambda]
+            [oc.auth.resources.user :as user-res]
+            [oc.lib.db.pool :as pool]
+            [oc.auth.resources.user :as user]))
 
 ;; ----- core.async -----
 
@@ -50,6 +53,19 @@
     (into bad-tokens-from-tickets
           bad-push-tokens-from-receipts)))
 
+(defn- remove-bad-push-tokens-from-users!
+  [db-pool push-notifications bad-push-tokens]
+  (let [bad-push-notifications (filter (comp bad-push-tokens :pushToken) push-notifications)
+        push-notif-user-id     (comp :user-id :data)
+        push-token->user-id    (zipmap (map :pushToken bad-push-notifications)
+                                       (map push-notif-user-id bad-push-notifications))]
+    (pool/with-pool [conn db-pool]
+      (doseq [[push-token user-id] push-token->user-id]
+        (let [user            (user-res/get-user conn user-id)
+              old-push-tokens (into #{} (:expo-push-tokens user))
+              new-push-tokens (disj old-push-tokens push-token)]
+          (user-res/update-user! conn user-id {:expo-push-tokens new-push-tokens}))))))
+
 (defn- handle-expo-message
   [db-pool msg]
   (let [{:keys [push-notifications tickets]} msg]
@@ -57,18 +73,21 @@
       (let [receipts (get-receipts tickets)
             bad-push-tokens (determine-bad-push-tokens push-notifications tickets receipts)]
         (timbre/info "Checked for bad push tokens" (merge msg {:receipts receipts}))
-        ;; TODO: we don't quite have enough data to go off for how to handle errors returned by
-        ;; Expo's push notification service. For now, let's throw any bad push tokens that we detect
-        ;; so that we are notified via Sentry/Slack.
         (when (not-empty bad-push-tokens)
-          ;; TODO: delete the bad push tokens from the database
-          (throw (ex-info "Found some bad push tokens! Dev attention required."
-                          (merge msg {:receipts receipts}))))))))
+          (try
+            (remove-bad-push-tokens-from-users! db-pool push-notifications bad-push-tokens)
+            (catch Exception e
+              (throw (ex-info "Error while scrubbing bad Expo push tokens from users"
+                              (merge msg {:receipts receipts
+                                          :bad-push-tokens bad-push-tokens})))
+              )))))))
 
 (comment
 
   ;; Sample receipts
   ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}}]
+
+  (user-res/get-user )
 
   (let [{:keys [push-notifications tickets] :as msg}
         {:push-notifications [{:pushToken "TOKEN_A"}
