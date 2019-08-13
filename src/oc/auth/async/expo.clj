@@ -63,7 +63,11 @@
       (doseq [[push-token user-id] push-token->user-id]
         (let [user            (user-res/get-user conn user-id)
               old-push-tokens (into #{} (:expo-push-tokens user))
-              new-push-tokens (disj old-push-tokens push-token)]
+              new-push-tokens (seq (disj old-push-tokens push-token))]
+          (timbre/info "Removing bad push tokens from user" {:user-id user-id
+                                                             :push-token push-token
+                                                             :old-push-tokens old-push-tokens
+                                                             :new-push-tokens new-push-tokens})
           (user-res/update-user! conn user-id {:expo-push-tokens new-push-tokens}))))))
 
 (defn- handle-expo-message
@@ -86,8 +90,6 @@
 
   ;; Sample receipts
   ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}}]
-
-  (user-res/get-user )
 
   (let [{:keys [push-notifications tickets] :as msg}
         {:push-notifications [{:pushToken "TOKEN_A"}
