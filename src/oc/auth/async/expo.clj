@@ -77,7 +77,7 @@
           (try
             (remove-bad-push-tokens-from-users! db-pool push-notifications bad-push-tokens)
             (catch Exception e
-              (throw (ex-info "Error while scrubbing bad Expo push tokens from users"
+              (throw (ex-info (.getMessage e)
                               (merge msg {:receipts receipts
                                           :bad-push-tokens bad-push-tokens})))
               )))))))
