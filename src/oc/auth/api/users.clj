@@ -458,13 +458,10 @@
   :known-content-type? (by-method {:options true
                                    :post (fn [ctx] (api-common/known-content-type? ctx mt/expo-push-token-media-type))})
 
-  :initialize-context (fn [ctx]
-                        (api-common/read-token
-                         (get-in ctx [:request :headers])
-                         config/passphrase))
-
   :allowed? (by-method {:options true
-                        :post (fn [ctx] (-> ctx :user :user-id))})
+                        :post (fn [ctx]
+                                (allow-user-and-team-admins conn ctx (-> ctx :user :user-id)))
+                        })
 
   :exists? (fn [ctx]
              (if-let [user (user-res/get-user conn (-> ctx :user :user-id))]
