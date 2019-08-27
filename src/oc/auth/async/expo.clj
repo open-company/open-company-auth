@@ -18,7 +18,8 @@
             [oc.lib.lambda.common :as lambda]
             [oc.auth.resources.user :as user-res]
             [oc.lib.db.pool :as pool]
-            [oc.auth.resources.user :as user]))
+            [oc.auth.resources.user :as user]
+            [raven-clj.core :as sentry]))
 
 ;; ----- core.async -----
 
@@ -64,10 +65,11 @@
         (let [user            (user-res/get-user conn user-id)
               old-push-tokens (into #{} (:expo-push-tokens user))
               new-push-tokens (seq (disj old-push-tokens push-token))]
-          (timbre/info "Removing bad push tokens from user" {:user-id user-id
-                                                             :push-token push-token
-                                                             :old-push-tokens old-push-tokens
-                                                             :new-push-tokens new-push-tokens})
+          (sentry/capture config/dsn {:message "Removing bad push tokens from user"
+                                      :extra {:user-id user-id
+                                              :push-token push-token
+                                              :old-push-tokens old-push-tokens
+                                              :new-push-tokens new-push-tokens}})
           (user-res/update-user! conn user-id {:expo-push-tokens new-push-tokens}))))))
 
 (defn- handle-expo-message
