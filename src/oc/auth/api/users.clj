@@ -479,14 +479,14 @@
                                     true))})
 
   :post! (fn [{:keys [existing-user expo-push-token] :as ctx}]
-           (timbre/info "Storing Expo push token: " expo-push-token)
+           (timbre/info "Storing Expo push token: " expo-push-token "for user" (-> ctx :user :user-id))
            (let [push-tokens (into #{} (:expo-push-tokens existing-user []))
                  new-push-tokens (conj push-tokens expo-push-token)
                  user-update {:expo-push-tokens (seq new-push-tokens)}
                  new-ctx (assoc ctx :user-update user-update)]
              (if (not= push-tokens new-push-tokens)
                (update-user conn new-ctx (:user-id existing-user))
-               (timbre/info "Expo push tokens have not changed, no action taken"))))
+               (timbre/info "Expo push tokens have not changed for user  " (-> ctx :user :user-id) ", no action taken"))))
 
   :handle-ok (by-method {:post (fn [ctx] (api-common/blank-response))})
   )
