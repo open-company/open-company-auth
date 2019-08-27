@@ -1,6 +1,6 @@
 (ns oc.auth.async.expo
   "
-  Async consumption of mobile push notification tickets from AWS SNS, produced
+  Async consumption of mobile push notification tickets from AWS SQS, produced
   by the open-company-notify service. The Expo push notification service produces
   what are called 'tickets' to determine the status of previously sent push notifications.
   If a 'ticket' is found to have failed, the relevant user's push token should be removed
