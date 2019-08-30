@@ -70,6 +70,11 @@
       (roster-link team-id)
       (channels-link team-id)]))))
 
+(defn- id-token-links
+  "HATEOAS links for a team resource for a user authenticated with the id-token only."
+  [{team-id :team-id :as team}]
+  (assoc team :links [(roster-link team-id)]))
+
 (defn- member-links
   "HATEOAS links for a team resource for a regular team member."
   [{team-id :team-id :as team}]
@@ -114,14 +119,15 @@
 
   If the user is an admin for the team, the team representation contains links.
   "
-  [teams user-id]
+  [teams user]
   (json/generate-string
     {:collection {:version hateoas/json-collection-version
                   :href "/teams"
                   :links [(hateoas/self-link "/teams" {:accept mt/team-collection-media-type})]
                   :items (->> teams
-                            (map #(if ((set (:admins %)) user-id) 
-                                    (admin-links % "item")
-                                    (member-links %)))
+                            (map #(cond
+                                    (:id-token user) (id-token-links %)
+                                    ((set (:admins %)) (:user-id user)) (admin-links % "item")
+                                    :else (member-links %)))
                             (map #(dissoc % :admins)))}}
     {:pretty config/pretty?}))

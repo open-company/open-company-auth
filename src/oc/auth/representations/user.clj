@@ -22,6 +22,7 @@
                :digest-medium :notification-medium :reminder-medium :timezone
                :created-at :updated-at :slack-users :status :qsg-checklist])
 (def representation-props (concat slack-props oc-props))
+(def team-user-representation-props (concat representation-props [:admin?]))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
 
 (defun url
@@ -70,13 +71,15 @@
                       slack-auth/auth-settings
                       google-auth/auth-settings)
                      email-rep/auth-link)  ; auth-link used for email verification w/ token
+        id-token-links [teams-link]
         jwt-links (conj
                    [(user-link (:user-id user))]
                    refresh-link
                    teams-link)]
     {:links (concat
              auth-links
-             (when-not (:id-token user)
+             (if (:id-token user)
+               id-token-links
                jwt-links))
      :status with-name-required}))
 
@@ -152,7 +155,7 @@
   {:pre [(map? user)]}
   (let [user-id (:user-id user)]
     (-> user
-      (select-keys (concat representation-props [:admin?]))
+      (select-keys team-user-representation-props)
       (user-collection-links team-id))))
 
 (schema/defn ^:always-validate render-user :- schema/Str
@@ -174,5 +177,5 @@
        :collection {:version hateoas/json-collection-version
                     :href url
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
-                    :items (map #(select-keys % representation-props) users)}}
+                    :items (map #(select-keys % team-user-representation-props) users)}}
       {:pretty config/pretty?})))
