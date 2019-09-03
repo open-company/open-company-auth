@@ -6,7 +6,7 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
             [oc.auth.lib.jwtoken :as jwtoken]
-            [oc.auth.lib.oauth :as oauth]
+            [oc.lib.oauth :as oauth]
             [oc.auth.lib.google :as google]
             [oc.auth.resources.user :as user-res]
             [oc.auth.config :as config]

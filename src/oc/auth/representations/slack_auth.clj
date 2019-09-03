@@ -2,7 +2,7 @@
   "Resource representation functions for Slack authentication."
   (:require [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
-            [oc.auth.lib.oauth :as oauth]))
+            [oc.lib.oauth :as oauth]))
 
 (def ^:private slack
   {:redirectURI  "/slack/auth"

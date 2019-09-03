@@ -9,7 +9,7 @@
             [taoensso.timbre :as timbre]
             [oc.lib.db.common :as db-common]
             [oc.auth.config :as config]
-            [oc.auth.lib.oauth :as oauth]))
+            [oc.lib.oauth :as oauth]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})

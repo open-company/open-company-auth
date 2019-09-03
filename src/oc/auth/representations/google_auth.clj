@@ -2,7 +2,7 @@
   "Resource representation functions for google oauth."
   (:require [oc.lib.hateoas :as hateoas]
             [oc.auth.config :as config]
-            [oc.auth.lib.oauth :as oauth]
+            [oc.lib.oauth :as oauth]
             [clj-oauth2.client :as oauth2]))
 
 (def ^:private google
