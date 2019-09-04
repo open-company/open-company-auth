@@ -16,7 +16,7 @@
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('google' or 'failed') and a JWToken."
   ([redirect-origin redirect access]
-    (redirect-to-web-ui redirect access nil :not-a-new-user)) ; nil = no jwtoken
+    (redirect-to-web-ui redirect-origin redirect access nil :not-a-new-user)) ; nil = no jwtoken
 
   ([redirect-origin redirect access jwtoken last-token-at]
   (let [page (or redirect "/login")
