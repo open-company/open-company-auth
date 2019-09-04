@@ -8,19 +8,20 @@
             [clj-slack.users :as slack-users]
             [taoensso.timbre :as timbre]
             [oc.lib.db.common :as db-common]
-            [oc.auth.config :as config]))
+            [oc.auth.config :as config]
+            [oc.lib.oauth :as oauth]))
 
 (def ^:private slack-endpoint "https://slack.com/api")
 (def ^:private slack-connection {:api-url slack-endpoint})
 
 (def ^:private slack
   {:redirectURI  "/slack/auth"
-   :state        "open-company-auth"})
+   :state        {:team-id "open-company-auth"}})
 
 (defn- coerce-to-user
   "Coerce the given map to a user."
   ([user-data] (coerce-to-user user-data nil))
-  
+
   ([user-data team-data]
   (let [user-name (or (:real_name_normalized user-data)
                       (:real_name user-data)
@@ -87,17 +88,14 @@
       (timbre/warn "Access token could not be validated"
                    {:identity identity :auth-test auth-test}))))
 
-(defn- split-state
-  [slack-state]
-  (let [split-state   (s/split slack-state #":")
-        team-id       (when (or (= (count split-state) 4) (= (count split-state) 5)) (second split-state)) ; team-id from state
-        user-id       (when (or (= (count split-state) 4) (= (count split-state) 5)) (nth split-state 2)) ; user-id from state
-        redirect      (case (count split-state)
-                        5 (nth split-state 3)
-                        4 (nth split-state 3)
-                        2 (last split-state))
-        slack-org-id  (when (= (count split-state) 5) (last split-state))]
-    {:team-id team-id :user-id user-id :redirect redirect :state-slack-org-id slack-org-id}))
+;; ¯\_(ツ)_/¯
+(defn- fixed-decode-state-string
+  [state-str]
+  (let [decoded-state (oauth/decode-state-string state-str)]
+    (cond-> decoded-state
+      (= "open-company-auth" (:team-id decoded-state))
+      (assoc :user-id nil
+             :team-id nil))))
 
 (defn- swap-code-for-user
   "Given a code from Slack, use the Slack OAuth library to swap it out for an access token.
@@ -108,7 +106,7 @@
     open-company-auth:{team-id}:{user-id}:/redirect/path:{slack-org-id} second step of user auth trying to add the bot"
   [slack-code slack-state]
   (timbre/info "Processing Slack response code with Slack state:" slack-state)
-  (let [splitted-state (split-state slack-state)]
+  (let [decoded-state (fixed-decode-state-string slack-state)]
     (if slack-code
       (let [response      (slack-oauth/access slack-connection
                                             config/slack-client-id
@@ -140,15 +138,15 @@
                        (merge (coerce-to-user user-profile team-profile) non-empty-user-info)
                        user-info)]
             ;; return user and Slack org info
-            (merge user slack-org splitted-state {:bot slack-bot :slack-token access-token}))
+            (merge user slack-org decoded-state {:bot slack-bot :slack-token access-token}))
 
           ;; invalid response or access token
           (do
             (timbre/warn "Could not swap code for token" {:oauth-response response})
-            (merge splitted-state {:error true}))))
+            (merge decoded-state {:error true}))))
       (do
         (timbre/warn "Empty slack code, user denied permission:" slack-code)
-        (merge splitted-state {:error true})))))
+        (merge decoded-state {:error true})))))
 
 (defn oauth-callback
   "Handle the callback from Slack, returning either a tuple of:
