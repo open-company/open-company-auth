@@ -20,7 +20,7 @@
 
   ([redirect-origin redirect access jwtoken last-token-at]
   (let [page (or redirect "/login")
-        jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
+        jwt-param (if jwtoken (str "&jwt=" jwtoken "&") "&")
         param-concat (if (.contains page "?") "&" "?")
         url (str (or redirect-origin config/ui-server-url) page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
     (timbre/info "Redirecting request to:" url)
