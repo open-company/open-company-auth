@@ -179,6 +179,15 @@ Go to the AWS SQS Console and select the SQS queue configured above. From the 'Q
 
 An [AWS SNS](https://aws.amazon.com/sns/) pub/sub topic is used to push user events to interested listeners, such as the [OpenCompany Storage service](https://github.com/open-company/open-company-storage). To take advantage of this capability, configure the `aws-sns-auth-topic-arn` with the ARN (Amazon Resource Name) of an SNS topic you setup in AWS. Then follow the instructions in the other services to subscribe to the SNS topic with an SQS queue.
 
+The `aws-sqs-expo-queue` is read by auth directly to consume Expo push notification tickets produced by the notify service. These tickets are then
+exchanged for push notification receipts with the Expo server in order to determine if the pushes were successful. In the case that a push notification
+failed, it is the responsibility of the auth service to remove the invalid push tokens from the database. This can happen if the user uninstalls the mobile
+application, for example. Subsequent push notification attempts will fail, because the push token on record is no longer valid. **Expo recommends allowing
+30 minutes to pass before a ticket is exchanged for a receipt to allow the respective push services time to deal with high volume. Because of this, the SQS
+queue should be configured with a delay in production scenarios.** At the time or writing, the maximum queue delay allowed is 15 minutes, which is okay for our
+purposes.
+
+For an explanation on configuring `aws-lambda-expo-prefix`, please see the [notify service documentation](https://github.com/open-company/open-company-notify).
 
 Make sure you update the `CHANGE-ME` items in the section of the `project.clj` that looks like this to contain your actual JWT, Slack, and AWS secrets:
 
@@ -198,6 +207,8 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :aws-sqs-email-queue "CHANGE-ME"
     :aws-sqs-slack-router-auth-queue "CHANGE-ME"
     :aws-sns-auth-topic-arn "CHANGE-ME"
+    :aws-sqs-expo-queue "CHANGE-ME"
+    :aws-lambda-expo-prefix "CHANGE-ME"
     :log-level "debug"
   }
 ```

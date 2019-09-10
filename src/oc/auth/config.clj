@@ -60,8 +60,13 @@
 (defonce aws-sqs-bot-queue (env :aws-sqs-bot-queue))
 (defonce aws-sqs-email-queue (env :aws-sqs-email-queue))
 (defonce aws-sqs-slack-router-auth-queue (env :aws-sqs-slack-router-auth-queue))
+(defonce aws-sqs-expo-queue (env :aws-sqs-expo-queue))
 
 (defonce aws-sns-auth-topic-arn (env :aws-sns-auth-topic-arn))
+
+;; ----- AWS Lambda -----
+
+(defonce aws-lambda-expo-prefix (env :aws-lambda-expo-prefix))
 
 ;; ----- JWT -----
 

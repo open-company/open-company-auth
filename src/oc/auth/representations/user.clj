@@ -20,7 +20,8 @@
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-medium :notification-medium :reminder-medium :timezone
-               :created-at :updated-at :slack-users :status :qsg-checklist])
+               :created-at :updated-at :slack-users :status :qsg-checklist
+               :expo-push-tokens])
 (def representation-props (concat slack-props oc-props))
 (def team-user-representation-props (concat representation-props [:admin?]))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
@@ -51,6 +52,10 @@
 (def refresh-link (hateoas/link-map "refresh" hateoas/GET "/users/refresh" {:accept jwt/media-type}))
 
 (def teams-link (hateoas/collection-link "/teams" {:accept mt/team-collection-media-type}))
+
+(def add-expo-push-token-link
+  (hateoas/link-map "add-expo-push-token" hateoas/POST "/users/expo-push-token" {:accept mt/expo-push-token-media-type
+                                                                                 :content-type mt/expo-push-token-media-type}))
 
 (defn authed-settings
   "Status can be an array of:
@@ -110,7 +115,8 @@
       refresh-link
       (delete-link user-id)
       teams-link
-      (resend-verification-email-link user-id)])))
+      (resend-verification-email-link user-id)
+      add-expo-push-token-link])))
 
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]

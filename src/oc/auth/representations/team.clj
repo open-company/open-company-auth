@@ -33,16 +33,16 @@
                                                                 :accept mt/user-media-type}))
 
 (defn add-slack-org-link [team-id]
-  (slack/auth-link "authenticate" team-id))
+  (slack/auth-link "authenticate" {:team-id team-id}))
 
 (defn- remove-slack-org-link [team-id slack-org-id]
   (hateoas/remove-link (s/join "/" [(url team-id) "slack-orgs" slack-org-id]) {} {:ref mt/slack-org-media-type}))
 
 (defn add-slack-bot-link [team-id]
-  (slack/bot-link team-id))
+  (slack/bot-link {:team-id team-id}))
 
 (defn add-google-auth-link [team-id]
-  (google/auth-link "authenticate" team-id))
+  (google/auth-link "authenticate" {:team-id team-id}))
 
 (defn roster-link [team-id]
   (hateoas/link-map "roster" hateoas/GET (str (url team-id) "/roster") {:accept mt/user-collection-media-type}))

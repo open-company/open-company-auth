@@ -6,6 +6,7 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
             [oc.auth.lib.jwtoken :as jwtoken]
+            [oc.lib.oauth :as oauth]
             [oc.auth.lib.google :as google]
             [oc.auth.resources.user :as user-res]
             [oc.auth.config :as config]
@@ -14,14 +15,14 @@
 
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('google' or 'failed') and a JWToken."
-  ([redirect access]
-    (redirect-to-web-ui redirect access nil :not-a-new-user)) ; nil = no jwtoken
+  ([redirect-origin redirect access]
+    (redirect-to-web-ui redirect-origin redirect access nil :not-a-new-user)) ; nil = no jwtoken
 
-  ([redirect access jwtoken last-token-at]
+  ([redirect-origin redirect access jwtoken last-token-at]
   (let [page (or redirect "/login")
-        jwt-param (if jwtoken (str "&jwt=" jwtoken) "")
+        jwt-param (if jwtoken (str "&jwt=" jwtoken "&") "&")
         param-concat (if (.contains page "?") "&" "?")
-        url (str config/ui-server-url page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
+        url (str (or redirect-origin config/ui-server-url) page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
     (timbre/info "Redirecting request to:" url)
     (response/redirect (str url jwt-param)))))
 
@@ -47,10 +48,16 @@
     (notification/send-trigger! trigger)
     user))
 
+(defn- parse-state-from-params
+  [params]
+  (some-> params (get "state") oauth/decode-state-string))
+
 (defn- google-callback
   [conn params]
   (timbre/info "Google Callback")
-  (let [token (google/access-token params)]
+  (timbre/info params)
+  (let [{:keys [redirect-origin]} (parse-state-from-params params)
+        token (google/access-token params)]
     (when token
       (let [user-info (google/user-info token)
             email (:email user-info)
@@ -77,7 +84,8 @@
                                                (assoc :google-domain (:hd user-info))
                                                (assoc :google-token token)) :google)]
         (timbre/debug jwt-user)
-        (redirect-to-web-ui (:success-uri config/google)
+        (redirect-to-web-ui redirect-origin
+                            (:success-uri config/google)
                             :google
                             (jwtoken/generate conn jwt-user)
                             (:last-token-at user))))))
@@ -85,8 +93,5 @@
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
-     (GET "/google/oauth" {params :params}
-       (pool/with-pool [conn db-pool]
-         (response/redirect (:uri google/auth-req))))
      (GET "/google/oauth/callback" {params :params}
        (pool/with-pool [conn db-pool] (google-callback conn params))))))

@@ -2,29 +2,30 @@
   "Namespace for the web application which serves the REST API."
   (:gen-class)
   (:require
-    [raven-clj.core :as sentry]
-    [raven-clj.interfaces :as sentry-interfaces]
-    [raven-clj.ring :as sentry-mw]
-    [taoensso.timbre :as timbre]
-    [ring.logger.timbre :refer (wrap-with-logger)]
-    [liberator.dev :refer (wrap-trace)]
-    [ring.middleware.params :refer (wrap-params)]
-    [ring.middleware.reload :refer (wrap-reload)]
-    [ring.middleware.cors :refer (wrap-cors)]
-    [buddy.auth.middleware :refer (wrap-authentication)]
-    [buddy.auth.backends :as backends]
-    [compojure.core :as compojure :refer (GET)]
-    [com.stuartsierra.component :as component]
-    [oc.lib.sentry-appender :as sa]
-    [oc.lib.api.common :as api-common]
-    [oc.auth.components :as components]
-    [oc.auth.config :as c]
-    [oc.auth.api.entry-point :as entry-point-api]
-    [oc.auth.api.slack :as slack-api]
-    [oc.auth.api.google :as google-api]
-    [oc.auth.api.users :as users-api]
-    [oc.auth.api.teams :as teams-api]
-    [oc.auth.async.slack-router :as slack-router]))
+   [raven-clj.core :as sentry]
+   [raven-clj.interfaces :as sentry-interfaces]
+   [raven-clj.ring :as sentry-mw]
+   [taoensso.timbre :as timbre]
+   [ring.logger.timbre :refer (wrap-with-logger)]
+   [liberator.dev :refer (wrap-trace)]
+   [ring.middleware.params :refer (wrap-params)]
+   [ring.middleware.reload :refer (wrap-reload)]
+   [ring.middleware.cors :refer (wrap-cors)]
+   [buddy.auth.middleware :refer (wrap-authentication)]
+   [buddy.auth.backends :as backends]
+   [compojure.core :as compojure :refer (GET)]
+   [com.stuartsierra.component :as component]
+   [oc.lib.sentry-appender :as sa]
+   [oc.lib.api.common :as api-common]
+   [oc.auth.components :as components]
+   [oc.auth.config :as c]
+   [oc.auth.api.entry-point :as entry-point-api]
+   [oc.auth.api.slack :as slack-api]
+   [oc.auth.api.google :as google-api]
+   [oc.auth.api.users :as users-api]
+   [oc.auth.api.teams :as teams-api]
+   [oc.auth.async.slack-router :as slack-router]
+   [oc.auth.async.expo :as expo]))
 
 ;; ----- Unhandled Exceptions -----
 
@@ -97,6 +98,8 @@
        :port port
        :sqs-queue c/aws-sqs-slack-router-auth-queue
        :slack-sqs-msg-handler slack-router/sqs-handler
+       :expo-sqs-queue c/aws-sqs-expo-queue
+       :expo-sqs-msg-handler expo/sqs-handler
        :sqs-creds {:access-key c/aws-access-key-id
                    :secret-key c/aws-secret-access-key}
        }

@@ -54,6 +54,7 @@
           :teams [lib-schema/UniqueID]
 
           (schema/optional-key :one-time-token) lib-schema/UUIDStr
+          (schema/optional-key :expo-push-tokens) [lib-schema/NonBlankStr]
 
           :email (schema/maybe lib-schema/EmailAddress)          
           (schema/optional-key :password-hash) lib-schema/NonBlankStr
