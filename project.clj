@@ -52,7 +52,7 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [open-company/lib "0.17.16" :exclusions [clj-http org.clojure/data.json]]
+    [open-company/lib "0.17.18" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -122,6 +122,7 @@
         :aws-sqs-bot-queue "CHANGE-ME"
         :aws-sqs-email-queue "CHANGE-ME"
         :aws-sqs-slack-router-auth-queue "CHANGE-ME"
+        :aws-sqs-expo-queue "CHANGE-ME"
         :aws-sns-auth-topic-arn "" ; SNS topic to publish notifications (optional)
         :log-level "debug"
       }
