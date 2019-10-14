@@ -9,6 +9,7 @@
    [oc.lib.db.pool :as pool]
    [oc.auth.config :as config]
    [oc.auth.resources.team :as team-res]
+   [oc.auth.resources.user :as user-res]
    [oc.auth.resources.slack-org :as slack-res]
    [taoensso.timbre :as timbre]))
 
@@ -17,6 +18,50 @@
 (defonce slack-router-chan (async/chan 10000)) ; buffered channel
 
 (defonce slack-router-go (atom nil))
+
+(defn- remove-slack-medium [user-property]
+  (if (= user-property "slack")
+    :email
+    (keyword user-property)))
+
+(defn- clean-user-mediums [conn user]
+  (let [fixed-user-map (-> user
+                        (update-in [:digest-medium] remove-slack-medium)
+                        (update-in [:notification-medium] remove-slack-medium)
+                        (update-in [:reminder-medium] remove-slack-medium))]
+    ;; Simply remove slack as medium where it's being used
+    (user-res/update-user! conn (:user-id user) fixed-user-map)))
+
+(defn- cleanup-team-users
+  "Set all users medium to :email instead of :slack if there is no other Slack org associated
+   with one of the user's team."
+  [conn team removing-slack-org]
+  ;; For each user of the team
+  (doseq [u (user-res/list-users conn (:team-id team))]
+    (let [user (user-res/get-user conn (:user-id u))]
+      ;; If the user has at least one medium set to Slack
+      (when (or (= (:digest-medium user) "slack")
+                (= (:notification-medium user) "slack")
+                (= (:reminder-medium user) "slack"))
+        (if (= (count (:teams user)) 1)
+          ;; if he's part of only one team
+          ;; or no other team has another Slack org associated
+          (clean-user-mediums conn user)
+          ;; else if he's part of multiple teams
+          (let [has-another-slack-bot? (atom false)]
+            (loop [user-teams (:teams user)]
+              (let [t (first user-teams)
+                    team-data (team-res/get-team conn t)
+                    slack-team-ids (filterv #(not= % (:slack-org-id removing-slack-org)) (:slack-orgs team-data))
+                    slack-teams (slack-res/list-slack-orgs-by-ids conn slack-team-ids [:bot-token])
+                    slack-team-ids-with-bots (map :slack-org-id (filterv #(seq (:bot-token %)) slack-teams))
+                    slack-users-with-bot (remove nil? (map #(get (:slack-users user) (keyword %)) slack-team-ids-with-bots))]
+                (if (seq slack-users-with-bot)
+                  (reset! has-another-slack-bot? true)
+                  (when (seq (rest user-teams))
+                    (recur (rest user-teams))))))
+            (when-not @has-another-slack-bot?
+              (clean-user-mediums conn user))))))))
 
 (defn slack-event
   "
@@ -58,15 +103,15 @@
           (when (= event-type "tokens_revoked")
             (let [slack-team-id (:team_id body)]
               (pool/with-pool [conn db-pool]
-                (let [teams (team-res/list-teams-by-index
-                             conn
-                             :slack-orgs
-                             slack-team-id)]
+                (let [teams (team-res/list-teams-by-index conn :slack-orgs slack-team-id [:slack-orgs])
+                      slack-org (slack-res/get-slack-org conn slack-team-id)]
                   (slack-res/delete-slack-org! conn slack-team-id)
                   (doseq [team teams]
+                    ;; Remove the slack org from the team
                     (team-res/remove-slack-org conn
                                                (:team-id team)
-                                               slack-team-id)))))))))))
+                                               slack-team-id)
+                    (cleanup-team-users conn team slack-org)))))))))))
 ;; ----- SQS handling -----
 
 (defn- read-message-body
