@@ -43,7 +43,6 @@
 (def EmailBotRemoved
   {
     :type (schema/enum "bot-removed")
-    :reply-to schema/Str ; inviter's email address
     :to [lib-schema/EmailAddress] ; invitee's email address
     :org-name schema/Str
     :org-slug lib-schema/NonBlankStr

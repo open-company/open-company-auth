@@ -69,16 +69,17 @@
 (defn- email-admins-via-sqs [conn org admins]
   (let [all-admins (map #(user-res/get-user conn %) admins)
         to (mapv :email all-admins)]
-    (sqs/send! sqs/EmailInvite
-      (sqs/->email-bot-removed
-        org to)
-      config/aws-sqs-email-queue)))
+    (timbre/info "Send email for bot removal to:" to)
+    (sqs/send! sqs/EmailBotRemoved
+     (sqs/->email-bot-removed org to)
+     config/aws-sqs-email-queue)))
 
-(defn- send-slack-message [conn team]
+(defn- notify-bot-removed [conn team]
   (let [c {:storage-server-url config/storage-server-url
            :auth-server-url config/auth-server-url
            :passphrase config/passphrase}
         orgs (storage-lib/orgs-team-for c {:user-id (first (:admins team))} (:team-id team))]
+    (timbre/info "Notify bot removed for team:" (:team-id team) "for orgs:" (clojure.string/join ", " (mapv :slug orgs)))
     (doseq [org orgs]
       (email-admins-via-sqs conn org (:admins team)))
     (slack-lib/message-webhook
@@ -148,7 +149,7 @@
                     ;; If we have the webhook setup send the message in Slack
                     ;; notifying the remove of the bot
                     (when config/slack-customer-support-webhook
-                      (send-slack-message conn team))))))))))))
+                      (notify-bot-removed conn team))))))))))))
 ;; ----- SQS handling -----
 
 (defn- read-message-body
