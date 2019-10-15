@@ -134,14 +134,19 @@
 (defn change-plan!
   "Changes the customer's current plan to the new plan with the given ID"
   [customer-id new-plan-id]
-  (if-let [sub-item-id (-> customer-id customer-info :subscription :item :id)]
-    (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
-          new-params {"plan" new-plan-id}]
-      (-> (.update sub-item new-params)
-          convert-subscription-item))
-    (throw (ex-info "Attempted to change non-existent plan"
-                    {:customer-id customer-id
-                     :new-plan-id new-plan-id}))))
+  (let [customer (customer-info customer-id)]
+    (if-let [sub-item-id (-> customer :subscription :item :id)]
+      (if-not (= new-plan-id (-> customer :subscription :current-plan :id))
+        (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
+              new-params {"plan" new-plan-id}]
+          (-> (.update sub-item new-params)
+              convert-subscription-item))
+        (throw (ex-info "Cannot change to the current plan"
+                        {:customer-id customer-id
+                         :new-plan-id new-plan-id})))
+      (throw (ex-info "Attempted to change non-existent plan"
+                      {:customer-id customer-id
+                       :new-plan-id new-plan-id})))))
 
 (defn cancel-subscription!
   "Flags the customer's current subscription for cancellation at the end of its billing cycle."
@@ -160,19 +165,18 @@
 (comment
 
   (def my-id
-    (-> (create-stripe-customer! {:email     "test@example.com"
-                                  :full-name "Test Example"})
+    (-> {:email     "test@example.com"
+         :full-name "Test Example"}
+        create-stripe-customer!
         :id))
 
   (customer-info my-id)
 
   (subscribe-customer-to-plan! my-id config/stripe-monthly-plan-id)
 
-  (let [sub-item-id (-> (customer-info my-id) :subscription :item :id)]
-    (change-plan! sub-item-id stripe-annual-plan-id))
+  (change-plan! my-id config/stripe-annual-plan-id)
 
-  (let [sub-id (-> (customer-info my-id) :subscription :id)]
-    (cancel-subscription! sub-id))
+  (cancel-subscription! my-id)
 
   (report-seats! my-id 29)
 
