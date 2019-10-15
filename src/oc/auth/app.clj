@@ -24,6 +24,7 @@
    [oc.auth.api.google :as google-api]
    [oc.auth.api.users :as users-api]
    [oc.auth.api.teams :as teams-api]
+   [oc.auth.api.payments :as payments-api]
    [oc.auth.async.slack-router :as slack-router]
    [oc.auth.async.expo :as expo]))
 
@@ -51,7 +52,8 @@
     (slack-api/routes sys)
     (google-api/routes sys)
     (users-api/routes sys)
-    (teams-api/routes sys)))
+    (teams-api/routes sys)
+    (payments-api/routes sys)))
 
 ;; ----- System Startup -----
 
