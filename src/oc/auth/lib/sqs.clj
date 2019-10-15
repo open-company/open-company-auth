@@ -12,6 +12,7 @@
 (def reset "reset")
 (def verify "verify")
 (def welcome "welcome")
+(def bot-removed "bot-removed")
 
 ;; Bot receiver type
 (def receiver :user)
@@ -37,6 +38,18 @@
     :org-logo-height schema/Int
     :token-link lib-schema/NonBlankStr
     :note schema/Str
+  })
+
+(def EmailBotRemoved
+  {
+    :type (schema/enum "bot-removed")
+    :reply-to schema/Str ; inviter's email address
+    :to [lib-schema/EmailAddress] ; invitee's email address
+    :org-name schema/Str
+    :org-slug lib-schema/NonBlankStr
+    :org-logo-url schema/Str
+    :org-logo-width schema/Int
+    :org-logo-height schema/Int
   })
 
 (def TokenAuth
@@ -95,6 +108,19 @@
     :org-logo-width (or (:logo-width payload) 0)
     :org-logo-height (or (:logo-height payload) 0)
     :token-link (token-link invite (:token payload))
+  })
+
+(schema/defn ^:always-validate ->email-bot-removed :- EmailBotRemoved
+  [org to :- [lib-schema/EmailAddress]]
+  {:pre [(map? org)]}
+  {
+    :type (name bot-removed)
+    :to to
+    :org-name (or (:name org) "")
+    :org-slug (or (:slug org) "")
+    :org-logo-url (or (:logo-url org) "")
+    :org-logo-width (or (:logo-width org) 0)
+    :org-logo-height (or (:logo-height org) 0)
   })
 
 (schema/defn ^:always-validate ->slack-invite :- SlackInvite
