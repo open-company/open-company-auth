@@ -119,11 +119,12 @@
       (-> (Subscription/create params)
           convert-subscription))))
 
-(defn report-latest-team-size!
-  [customer-id team-size]
-  (if-let [sub-item-id (-> (customer-info customer-id) :subscription :item :id)]
+(defn report-seats!
+  "Reports to Stripe the latest number of seats being used"
+  [customer-id num-seats]
+  (if-let [sub-item-id (-> customer-id customer-info :subscription :item :id)]
     (let [params {"action"    "set"
-                  "quantity"  team-size
+                  "quantity"  num-seats
                   "timestamp" (stripe-now)}]
       (-> (UsageRecord/createOnSubscriptionItem sub-item-id params nil)
           convert-usage-record))
@@ -131,24 +132,30 @@
                     {:customer-id customer-id}))))
 
 (defn change-plan!
-  [sub-item-id new-plan-id]
-  (if-let [sub-item (SubscriptionItem/retrieve sub-item-id)]
-    (let [new-params {"plan" new-plan-id}]
+  "Changes the customer's current plan to the new plan with the given ID"
+  [customer-id new-plan-id]
+  (if-let [sub-item-id (-> customer-id customer-info :subscription :item :id)]
+    (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
+          new-params {"plan" new-plan-id}]
       (-> (.update sub-item new-params)
           convert-subscription-item))
     (throw (ex-info "Attempted to change non-existent plan"
-                    {:subscription-item-id sub-item-id
-                     :new-plan-id          new-plan-id}))))
+                    {:customer-id customer-id
+                     :new-plan-id new-plan-id}))))
 
 (defn cancel-subscription!
-  "Flags the given subscription for cancellation at the end of its billing cycle."
-  [sub-id]
-  (if-let [sub (Subscription/retrieve sub-id)]
-    (let [params {"cancel_at_period_end" true}]
+  "Flags the customer's current subscription for cancellation at the end of its billing cycle."
+  [customer-id]
+  (if-let [sub-id (-> customer-id customer-info :subscription :id)]
+    (let [sub    (Subscription/retrieve sub-id)
+          params {"cancel_at_period_end" true}]
       (-> (.update sub params)
           convert-subscription))
     (throw (ex-info "Cannot cancel non-existent plan"
-                    {:subscription-id sub-id}))))
+                    {:customer-id customer-id}))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; REPL testing
 
 (comment
 
@@ -167,6 +174,6 @@
   (let [sub-id (-> (customer-info my-id) :subscription :id)]
     (cancel-subscription! sub-id))
 
-  (report-latest-team-size! my-id 29)
+  (report-seats! my-id 29)
 
   )
