@@ -106,3 +106,9 @@
 
 (defonce email-domain-blacklist (rest (clojure.string/split
                                   (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
+
+;; ----- Stripe -----
+
+(defonce stripe-secret-key      (env :stripe-secret-key))
+(defonce stripe-monthly-plan-id (env :stripe-monthly-plan-id))
+(defonce stripe-annual-plan-id  (env :stripe-annual-plan-id))
