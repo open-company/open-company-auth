@@ -63,8 +63,14 @@
 (schema/defn ^:always-validate get-customer :- Customer
   [conn team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
-  (let [customer-id (get-customer-id conn team-id)]
+  (when-let [customer-id (get-customer-id conn team-id)]
     (stripe/customer-info customer-id)))
+
+(schema/defn ^:always-validate start-plan! :- Subscription
+  [conn team-id :- (:team-id team/Team) new-plan-id]
+  {:pre [(db-common/conn? conn)]}
+  (let [customer-id (get-customer-id conn team-id)]
+    (stripe/subscribe-customer-to-plan! customer-id new-plan-id)))
 
 (schema/defn ^:always-validate change-plan! :- SubscriptionItem
   [conn team-id :- (:team-id team/Team) new-plan-id]
