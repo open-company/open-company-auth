@@ -5,8 +5,11 @@
   (:require
    [clojure.core.async :as async :refer (<!! >!!)]
    [cheshire.core :as json]
-   [oc.lib.sqs :as sqs]
+   [oc.lib.sqs :as sqs-lib]
+   [oc.auth.lib.sqs :as sqs]
    [oc.lib.db.pool :as pool]
+   [oc.lib.slack :as slack-lib]
+   [oc.lib.storage :as storage-lib]
    [oc.auth.config :as config]
    [oc.auth.resources.team :as team-res]
    [oc.auth.resources.user :as user-res]
@@ -63,6 +66,36 @@
             (when-not @has-another-slack-bot?
               (clean-user-mediums conn user))))))))
 
+(defn- email-admins-via-sqs [conn org admins]
+  (let [all-admins (map #(user-res/get-user conn %) admins)
+        to (mapv :email all-admins)]
+    (sqs/send! sqs/EmailInvite
+      (sqs/->email-bot-removed
+        org to)
+      config/aws-sqs-email-queue)))
+
+(defn- send-slack-message [conn team]
+  (let [c {:storage-server-url config/storage-server-url
+           :auth-server-url config/auth-server-url
+           :passphrase config/passphrase}
+        orgs (storage-lib/orgs-team-for c {:user-id (first (:admins team))} (:team-id team))]
+    (doseq [org orgs]
+      (email-admins-via-sqs conn org (:admins team)))
+    (slack-lib/message-webhook
+     config/slack-customer-support-webhook
+     (str "Carrot Auth Service"
+      (cond
+       (= config/short-server-name "staging")
+       " (staging)"
+       (= config/short-server-name "localhost")
+       " (localhost)"))
+     (str "<!here> Carrot bot was removed for the following orgs:"
+      (clojure.string/join ","
+       (map #(str
+              " <" config/dashboard-endpoint "/orgs/" (:slug %)
+              "|" (:name %) " (" (count (:admins team)) " admin" (when (not= (count (:admins team)) 1) "s") ")>")
+        orgs))))))
+
 (defn slack-event
   "
   Handle a message event from Slack. Ignore events that aren't threaded, or that are from us.
@@ -103,7 +136,7 @@
           (when (= event-type "tokens_revoked")
             (let [slack-team-id (:team_id body)]
               (pool/with-pool [conn db-pool]
-                (let [teams (team-res/list-teams-by-index conn :slack-orgs slack-team-id [:slack-orgs])
+                (let [teams (team-res/list-teams-by-index conn :slack-orgs slack-team-id [:slack-orgs :admins])
                       slack-org (slack-res/get-slack-org conn slack-team-id)]
                   (slack-res/delete-slack-org! conn slack-team-id)
                   (doseq [team teams]
@@ -111,7 +144,11 @@
                     (team-res/remove-slack-org conn
                                                (:team-id team)
                                                slack-team-id)
-                    (cleanup-team-users conn team slack-org)))))))))))
+                    (cleanup-team-users conn team slack-org)
+                    ;; If we have the webhook setup send the message in Slack
+                    ;; notifying the remove of the bot
+                    (when config/slack-customer-support-webhook
+                      (send-slack-message conn team))))))))))))
 ;; ----- SQS handling -----
 
 (defn- read-message-body
@@ -131,7 +168,7 @@
         error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
     (timbre/infof "Received message from SQS: %s\n" msg-body)
     (>!! slack-router-chan msg-body))
-  (sqs/ack done-channel msg))
+  (sqs-lib/ack done-channel msg))
 
 ;; ----- Event loop -----
 
