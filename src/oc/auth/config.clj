@@ -14,6 +14,7 @@
 
 (defonce prod? (= "production" (env :env)))
 (defonce intro? (not prod?))
+(defonce short-server-name (or (env :short-server-name) "localhost"))
 
 ;; ----- Sentry -----
 
@@ -51,6 +52,7 @@
 
 (defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
 (defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
+(defonce storage-server-url (or (env :storage-server-url) "http://localhost:3001"))
 
 ;; ----- AWS SQS -----
 
@@ -84,6 +86,9 @@
                               ","
                               slack-unfurl-scope
                               ",bot,chat:write:bot"))
+(defonce slack-customer-support-webhook (env :oc-customer-support-webhook))
+(defonce dashboard-endpoint (or (env :oc-dashboard-endpoint) "http://localhost:4001"))
+
 ;; ----- Google Oauth -----
 (defonce google-login-uri "https://accounts.google.com")
 (defonce google
