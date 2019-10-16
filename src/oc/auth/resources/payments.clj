@@ -60,7 +60,7 @@
         customer-id (:id customer)]
     (team/update-team! conn team-id {:stripe-customer-id customer-id})))
 
-(schema/defn ^:always-validate get-customer :- Customer
+(schema/defn ^:always-validate get-customer :- (schema/maybe Customer)
   [conn team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
   (when-let [customer-id (get-customer-id conn team-id)]
