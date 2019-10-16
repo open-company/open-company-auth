@@ -84,9 +84,7 @@
   (let [customer-id (get-customer-id conn team-id)]
     (stripe/cancel-subscription! customer-id)))
 
-;; TODO: figure out how to count seats...
-;; (schema/defn ^:always-validate report-latest-team-size!
-;;   [conn team-id :- (:team-id team/Team)]
-;;   {:pre [(db-common/conn? conn)]}
-;;   (let [team (team/get-team conn team-id)]
-;;     (stripe/report-seats! customer-id)))
+(schema/defn ^:always-validate report-latest-team-size!
+  [customer-id :- (:id Customer)
+   seat-count :- (:seats UsageSummary)]
+  (stripe/report-seats! customer-id seat-count))
