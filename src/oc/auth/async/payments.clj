@@ -54,8 +54,8 @@
 ;; ----- Payments triggering -----
 
 (defn ->team-report-trigger
-  [{:keys [seat-count] :as report}]
-  (select-keys report [:seats]))
+  [{:keys [customer-id seats] :as report}]
+  (select-keys report [:customer-id :seats]))
 
 (schema/defn ^:always-validate send-team-report-trigger! [trigger :- TeamReportTrigger]
   (>!! payments-chan trigger))
