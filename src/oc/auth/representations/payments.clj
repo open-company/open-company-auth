@@ -15,10 +15,6 @@
   [team-id]
   (hateoas/self-link (customer-url team-id) {:content-type mt/payment-customer-media-type}))
 
-(defn customer-info-link
-  [team-id]
-  (hateoas/link-map "customer" hateoas/GET (customer-url team-id) {:content-type mt/payment-customer-media-type}))
-
 (defn- create-customer-link
   [team-id]
   (hateoas/create-link (customer-url team-id) {:content-type mt/payment-customer-media-type}))

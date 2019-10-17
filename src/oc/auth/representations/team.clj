@@ -7,8 +7,7 @@
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.slack-auth :as slack]
-            [oc.auth.representations.google-auth :as google]
-            [oc.auth.representations.payments :as payments]))
+            [oc.auth.representations.google-auth :as google]))
 
 (def representation-props [:team-id :logo-url :name :users :created-at :updated-at])
 
@@ -69,8 +68,7 @@
       (add-google-auth-link team-id)
       (delete-link team-id)
       (roster-link team-id)
-      (channels-link team-id)
-      (payments/customer-info-link team-id)]))))
+      (channels-link team-id)]))))
 
 (defn- id-token-links
   "HATEOAS links for a team resource for a user authenticated with the id-token only."
