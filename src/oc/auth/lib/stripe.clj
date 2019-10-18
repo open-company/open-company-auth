@@ -57,9 +57,7 @@
 (defn- convert-subscription
   [sub]
   (let [item          (-> sub .getItems .getData first)
-        usage-summary (-> item .usageRecordSummaries .getData first)
-        avail-plans   [(Plan/retrieve config/stripe-monthly-plan-id)
-                       (Plan/retrieve config/stripe-annual-plan-id)]]
+        usage-summary (-> item .usageRecordSummaries .getData first)]
     {:id                   (.getId sub)
      :status               (.getStatus sub)
      :trial-start          (.getTrialStart sub)
@@ -68,16 +66,18 @@
      :current-period-end   (.getCurrentPeriodEnd sub)
      :current-plan         (convert-plan (.getPlan sub))
      :usage                (convert-usage-summary usage-summary)
-     :available-plans      (mapv convert-plan avail-plans)
      :item                 (convert-subscription-item item)
      }))
 
 (defn- convert-customer
   [customer]
-  (let [sub (-> customer .getSubscriptions .getData first)]
+  (let [sub         (-> customer .getSubscriptions .getData first)
+        avail-plans [(Plan/retrieve config/stripe-monthly-plan-id)
+                     (Plan/retrieve config/stripe-annual-plan-id)]]
     (cond-> {:id           (.getId customer)
              :email        (.getEmail customer)
-             :full-name    (.getName customer)}
+             :full-name    (.getName customer)
+             :available-plans (mapv convert-plan avail-plans)}
       sub (assoc :subscription (convert-subscription sub)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

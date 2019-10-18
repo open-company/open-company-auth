@@ -29,7 +29,6 @@
    :trial-end            (schema/maybe schema/Int)
    :status               (schema/enum "trialing" "active")
    :current-plan         Plan
-   :available-plans      [Plan]
    :usage                UsageSummary
    :item                 SubscriptionItem
    })
@@ -38,6 +37,7 @@
   {:id        schema/Str
    :email     schema/Str
    :full-name schema/Str
+   :available-plans [Plan]
    (schema/optional-key :subscription) (schema/maybe Subscription)
    })
 
