@@ -2,7 +2,7 @@
   (:require [clojure.set :as cset]
             [oc.auth.config :as config])
   (:import [com.stripe Stripe]
-           [com.stripe.model Customer Subscription SubscriptionItem UsageRecord Plan]
+           [com.stripe.model Customer Subscription SubscriptionItem Plan Invoice]
            [java.util Date]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -31,6 +31,10 @@
   [cid]
   (Customer/retrieve cid))
 
+(defn- retrieve-upcoming-invoice
+  [cid]
+  (Invoice/upcoming {"customer" cid}))
+
 (defn- convert-plan
   [plan]
   {:id       (.getId plan)
@@ -40,33 +44,44 @@
    :active   (.getActive plan)
    :interval (.getInterval plan)})
 
-(defn- convert-usage-summary
-  [usage-summary]
-  {:seats (.getTotalUsage usage-summary)})
-
 (defn- convert-subscription-item
   [sub-item]
   {:id (.getId sub-item)})
 
-(defn- convert-usage-record
-  [usage-record]
-  {:id        (.getId usage-record)
-   :seats     (.getQuantity usage-record)
-   :timestamp (.getTimestamp usage-record)})
+(defn- convert-invoice-line-item
+  [line-item]
+  {:id          (.getId line-item)
+   :amount      (.getAmount line-item)
+   :currency    (.getCurrency line-item)
+   :description (.getDescription line-item)
+   :quantity    (.getQuantity line-item)})
+
+(defn- convert-invoice
+  [invoice]
+  (let [line-items (-> invoice .getLines .getData)]
+    {:amount-due           (.getAmountDue invoice)
+     :currency             (.getCurrency invoice)
+     :total                (.getTotal invoice)
+     :subtotal             (.getSubtotal invoice)
+     :next-payment-attempt (.getNextPaymentAttempt invoice)
+     :line-items           (mapv convert-invoice-line-item line-items)
+     }))
 
 (defn- convert-subscription
   [sub]
-  (let [item          (-> sub .getItems .getData first)
-        usage-summary (-> item .usageRecordSummaries .getData first)]
+  (let [item             (-> sub .getItems .getData first)
+        usage-summary    (-> item .usageRecordSummaries .getData first)
+        upcoming-invoice (retrieve-upcoming-invoice (.getCustomer sub))]
     {:id                   (.getId sub)
      :status               (.getStatus sub)
+     :quantity             (.getQuantity sub)
      :trial-start          (.getTrialStart sub)
      :trial-end            (.getTrialEnd sub)
      :current-period-start (.getCurrentPeriodStart sub)
      :current-period-end   (.getCurrentPeriodEnd sub)
      :current-plan         (convert-plan (.getPlan sub))
-     :usage                (convert-usage-summary usage-summary)
      :item                 (convert-subscription-item item)
+     :upcoming-invoice     (convert-invoice upcoming-invoice)
      }))
 
 (defn- convert-customer
@@ -120,16 +135,16 @@
           convert-subscription))))
 
 (defn report-seats!
-  "Reports to Stripe the latest number of seats being used"
   [customer-id num-seats]
-  (if-let [sub-item-id (-> customer-id customer-info :subscription :item :id)]
-    (let [params {"action"    "set"
-                  "quantity"  num-seats
-                  "timestamp" (stripe-now)}]
-      (-> (UsageRecord/createOnSubscriptionItem sub-item-id params nil)
-          convert-usage-record))
-    (throw (ex-info "Cannot report metered usage on non-existent SubscriptionItem"
-                    {:customer-id customer-id}))))
+  (let [customer (customer-info customer-id)]
+    (if-let [sub-item-id (-> customer :subscription :item :id)]
+      (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
+            new-params {"quantity" num-seats}]
+        (-> (.update sub-item new-params)
+            convert-subscription-item))
+      (throw (ex-info "Attempted to report seat usage on non-existent plan"
+                      {:customer-id customer-id
+                       :num-seats num-seats})))))
 
 (defn change-plan!
   "Changes the customer's current plan to the new plan with the given ID"
@@ -169,6 +184,18 @@
          :full-name "Test Example"}
         create-stripe-customer!
         :id))
+
+  (retrieve-upcoming-invoice my-id)
+
+  (-> my-id
+      retrieve-customer-by-id
+      .getSubscriptions
+      .getData
+      first
+      ;; .getItems
+      ;; .getData
+      ;; first
+      )
 
   (customer-info my-id)
 

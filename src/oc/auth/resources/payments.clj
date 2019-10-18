@@ -15,8 +15,20 @@
    :interval (schema/enum "month" "annual")
    })
 
-(def UsageSummary
-  {:seats schema/Int})
+(def InvoiceLineItem
+  {:id          schema/Str
+   :amount      schema/Int
+   :currency    schema/Str
+   :description schema/Str
+   :quantity    schema/Int})
+
+(def Invoice
+  {:amount-due           schema/Int
+   :currency             schema/Str
+   :total                schema/Int
+   :subtotal             schema/Int
+   :next-payment-attempt schema/Int
+   :line-items           [InvoiceLineItem]})
 
 (def SubscriptionItem
   {:id schema/Str})
@@ -28,9 +40,10 @@
    :trial-start          (schema/maybe schema/Int)
    :trial-end            (schema/maybe schema/Int)
    :status               (schema/enum "trialing" "active")
+   :quantity             schema/Int
    :current-plan         Plan
-   :usage                UsageSummary
    :item                 SubscriptionItem
+   :upcoming-invoice     Invoice
    })
 
 (def Customer
@@ -90,5 +103,5 @@
 
 (schema/defn ^:always-validate report-latest-team-size!
   [customer-id :- (:id Customer)
-   seat-count :- (:seats UsageSummary)]
+   seat-count :- (:quantity Subscription)]
   (stripe/report-seats! customer-id seat-count))
