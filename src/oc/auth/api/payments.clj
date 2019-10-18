@@ -41,23 +41,23 @@
 (defn create-new-subscription!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
-    {:new-subscription (payments-res/start-plan! conn team-id plan-id)}))
+    {:updated-customer (payments-res/start-plan! conn team-id plan-id)}))
 
 (defn change-subscription-plan!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
-    {:updated-subscription (payments-res/change-plan! conn team-id plan-id)}))
+    {:updated-customer (payments-res/change-plan! conn team-id plan-id)}))
 
 (defn cancel-subscription!
   [ctx conn team-id]
-  {:canceled-subscription (payments-res/cancel-subscription! conn team-id)})
+  {:updated-customer (payments-res/cancel-subscription! conn team-id)})
 
 ;; ----- Resources -----
 
 (defresource customer [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase)
 
-  :allowed-methods [:options :get :post :put :path :delete]
+  :allowed-methods [:options :get :put :path :delete]
 
   ;; Media type client accepts
   :available-media-types [mt/payment-customer-media-type]
@@ -67,7 +67,6 @@
   :known-content-type? (by-method {
     :options true
     :get true
-    :post true
     :put true
     :patch true
     :delete true})
@@ -76,7 +75,6 @@
   :allowed? (by-method {
     :options true
     :get (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :put (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :patch (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
@@ -86,7 +84,6 @@
   :processable? (by-method {
     :options true
     :get true
-    :post (fn [ctx] (nil? (:existing-customer ctx)))
     :put (fn [ctx] (nil? (-> ctx :existing-customer :subscription)))
     :patch (fn [ctx] (some? (-> ctx :existing-customer :subscription)))
     :delete (fn [ctx] (some? (-> ctx :existing-customer :subscription)))
@@ -95,25 +92,26 @@
   :malformed? (by-method {
     :options false
     :get false
-    :post false
     :put plan-id-from-body
     :patch plan-id-from-body
     :delete plan-id-from-body})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [customer (payments-res/get-customer conn team-id)]
-                        {:existing-customer customer}
-                        false))
+                       {:existing-customer customer}
+                       ;; on-demand creation
+                       (create-customer-with-creator-as-contact! ctx conn team-id)))
 
   ;; Actions
-  :post! (fn [ctx] (create-customer-with-creator-as-contact! ctx conn team-id))
   :put! (fn [ctx] (create-new-subscription! ctx conn team-id))
   :patch! (fn [ctx] (change-subscription-plan! ctx conn team-id))
   :delete! (fn [ctx] (cancel-subscription! ctx conn team-id))
 
   ;; Responses
-  :handle-ok (fn [ctx] (let [customer (payments-res/get-customer conn team-id)]
-                          (payments-rep/render-customer team-id customer)))
+  :handle-ok (fn [ctx] (let [customer (or (:new-customer ctx)
+                                          (:existing-customer ctx)
+                                          (:updated-customer ctx))]
+                         (payments-rep/render-customer team-id customer)))
   )
 
 ;; ----- Routes -----
