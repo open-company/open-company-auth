@@ -153,7 +153,8 @@
     (if-let [sub-item-id (-> customer :subscription :item :id)]
       (if-not (= new-plan-id (-> customer :subscription :current-plan :id))
         (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
-              new-params {"plan" new-plan-id}]
+              new-params {"plan"     new-plan-id
+                          "quantity" (.getQuantity sub-item)}]
           (-> (.update sub-item new-params)
               convert-subscription-item))
         (throw (ex-info "Cannot change to the current plan"
@@ -192,9 +193,9 @@
       .getSubscriptions
       .getData
       first
-      ;; .getItems
-      ;; .getData
-      ;; first
+      .getItems
+      .getData
+      first
       )
 
   (customer-info my-id)
