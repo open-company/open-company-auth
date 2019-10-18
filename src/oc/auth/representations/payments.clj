@@ -5,7 +5,7 @@
             [oc.auth.representations.media-types :as mt]))
 
 (def customer-representation-props
-  [:id :email :full-name :subscription])
+  [:id :email :full-name :subscription :available-plans])
 
 (defun customer-url
   ([team-id :guard string?] (str "/teams/" team-id "/customer"))
