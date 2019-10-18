@@ -23,7 +23,7 @@
 
 (def TeamReportTrigger
   {:customer-id (:id pay-res/Customer)
-   :seats       (:seats pay-res/UsageSummary)})
+   :seats       (:quantity pay-res/Subscription)})
 
 ;; ----- Event handling -----
 
