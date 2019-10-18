@@ -12,7 +12,7 @@
    :nickname schema/Str
    :currency (schema/enum "usd")
    :active   schema/Bool
-   :interval (schema/enum "month" "annual")
+   :interval (schema/enum "month" "year")
    })
 
 (def InvoiceLineItem
