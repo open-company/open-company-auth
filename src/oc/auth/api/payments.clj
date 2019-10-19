@@ -5,6 +5,7 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.payments :as payments-rep]
             [oc.auth.resources.payments :as payments-res]
+            [oc.auth.resources.user :as user-res]
             [oc.auth.resources.team :as team-res]
             [oc.lib.api.common :as api-common]
             [oc.lib.db.pool :as pool]
@@ -20,6 +21,14 @@
   [conn {user-id :user-id} team-id]
   (if-let [team (team-res/get-team conn team-id)]
     ((set (:admins team)) user-id)
+    false))
+
+;; FIXME: starting to complect with team
+(defn allow-team-members
+  "Return true if the JWToken user is a member of the specified team."
+  [conn {user-id :user-id} team-id]
+  (if-let [user (user-res/get-user conn user-id)]
+    ((set (:teams user)) team-id)
     false))
 
 (defn- plan-id-from-body
@@ -74,7 +83,7 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :get (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))
     :put (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :patch (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
