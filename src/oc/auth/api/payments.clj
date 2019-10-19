@@ -9,6 +9,7 @@
             [oc.auth.resources.team :as team-res]
             [oc.lib.api.common :as api-common]
             [oc.lib.db.pool :as pool]
+            [cheshire.core :as json]
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]))
@@ -33,7 +34,7 @@
 
 (defn- plan-id-from-body
   [ctx]
-  (if-let* [plan-id (-> ctx :request :body slurp)
+  (if-let* [plan-id (-> ctx :request :body slurp (json/parse-string true) :plan-id)
             valid? (schema/validate schema/Str plan-id)]
     [false {:plan-id plan-id}]
     true))
