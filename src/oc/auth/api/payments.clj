@@ -67,7 +67,7 @@
 (defresource customer [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase)
 
-  :allowed-methods [:options :get :put :path :delete]
+  :allowed-methods [:options :get :put :patch :delete]
 
   ;; Media type client accepts
   :available-media-types [mt/payment-customer-media-type]
