@@ -39,7 +39,13 @@
    :current-period-end   schema/Int
    :trial-start          (schema/maybe schema/Int)
    :trial-end            (schema/maybe schema/Int)
-   :status               (schema/enum "trialing" "active")
+   :status               (schema/enum "trialing"
+                                      "active"
+                                      "past_due"
+                                      "unpaid"
+                                      "canceled"
+                                      "incomplete"
+                                      "incomplete_expired")
    :quantity             schema/Int
    :current-plan         Plan
    :item                 SubscriptionItem
