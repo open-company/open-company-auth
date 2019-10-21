@@ -7,6 +7,7 @@
             [oc.auth.resources.payments :as payments-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.team :as team-res]
+            [oc.auth.async.payments :as pasync]
             [oc.lib.api.common :as api-common]
             [oc.lib.db.pool :as pool]
             [cheshire.core :as json]
@@ -43,10 +44,13 @@
 
 (defn create-customer-with-creator-as-contact!
   [ctx conn team-id]
-  (let [creator (:user ctx)
-        contact {:email     (:email creator)
-                 :full-name (lib-user/name-for creator)}]
-    {:new-customer (payments-res/create-customer! conn team-id contact)}))
+  (let [creator      (:user ctx)
+        contact      {:email     (:email creator)
+                      :full-name (lib-user/name-for creator)}
+        new-customer {:new-customer (payments-res/create-customer! conn team-id contact)}]
+    (payments-res/start-plan! conn team-id config/stripe-monthly-plan-id)
+    (pasync/report-team-seat-usage! conn team-id)
+    new-customer))
 
 (defn create-new-subscription!
   [ctx conn team-id]
