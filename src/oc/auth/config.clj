@@ -109,6 +109,6 @@
 
 ;; ----- Stripe -----
 
-(defonce stripe-secret-key      (env :stripe-secret-key))
-(defonce stripe-monthly-plan-id (env :stripe-monthly-plan-id))
-(defonce stripe-annual-plan-id  (env :stripe-annual-plan-id))
+(defonce stripe-secret-key         (env :stripe-secret-key))
+(defonce stripe-premium-product-id (env :stripe-premium-product-id))
+(defonce stripe-default-plan-id    (env :stripe-default-plan-id))

@@ -35,6 +35,13 @@
   [cid]
   (Invoice/upcoming {"customer" cid}))
 
+(defn- retrieve-available-plans
+  [product-id]
+  (let [is-public? #(-> % .getMetadata (get "isPublic"))]
+    (->> (Plan/list {"product" product-id})
+         (.getData)
+         (filter is-public?))))
+
 (defn- convert-plan
   [plan]
   {:id       (.getId plan)
@@ -87,8 +94,7 @@
 (defn- convert-customer
   [customer]
   (let [sub         (-> customer .getSubscriptions .getData first)
-        avail-plans [(Plan/retrieve config/stripe-monthly-plan-id)
-                     (Plan/retrieve config/stripe-annual-plan-id)]]
+        avail-plans (retrieve-available-plans config/stripe-premium-product-id)]
     (cond-> {:id           (.getId customer)
              :email        (.getEmail customer)
              :full-name    (.getName customer)
@@ -188,15 +194,7 @@
 
   (retrieve-upcoming-invoice my-id)
 
-  (-> my-id
-      retrieve-customer-by-id
-      .getSubscriptions
-      .getData
-      first
-      .getItems
-      .getData
-      first
-      )
+  (retrieve-available-plans config/stripe-premium-product-id)
 
   (customer-info my-id)
 

@@ -48,7 +48,7 @@
         contact      {:email     (:email creator)
                       :full-name (lib-user/name-for creator)}
         new-customer {:new-customer (payments-res/create-customer! conn team-id contact)}]
-    (payments-res/start-plan! conn team-id config/stripe-monthly-plan-id)
+    (payments-res/start-plan! conn team-id config/stripe-default-plan-id)
     (pasync/report-team-seat-usage! conn team-id)
     new-customer))
 
