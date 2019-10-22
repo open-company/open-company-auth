@@ -104,7 +104,7 @@
 
 (defn- convert-checkout-session
   [session]
-  {:checkout-session-id (.getId session)})
+  {:sessionId (.getId session)})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stripe API

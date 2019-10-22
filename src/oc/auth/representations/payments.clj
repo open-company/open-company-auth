@@ -53,7 +53,7 @@
 ;; Checkout Session
 
 (def checkout-session-representation-props
-  [:checkout-session-id])
+  [:sessionId])
 
 (defn render-checkout-session
   [team-id session]
