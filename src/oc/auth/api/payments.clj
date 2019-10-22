@@ -16,7 +16,9 @@
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
-            [oc.auth.lib.stripe :as stripe]))
+            [oc.auth.lib.stripe :as stripe]
+            [clojure.edn :as edn])
+  (:import [java.util Base64]))
 
 ;; ----- Validations -----
 
@@ -81,10 +83,12 @@
 
 (defn- wrap-redirect-success-url
   [state]
-  (str config/auth-server-url
-       checkout-session-success-path
-       "?sessionId={CHECKOUT_SESSION_ID}"
-       (when state (str "&state=" (oauth/encode-state-string state)))))
+  (let [encode #(.. (Base64/getUrlEncoder)
+                    (encodeToString (-> % pr-str .getBytes)))]
+    (str config/auth-server-url
+         checkout-session-success-path
+         "?sessionId={CHECKOUT_SESSION_ID}"
+         (when state (str "&state=" (encode state))))))
 
 (defn- create-checkout-session!
   [ctx conn team-id]
@@ -190,7 +194,8 @@
   )
 
 (defn checkout-session-callback [conn session-id state]
-  (let [redirects (oauth/decode-state-string state)]
+  (let [decoder   (Base64/getUrlDecoder)
+        redirects (->> state (.decode decoder) (String.) edn/read-string)]
     (payments-res/finish-checkout-session! conn session-id)
     (response/redirect (:success-url redirects))))
 
