@@ -106,15 +106,6 @@
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     })
 
-  ;; Validations
-  :processable? (by-method {
-    :options true
-    :get true
-    :put (fn [ctx] (nil? (-> ctx :existing-customer :subscription)))
-    :patch (fn [ctx] (some? (-> ctx :existing-customer :subscription)))
-    :delete (fn [ctx] (some? (-> ctx :existing-customer :subscription)))
-    })
-
   :malformed? (by-method {
     :options false
     :get false
