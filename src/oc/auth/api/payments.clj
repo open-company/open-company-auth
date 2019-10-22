@@ -175,24 +175,9 @@
                               (payments-rep/render-checkout-session session)))
   )
 
-(defresource checkout-session-callback [conn session-id]
-  :allowed-methods [:options :get]
-
-  ;; Media type client accepts
-  :available-media-types ["application/json"]
-  :handle-not-acceptable (api-common/only-accept 406 "application/json")
-
-  ;; Media type client sends
-  :known-content-type? (by-method {
-    :options true
-    :get true
-    })
-
-  ;; Responses
-  :handle-ok (fn [ctx]
-               (payments-res/finish-checkout-session! conn session-id)
-               (response/redirect config/ui-server-url))
-  )
+(defn checkout-session-callback [conn session-id]
+  (payments-res/finish-checkout-session! conn session-id)
+  (response/redirect config/ui-server-url))
 
 ;; ----- Routes -----
 
