@@ -47,7 +47,8 @@
   (if-let* [callbacks (-> ctx :request :body slurp (json/parse-string true) (select-keys [:success-url :cancel-url]))
             valid? (schema/validate {:success-url schema/Str
                                      :cancel-url  schema/Str} callbacks)]
-    {:checkout-callbacks callbacks}))
+    [false {:checkout-callbacks callbacks}]
+    true))
 
 ;; ----- Actions -----
 
