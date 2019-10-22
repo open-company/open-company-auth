@@ -42,6 +42,13 @@
     [false {:plan-id plan-id}]
     true))
 
+(defn- checkout-callbacks-from-body
+  [ctx]
+  (if-let* [callbacks (-> ctx :request :body slurp (json/parse-string true) (select-keys [:success-url :cancel-url]))
+            valid? (schema/validate {:success-url schema/Str
+                                     :cancel-url  schema/Str} callbacks)]
+    {:checkout-callbacks callbacks}))
+
 ;; ----- Actions -----
 
 (defn create-customer-with-creator-as-contact!
@@ -68,16 +75,10 @@
   [ctx conn team-id]
   {:updated-customer (payments-res/cancel-subscription! conn team-id)})
 
-(def checkout-session-success-path "/payments/callbacks/checkout-session")
-(def checkout-session-success-url
-  (str config/auth-server-url checkout-session-success-path "?sessionId={CHECKOUT_SESSION_ID}"))
-(def checkout-session-cancel-url config/ui-server-url)
-
 (defn create-checkout-session!
   [ctx conn team-id]
-  (let [callback-opts {:success-url checkout-session-success-url
-                       :cancel-url  checkout-session-cancel-url}
-        session       (payments-res/create-checkout-session! conn team-id callback-opts)]
+  (let [callbacks (:checkout-callbacks ctx)
+        session   (payments-res/create-checkout-session! conn team-id callbacks)]
     {:new-session session}))
 
 ;; ----- Resources -----
@@ -164,7 +165,7 @@
 
   :malformed? (by-method {
     :options false
-    :post false
+    :post checkout-callbacks-from-body
     })
 
   ;; Actions
