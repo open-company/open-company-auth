@@ -194,7 +194,7 @@
           [team-id]
           (pool/with-pool [conn db-pool] (checkout-session conn team-id)))
 
-     (ANY checkout-session-success-path
+     (ANY "/payments/callbacks/checkout-session"
           [sessionId] ;; obtained from query params
           (pool/with-pool [conn db-pool] (checkout-session-callback conn sessionId)))
      )))
