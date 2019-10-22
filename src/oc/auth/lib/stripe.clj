@@ -43,6 +43,12 @@
          (.getData)
          (filter is-public?))))
 
+(defn- retrieve-payment-methods
+  [cid]
+  (-> (PaymentMethod/list {"customer" "cus_G29njZofp3NNGx"
+                           "type" "card"})
+      .getData))
+
 (defn- convert-plan
   [plan]
   {:id       (.getId plan)
@@ -92,14 +98,27 @@
      :upcoming-invoice     (convert-invoice upcoming-invoice)
      }))
 
+(defn- convert-payment-method
+  [pay-method]
+  (let [card (.getCard pay-method)]
+    {:id      (.getId pay-method)
+     :created (.getCreated pay-method)
+     :card    {:brand     (.getBrand card)
+               :exp-year  (.getExpYear card)
+               :exp-month (.getExpMonth card)
+               :last-4    (.getLast4 card)
+               :country   (.getCountry card)}}))
+
 (defn- convert-customer
   [customer]
   (let [sub         (-> customer .getSubscriptions .getData first)
+        pay-methods (-> customer .getId retrieve-payment-methods)
         avail-plans (retrieve-available-plans config/stripe-premium-product-id)]
     (cond-> {:id           (.getId customer)
              :email        (.getEmail customer)
              :full-name    (.getName customer)
-             :available-plans (mapv convert-plan avail-plans)}
+             :available-plans (mapv convert-plan avail-plans)
+             :payment-methods (mapv convert-payment-method pay-methods)}
       sub (assoc :subscription (convert-subscription sub)))))
 
 (defn- convert-checkout-session

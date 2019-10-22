@@ -52,12 +52,22 @@
    :upcoming-invoice     Invoice
    })
 
+(def PaymentMethod
+  {:id      schema/Str
+   :created schema/Int
+   :card    {:brand     schema/Str
+             :exp-year  schema/Int
+             :exp-month schema/Int
+             :last-4    schema/Str
+             :country   schema/Str}})
+
 (def Customer
   {:id        schema/Str
    :email     schema/Str
    :full-name schema/Str
    :available-plans [Plan]
    (schema/optional-key :subscription) (schema/maybe Subscription)
+   (schema/optional-key :payment-methods) (schema/maybe [PaymentMethod])
    })
 
 (def CustomerContact

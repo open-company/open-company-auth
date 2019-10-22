@@ -8,7 +8,7 @@
 ;; Customer
 
 (def customer-representation-props
-  [:id :email :full-name :subscription :available-plans])
+  [:id :email :full-name :subscription :available-plans :payment-methods])
 
 (defun customer-url
   ([team-id :guard string?] (str "/teams/" team-id "/customer"))
