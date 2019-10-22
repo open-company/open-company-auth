@@ -176,13 +176,11 @@
   )
 
 (defresource checkout-session-callback [conn session-id]
-  (api-common/open-company-authenticated-resource config/passphrase)
-
   :allowed-methods [:options :get]
 
   ;; Media type client accepts
-  :available-media-types [mt/payment-checkout-session-media-type]
-  :handle-not-acceptable (api-common/only-accept 406 mt/payment-checkout-session-media-type)
+  :available-media-types ["application/json"]
+  :handle-not-acceptable (api-common/only-accept 406 "application/json")
 
   ;; Media type client sends
   :known-content-type? (by-method {
