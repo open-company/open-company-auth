@@ -11,6 +11,7 @@
             [oc.auth.async.payments :as pasync]
             [oc.lib.api.common :as api-common]
             [oc.lib.db.pool :as pool]
+            [oc.lib.oauth :as oauth]
             [cheshire.core :as json]
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
@@ -20,7 +21,7 @@
 ;; ----- Validations -----
 
 ;; FIXME: starting to complect with team
-(defn allow-team-admins
+(defn- allow-team-admins
   "Return true if the JWToken user is an admin of the specified team."
   [conn {user-id :user-id} team-id]
   (if-let [team (team-res/get-team conn team-id)]
@@ -28,7 +29,7 @@
     false))
 
 ;; FIXME: starting to complect with team
-(defn allow-team-members
+(defn- allow-team-members
   "Return true if the JWToken user is a member of the specified team."
   [conn {user-id :user-id} team-id]
   (if-let [user (user-res/get-user conn user-id)]
@@ -42,17 +43,17 @@
     [false {:plan-id plan-id}]
     true))
 
-(defn- checkout-callbacks-from-body
+(defn- get-checkout-redirects-from-body
   [ctx]
-  (if-let* [callbacks (-> ctx :request :body slurp (json/parse-string true) (select-keys [:success-url :cancel-url]))
+  (if-let* [redirects (-> ctx :request :body slurp (json/parse-string true) (select-keys [:success-url :cancel-url]))
             valid? (schema/validate {:success-url schema/Str
-                                     :cancel-url  schema/Str} callbacks)]
-    [false {:checkout-callbacks callbacks}]
+                                     :cancel-url  schema/Str} redirects)]
+    [false {:checkout-redirects redirects}]
     true))
 
 ;; ----- Actions -----
 
-(defn create-customer-with-creator-as-contact!
+(defn- create-customer-with-creator-as-contact!
   [ctx conn team-id]
   (let [creator      (:user ctx)
         contact      {:email     (:email creator)
@@ -62,24 +63,35 @@
     (pasync/report-team-seat-usage! conn team-id)
     new-customer))
 
-(defn create-new-subscription!
+(defn- create-new-subscription!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
     {:updated-customer (payments-res/start-plan! conn team-id plan-id)}))
 
-(defn change-subscription-plan!
+(defn- change-subscription-plan!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
     {:updated-customer (payments-res/change-plan! conn team-id plan-id)}))
 
-(defn cancel-subscription!
+(defn- cancel-subscription!
   [ctx conn team-id]
   {:updated-customer (payments-res/cancel-subscription! conn team-id)})
 
-(defn create-checkout-session!
+(def ^:private checkout-session-success-path "/payments/callbacks/checkout-session")
+
+(defn- wrap-redirect-success-url
+  [state]
+  (str config/auth-server-url
+       checkout-session-success-path
+       "?sessionId={CHECKOUT_SESSION_ID}"
+       (when state (str "&state=" (oauth/encode-state-string state)))))
+
+(defn- create-checkout-session!
   [ctx conn team-id]
-  (let [callbacks (:checkout-callbacks ctx)
-        session   (payments-res/create-checkout-session! conn team-id callbacks)]
+  (let [redirects   (:checkout-redirects ctx)
+        success-url (wrap-redirect-success-url redirects)
+        callbacks   (assoc redirects :success-url success-url)
+        session     (payments-res/create-checkout-session! conn team-id callbacks)]
     {:new-session session}))
 
 ;; ----- Resources -----
@@ -166,7 +178,7 @@
 
   :malformed? (by-method {
     :options false
-    :post checkout-callbacks-from-body
+    :post get-checkout-redirects-from-body
     })
 
   ;; Actions
@@ -177,9 +189,10 @@
                               (payments-rep/render-checkout-session session)))
   )
 
-(defn checkout-session-callback [conn session-id]
-  (payments-res/finish-checkout-session! conn session-id)
-  (response/redirect config/ui-server-url))
+(defn checkout-session-callback [conn session-id state]
+  (let [redirects (oauth/decode-state-string state)]
+    (payments-res/finish-checkout-session! conn session-id)
+    (response/redirect (:success-url redirects))))
 
 ;; ----- Routes -----
 
@@ -194,7 +207,7 @@
           [team-id]
           (pool/with-pool [conn db-pool] (checkout-session conn team-id)))
 
-     (ANY "/payments/callbacks/checkout-session"
-          [sessionId] ;; obtained from query params
-          (pool/with-pool [conn db-pool] (checkout-session-callback conn sessionId)))
+     (ANY checkout-session-success-path
+          [sessionId state] ;; obtained from query params
+          (pool/with-pool [conn db-pool] (checkout-session-callback conn sessionId state)))
      )))
