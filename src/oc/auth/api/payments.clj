@@ -75,8 +75,10 @@
 
 (defn create-checkout-session!
   [ctx conn team-id]
-  (payments-res/create-checkout-session! conn team-id {:success-url checkout-session-success-url
-                                                       :cancel-url  checkout-session-cancel-url}))
+  (let [callback-opts {:success-url checkout-session-success-url
+                       :cancel-url  checkout-session-cancel-url}
+        session       (payments-res/create-checkout-session! conn team-id callback-opts)]
+    {:new-session session}))
 
 ;; ----- Resources -----
 
@@ -170,7 +172,7 @@
 
   ;; Responses
   :handle-ok (fn [ctx] (let [session (:new-session ctx)]
-                         (payments-rep/render-checkout-session team-id session)))
+                         (payments-rep/render-checkout-session session)))
   )
 
 (defresource checkout-session-callback [conn session-id]

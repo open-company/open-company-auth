@@ -56,7 +56,7 @@
   [:sessionId])
 
 (defn render-checkout-session
-  [team-id session]
+  [session]
   (-> session
       (select-keys checkout-session-representation-props)
       json/generate-string))
