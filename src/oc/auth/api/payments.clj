@@ -1,6 +1,7 @@
 (ns oc.auth.api.payments
   (:require [compojure.core :as compojure :refer [ANY]]
             [liberator.core :refer [by-method defresource]]
+            [ring.util.response :as response]
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.payments :as payments-rep]
@@ -13,7 +14,8 @@
             [cheshire.core :as json]
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
-            [schema.core :as schema]))
+            [schema.core :as schema]
+            [oc.auth.lib.stripe :as stripe]))
 
 ;; ----- Validations -----
 
@@ -65,6 +67,16 @@
 (defn cancel-subscription!
   [ctx conn team-id]
   {:updated-customer (payments-res/cancel-subscription! conn team-id)})
+
+(def checkout-session-success-path "/payments/callbacks/checkout-session")
+(def checkout-session-success-url
+  (str config/auth-server-url checkout-session-success-path "?sessionId={CHECKOUT_SESSION_ID}"))
+(def checkout-session-cancel-url config/ui-server-url)
+
+(defn create-checkout-session!
+  [ctx conn team-id]
+  (payments-res/create-checkout-session! conn team-id {:success-url checkout-session-success-url
+                                                       :cancel-url  checkout-session-cancel-url}))
 
 ;; ----- Resources -----
 
@@ -128,10 +140,83 @@
                          (payments-rep/render-customer team-id customer)))
   )
 
+;; https://stripe.com/docs/payments/checkout/collecting
+;; https://stripe.com/docs/api/checkout/sessions/create
+(defresource checkout-session [conn team-id]
+  (api-common/open-company-authenticated-resource config/passphrase)
+
+  :allowed-methods [:options :post]
+
+  ;; Media type client accepts
+  :available-media-types [mt/payment-checkout-session-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/payment-checkout-session-media-type)
+
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :post true
+    })
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true
+    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    })
+
+  ;; Validations
+  :processable? (by-method {
+    :options true
+    :post true
+    })
+
+  :malformed? (by-method {
+    :options false
+    :post false
+    })
+
+  ;; Actions
+  :post! (fn [ctx] (create-checkout-session! ctx conn team-id))
+
+  ;; Responses
+  :handle-ok (fn [ctx] (let [session (:new-session ctx)]
+                         (payments-rep/render-checkout-session team-id session)))
+  )
+
+(defresource checkout-session-callback [conn session-id]
+  (api-common/open-company-authenticated-resource config/passphrase)
+
+  :allowed-methods [:options :get]
+
+  ;; Media type client accepts
+  :available-media-types [mt/payment-checkout-session-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/payment-checkout-session-media-type)
+
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :get true
+    })
+
+  ;; Responses
+  :handle-ok (fn [ctx]
+               (payments-res/finish-checkout-session! conn session-id)
+               (response/redirect config/ui-server-url))
+  )
+
 ;; ----- Routes -----
 
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
-     (ANY "/teams/:team-id/customer" [team-id] (pool/with-pool [conn db-pool] (customer conn team-id)))
+     (ANY "/teams/:team-id/customer"
+          [team-id]
+          (pool/with-pool [conn db-pool] (customer conn team-id)))
+
+     (ANY "/teams/:team-id/customer/checkout-session"
+          [team-id]
+          (pool/with-pool [conn db-pool] (checkout-session conn team-id)))
+
+     (ANY checkout-session-success-path
+          [sessionId] ;; obtained from query params
+          (pool/with-pool [conn db-pool] (checkout-session-callback conn sessionId)))
      )))

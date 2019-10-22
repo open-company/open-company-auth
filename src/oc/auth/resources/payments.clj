@@ -111,3 +111,12 @@
   [customer-id :- (:id Customer)
    seat-count :- (:quantity Subscription)]
   (stripe/report-seats! customer-id seat-count))
+
+(schema/defn ^:always-validate create-checkout-session!
+  [conn team-id :- (:team-id team/Team) callback-opts]
+  (let [customer-id (get-customer-id conn team-id)]
+    (stripe/create-checkout-session! customer-id callback-opts)))
+
+(schema/defn ^:always-validate finish-checkout-session!
+  [conn session-id]
+  (stripe/finish-checkout-session! session-id))

@@ -2,7 +2,8 @@
   (:require [clojure.set :as cset]
             [oc.auth.config :as config])
   (:import [com.stripe Stripe]
-           [com.stripe.model Customer Subscription SubscriptionItem Plan Invoice]
+           [com.stripe.model Customer Subscription SubscriptionItem Plan Invoice SetupIntent PaymentMethod]
+           [com.stripe.model.checkout Session]
            [java.util Date]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -24,7 +25,7 @@
   (date->timestamp (Date.)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Customer summary
+;; Entity conversion
 
 (defn- retrieve-customer-by-id
   "Queries Stripe to retrieve the Customer record with the given Stripe ID"
@@ -100,6 +101,10 @@
              :full-name    (.getName customer)
              :available-plans (mapv convert-plan avail-plans)}
       sub (assoc :subscription (convert-subscription sub)))))
+
+(defn- convert-checkout-session
+  [session]
+  {:checkout-session-id (.getId session)})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stripe API
@@ -181,6 +186,32 @@
     (throw (ex-info "Cannot cancel non-existent plan"
                     {:customer-id customer-id}))))
 
+(defn create-checkout-session!
+  "Creates a Checkout Session: the context from which we obtain a customer's payment info.
+  See https://stripe.com/docs/payments/checkout/collecting"
+  [customer-id {:keys [success-url
+                       cancel-url]}]
+  (-> (Session/create {"payment_method_types" ["card"]
+                       "mode"                 "setup"
+                       "success_url"          success-url
+                       "cancel_url"           cancel-url
+                       "client_reference_id"  customer-id})
+      convert-checkout-session))
+
+(defn finish-checkout-session!
+  "Callback for the session created with `create-checkout-session!`. Once customer
+  has entered payment method info, this callback should be invoked in order to
+  associate this data with the customer record in Stripe."
+  [session-id]
+  (let [session       (Session/retrieve session-id)
+        customer-id   (.getClientReferenceId session)
+        intent-id     (.getSetupIntent session)
+        intent        (SetupIntent/retrieve intent-id)
+        pay-method-id (.getPaymentMethod intent)
+        pay-method    (PaymentMethod/retrieve pay-method-id)]
+    (.attach pay-method {"customer" customer-id})
+    (customer-info customer-id)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REPL testing
 
@@ -192,18 +223,23 @@
         create-stripe-customer!
         :id))
 
+  (retrieve-customer-by-id my-id)
+
   (retrieve-upcoming-invoice my-id)
 
   (retrieve-available-plans config/stripe-premium-product-id)
 
   (customer-info my-id)
 
-  (subscribe-customer-to-plan! my-id config/stripe-monthly-plan-id)
+  (subscribe-customer-to-plan! my-id config/stripe-default-plan-id)
 
   (change-plan! my-id config/stripe-annual-plan-id)
 
   (cancel-subscription! my-id)
 
   (report-seats! my-id 29)
+
+  (create-checkout-session! my-id {:success-url "https://staging-auth.carrot.io/team/123/customer/checkout-session"
+                                   :cancel-url  "https://staging-auth.carrot.io/team/123/customer/checkout-session/cancel"})
 
   )
