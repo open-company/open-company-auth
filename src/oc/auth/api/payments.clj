@@ -171,8 +171,8 @@
   :post! (fn [ctx] (create-checkout-session! ctx conn team-id))
 
   ;; Responses
-  :handle-ok (fn [ctx] (let [session (:new-session ctx)]
-                         (payments-rep/render-checkout-session session)))
+  :handle-created (fn [ctx] (let [session (:new-session ctx)]
+                              (payments-rep/render-checkout-session session)))
   )
 
 (defresource checkout-session-callback [conn session-id]
