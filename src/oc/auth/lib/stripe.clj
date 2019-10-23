@@ -45,7 +45,7 @@
 
 (defn- retrieve-payment-methods
   [cid]
-  (-> (PaymentMethod/list {"customer" "cus_G29njZofp3NNGx"
+  (-> (PaymentMethod/list {"customer" cid
                            "type" "card"})
       .getData))
 
