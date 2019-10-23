@@ -205,8 +205,9 @@
 
 (defn checkout-session-callback [conn session-id state]
   (let [decoder   (Base64/getUrlDecoder)
-        redirects (->> state (.decode decoder) (String.) edn/read-string)]
-    (payments-res/finish-checkout-session! conn session-id)
+        redirects (->> state (.decode decoder) (String.) edn/read-string)
+        customer  (payments-res/finish-checkout-session! conn session-id)]
+    (payments-res/end-trial-period! conn (:id customer))
     (response/redirect (:success-url redirects))))
 
 ;; ----- Routes -----

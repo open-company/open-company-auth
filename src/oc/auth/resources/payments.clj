@@ -139,4 +139,8 @@
 
 (schema/defn ^:always-validate finish-checkout-session!
   [conn session-id]
-  (stripe/finish-checkout-session! session-id))
+  (stripe/assoc-session-result-with-customer! session-id))
+
+(schema/defn ^:always-validate end-trial-period!
+  [conn customer-id :- (:id Customer)]
+  (stripe/end-trial-period! customer-id))

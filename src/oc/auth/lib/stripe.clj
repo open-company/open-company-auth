@@ -228,19 +228,34 @@
                        "client_reference_id"  customer-id})
       convert-checkout-session))
 
-(defn finish-checkout-session!
+(defn assoc-session-result-with-customer!
   "Callback for the session created with `create-checkout-session!`. Once customer
   has entered payment method info, this callback should be invoked in order to
   associate this data with the customer record in Stripe."
   [session-id]
-  (let [session       (Session/retrieve session-id)
-        customer-id   (.getClientReferenceId session)
-        intent-id     (.getSetupIntent session)
-        intent        (SetupIntent/retrieve intent-id)
-        pay-method-id (.getPaymentMethod intent)
-        pay-method    (PaymentMethod/retrieve pay-method-id)]
-    (.attach pay-method {"customer" customer-id})
-    (customer-info customer-id)))
+  (let [session             (Session/retrieve session-id)
+        customer-id         (.getClientReferenceId session)
+        intent-id           (.getSetupIntent session)
+        intent              (SetupIntent/retrieve intent-id)
+        pay-method-id       (.getPaymentMethod intent)
+        pay-method          (PaymentMethod/retrieve pay-method-id)
+        attached-pay-method (.attach pay-method {"customer" customer-id})]
+    (-> (Customer/retrieve customer-id)
+        (.update {"invoice_settings" {"default_payment_method" (.getId attached-pay-method)}})
+        convert-customer)))
+
+(defn end-trial-period!
+  "Ends this user's trial period immediately, and charges the default payment on file
+  in order to activate their subscription."
+  [customer-id]
+  (if-let [sub-id (-> customer-id customer-info :subscription :id)]
+    (let [sub    (Subscription/retrieve sub-id)
+          params {"trial_end" "now"}]
+      (-> (.update sub params)
+          convert-subscription))
+    (throw (ex-info "Cannot end trial on non-existent subscription"
+                    {:key         ::does-not-exist
+                     :customer-id customer-id}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REPL testing
