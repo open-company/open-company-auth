@@ -59,7 +59,6 @@
   [ctx e]
   (case (-> e ex-data :key)
     ::stripe/cannot-change-to-current-plan ctx
-    :else
     (throw e)))
 
 (defn- create-customer-with-creator-as-contact!
