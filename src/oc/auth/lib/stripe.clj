@@ -180,8 +180,9 @@
         (-> (.update sub-item new-params)
             convert-subscription-item))
       (throw (ex-info "Attempted to report seat usage on non-existent plan"
-                      {:customer-id customer-id
-                       :num-seats num-seats})))))
+                      {:key         ::does-not-exist
+                       :customer-id customer-id
+                       :num-seats   num-seats})))))
 
 (defn change-plan!
   "Changes the customer's current plan to the new plan with the given ID"
@@ -195,10 +196,12 @@
           (-> (.update sub-item new-params)
               convert-subscription-item))
         (throw (ex-info "Cannot change to the current plan"
-                        {:customer-id customer-id
+                        {:key         ::cannot-change-to-current-plan
+                         :customer-id customer-id
                          :new-plan-id new-plan-id})))
       (throw (ex-info "Attempted to change non-existent plan"
-                      {:customer-id customer-id
+                      {:key         ::does-not-exist
+                       :customer-id customer-id
                        :new-plan-id new-plan-id})))))
 
 (defn cancel-subscription!
@@ -210,7 +213,8 @@
       (-> (.update sub params)
           convert-subscription))
     (throw (ex-info "Cannot cancel non-existent plan"
-                    {:customer-id customer-id}))))
+                    {:key         ::does-not-exist
+                     :customer-id customer-id}))))
 
 (defn create-checkout-session!
   "Creates a Checkout Session: the context from which we obtain a customer's payment info.

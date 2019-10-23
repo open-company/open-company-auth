@@ -55,6 +55,13 @@
 
 ;; ----- Actions -----
 
+(defn- handle-stripe-exception
+  [ctx e]
+  (case (-> e ex-data :key)
+    ::stripe/cannot-change-to-current-plan ctx
+    :else
+    (throw e)))
+
 (defn- create-customer-with-creator-as-contact!
   [ctx conn team-id]
   (let [creator      (:user ctx)
@@ -73,7 +80,10 @@
 (defn- change-subscription-plan!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
-    {:updated-customer (payments-res/change-plan! conn team-id plan-id)}))
+    (try
+      {:updated-customer (payments-res/change-plan! conn team-id plan-id)}
+      (catch Exception e
+        (handle-stripe-exception ctx e)))))
 
 (defn- cancel-subscription!
   [ctx conn team-id]
