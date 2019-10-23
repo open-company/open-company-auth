@@ -49,6 +49,12 @@
                            "type" "card"})
       .getData))
 
+(defn- convert-tier
+  [tier]
+  {:flat-amount (.getFlatAmount tier)
+   :unit-amount (.getUnitAmount tier)
+   :up-to       (.getUpTo tier)})
+
 (defn- convert-plan
   [plan]
   {:id       (.getId plan)
@@ -56,7 +62,8 @@
    :nickname (.getNickname plan)
    :currency (.getCurrency plan)
    :active   (.getActive plan)
-   :interval (.getInterval plan)})
+   :interval (.getInterval plan)
+   :tiers    (mapv convert-tier (.getTiers plan))})
 
 (defn- convert-subscription-item
   [sub-item]

@@ -6,13 +6,20 @@
 
 ;; ----- Schema -----
 
+(def Tier
+  {:flat-amount (schema/maybe schema/Int)
+   :unit-amount (schema/maybe schema/Int)
+   :up-to       (schema/maybe schema/Int)
+   })
+
 (def Plan
   {:id       schema/Str
-   :amount   schema/Int
+   :amount   (schema/maybe schema/Int)
    :nickname schema/Str
    :currency (schema/enum "usd")
    :active   schema/Bool
    :interval (schema/enum "month" "year")
+   :tiers    [Tier]
    })
 
 (def InvoiceLineItem
@@ -20,7 +27,8 @@
    :amount      schema/Int
    :currency    schema/Str
    :description schema/Str
-   :quantity    schema/Int})
+   :quantity    schema/Int
+   })
 
 (def Invoice
   {:amount-due           schema/Int
@@ -31,7 +39,8 @@
    :line-items           [InvoiceLineItem]})
 
 (def SubscriptionItem
-  {:id schema/Str})
+  {:id schema/Str
+   })
 
 (def Subscription
   {:id                   schema/Str
@@ -59,7 +68,8 @@
              :exp-year  schema/Int
              :exp-month schema/Int
              :last-4    schema/Str
-             :country   schema/Str}})
+             :country   schema/Str
+             }})
 
 (def Customer
   {:id        schema/Str
