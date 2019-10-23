@@ -64,6 +64,7 @@
 (def PaymentMethod
   {:id      schema/Str
    :created schema/Int
+   :default schema/Bool
    :card    {:brand     schema/Str
              :exp-year  schema/Int
              :exp-month schema/Int

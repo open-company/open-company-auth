@@ -106,26 +106,29 @@
      }))
 
 (defn- convert-payment-method
-  [pay-method]
-  (let [card (.getCard pay-method)]
-    {:id      (.getId pay-method)
-     :created (.getCreated pay-method)
-     :card    {:brand     (.getBrand card)
-               :exp-year  (.getExpYear card)
-               :exp-month (.getExpMonth card)
-               :last-4    (.getLast4 card)
-               :country   (.getCountry card)}}))
+  [pay-method & [default-pay-method-id]]
+  (let [pm-id (.getId pay-method)
+        card  (.getCard pay-method)]
+    {:id       pm-id
+     :created  (.getCreated pay-method)
+     :default? (= pm-id default-pay-method-id)
+     :card     {:brand     (.getBrand card)
+                :exp-year  (.getExpYear card)
+                :exp-month (.getExpMonth card)
+                :last-4    (.getLast4 card)
+                :country   (.getCountry card)}}))
 
 (defn- convert-customer
   [customer]
-  (let [sub         (-> customer .getSubscriptions .getData first)
-        pay-methods (-> customer .getId retrieve-payment-methods)
-        avail-plans (retrieve-available-plans config/stripe-premium-product-id)]
+  (let [sub                (-> customer .getSubscriptions .getData first)
+        default-pay-method (-> customer .getInvoiceSettings .getDefaultPaymentMethod)
+        pay-methods        (-> customer .getId retrieve-payment-methods)
+        avail-plans        (retrieve-available-plans config/stripe-premium-product-id)]
     (cond-> {:id           (.getId customer)
              :email        (.getEmail customer)
              :full-name    (.getName customer)
              :available-plans (mapv convert-plan avail-plans)
-             :payment-methods (mapv convert-payment-method pay-methods)}
+             :payment-methods (mapv #(convert-payment-method % default-pay-method) pay-methods)}
       sub (assoc :subscription (convert-subscription sub)))))
 
 (defn- convert-checkout-session
@@ -268,7 +271,7 @@
         create-stripe-customer!
         :id))
 
-  (retrieve-customer-by-id my-id)
+  (retrieve-payment-methods my-id)
 
   (retrieve-upcoming-invoice my-id)
 
