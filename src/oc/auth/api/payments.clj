@@ -146,8 +146,8 @@
 
   ;; Responses
   :handle-ok (fn [ctx] (let [customer (or (:new-customer ctx)
-                                          (:existing-customer ctx)
-                                          (:updated-customer ctx))]
+                                          (:updated-customer ctx)
+                                          (:existing-customer ctx))]
                          (payments-rep/render-customer team-id customer)))
   )
 

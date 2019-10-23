@@ -252,7 +252,7 @@
 
   (subscribe-customer-to-plan! my-id config/stripe-default-plan-id)
 
-  (change-plan! my-id config/stripe-annual-plan-id)
+  (change-plan! my-id "plan_G12Un6HuO4ihrb")
 
   (cancel-subscription! my-id)
 
