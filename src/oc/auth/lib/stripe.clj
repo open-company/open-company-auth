@@ -11,8 +11,9 @@
 
 (set! (Stripe/apiKey) config/stripe-secret-key)
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Implementation details
+;; Stripe utils
 
 (defn- date->timestamp
   "Converts a java.util.Date object to a Stripe timestamp"
@@ -24,50 +25,9 @@
   []
   (date->timestamp (Date.)))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Entity conversion
-
-(defn- retrieve-customer-by-id
-  "Queries Stripe to retrieve the Customer record with the given Stripe ID"
-  [cid]
-  (Customer/retrieve cid))
-
-(defn- retrieve-upcoming-invoice
-  [cid]
-  (Invoice/upcoming {"customer" cid}))
-
-(defn- retrieve-available-plans
-  [product-id]
-  (let [is-public? #(-> % .getMetadata (get "isPublic"))]
-    (->> (Plan/list {"product" product-id})
-         (.getData)
-         (filter is-public?))))
-
-(defn- retrieve-payment-methods
-  [cid]
-  (-> (PaymentMethod/list {"customer" cid
-                           "type" "card"})
-      .getData))
-
-(defn- convert-tier
-  [tier]
-  {:flat-amount (.getFlatAmount tier)
-   :unit-amount (.getUnitAmount tier)
-   :up-to       (.getUpTo tier)})
-
-(defn- convert-plan
-  [plan]
-  {:id       (.getId plan)
-   :amount   (.getAmount plan)
-   :nickname (.getNickname plan)
-   :currency (.getCurrency plan)
-   :active   (.getActive plan)
-   :interval (.getInterval plan)
-   :tiers    (mapv convert-tier (.getTiers plan))})
-
-(defn- convert-subscription-item
-  [sub-item]
-  {:id (.getId sub-item)})
+;; Invoice
 
 (defn- convert-invoice-line-item
   [line-item]
@@ -88,147 +48,319 @@
      :line-items           (mapv convert-invoice-line-item line-items)
      }))
 
+(defn get-upcoming-invoice
+  [customer-id]
+  (try
+    (-> (Invoice/upcoming {"customer" customer-id})
+        convert-invoice)
+    (catch Exception e nil)))
+
+(defn create-invoice!
+  [customer-id & [opts]]
+  (-> (Invoice/create (merge {"customer" customer-id} opts))
+      convert-invoice))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Plan
+
+(defn- convert-tier
+  [tier]
+  {:flat-amount (.getFlatAmount tier)
+   :unit-amount (.getUnitAmount tier)
+   :up-to       (.getUpTo tier)})
+
+(defn- convert-plan
+  [plan]
+  {:id       (.getId plan)
+   :amount   (.getAmount plan)
+   :nickname (.getNickname plan)
+   :currency (.getCurrency plan)
+   :active   (.getActive plan)
+   :interval (.getInterval plan)
+   :tiers    (mapv convert-tier (.getTiers plan))})
+
+(defn list-public-plans
+  "Returns a list of available plans of the given product that have
+  `isPublic=true` set in their metadata map."
+  [product-id]
+  (let [is-public? #(-> % .getMetadata (get "isPublic"))]
+    (->> (Plan/list {"product" product-id})
+         (.getData)
+         (filter is-public?)
+         (mapv convert-plan))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SubscriptionItem
+
+(defn- convert-subscription-item
+  [sub-item]
+  {:id (.getId sub-item)})
+
+(defn get-subscription-item
+  [item-id]
+  (-> (SubscriptionItem/retrieve item-id)
+      convert-subscription-item))
+
+(defn update-subscription-item!
+  "Updates the plan or quantity of an item on a current subscription.
+  See https://stripe.com/docs/api/subscription_items/update?lang=java for options."
+  [item-id opts]
+  (let [sub-item (SubscriptionItem/retrieve item-id)]
+    (-> (.update sub-item opts)
+        convert-subscription-item)))
+
+(defn update-subscription-item-plan!
+  [item-id new-plan-id]
+  (update-subscription-item! item-id {"plan" new-plan-id}))
+
+(defn delete-subscription-item!
+  [item-id]
+  (let [item (SubscriptionItem/retrieve item-id)]
+    (-> (.delete item)
+        convert-subscription-item)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Subscription
+
 (defn- convert-subscription
   [sub]
-  (let [item             (-> sub .getItems .getData first)
-        usage-summary    (-> item .usageRecordSummaries .getData first)
-        upcoming-invoice (retrieve-upcoming-invoice (.getCustomer sub))]
-    {:id                   (.getId sub)
-     :status               (.getStatus sub)
-     :quantity             (.getQuantity sub)
-     :trial-start          (.getTrialStart sub)
-     :trial-end            (.getTrialEnd sub)
-     :current-period-start (.getCurrentPeriodStart sub)
-     :current-period-end   (.getCurrentPeriodEnd sub)
-     :current-plan         (convert-plan (.getPlan sub))
-     :item                 (convert-subscription-item item)
-     :upcoming-invoice     (convert-invoice upcoming-invoice)
+  (let [item (-> sub .getItems .getData first)]
+    {:id                    (.getId sub)
+     :status                (.getStatus sub)
+     :quantity              (.getQuantity sub)
+     :trial-start           (.getTrialStart sub)
+     :trial-end             (.getTrialEnd sub)
+     :current-period-start  (.getCurrentPeriodStart sub)
+     :current-period-end    (.getCurrentPeriodEnd sub)
+     :plan                  (convert-plan (.getPlan sub))
+     :item                  (convert-subscription-item item)
+     :cancel-at-period-end? (.getCancelAtPeriodEnd sub)
      }))
 
+(defn get-subscription
+  [sub-id]
+  (-> (Subscription/retrieve sub-id)
+      convert-subscription))
+
+(defn trialing?
+  [{:keys [status] :as sub}]
+  (= status "trialing"))
+
+(defn active?
+  [{:keys [status] :as sub}]
+  (= status "active"))
+
+(defn canceled?
+  [{:keys [status cancel-at-period-end?] :as sub}]
+  (or (= status "canceled")
+      cancel-at-period-end?))
+
+(defn create-subscription!
+  "Subscribes the customer to the given plan and returns the subscription.
+  See https://stripe.com/docs/api/subscriptions/create?lang=java for options."
+  [customer-id plan-id & [opts item-opts]]
+  (let [items     [(merge {"plan" plan-id}
+                          item-opts)]
+        sub (merge {"customer" customer-id
+                    "items"    items}
+                   opts)]
+    (-> (Subscription/create sub)
+        convert-subscription)))
+
+(defn start-trial!
+  [customer-id plan-id & [opts item-opts]]
+  (let [trial-opts {"trial_from_plan" true}]
+    (create-subscription! customer-id plan-id (merge opts trial-opts) item-opts)))
+
+(defn update-subscription!
+  [sub-id opts]
+  (let [sub (Subscription/retrieve sub-id)]
+    (-> (.update sub opts)
+        convert-subscription)))
+
+(defn update-subscription-quantity!
+  [sub-id quantity & [opts]]
+  (update-subscription! sub-id (merge {"quantity" quantity}
+                                      opts)))
+
+(defn flag-sub-for-cancellation!
+  "Flags the customer's current subscription for cancellation at the end of its billing cycle."
+  [sub-id]
+  (update-subscription! sub-id {"cancel_at_period_end" true}))
+
+(defn cancel-sub-now!
+  "Cancels a subscription immediately."
+  [sub-id]
+  (let [sub (Subscription/retrieve sub-id)]
+    (.cancel sub {"invoice_now" false
+                  "prorate"     false})))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Payment Methods
+
 (defn- convert-payment-method
-  [pay-method & [default-pay-method-id]]
+  [pay-method]
   (let [pm-id (.getId pay-method)
         card  (.getCard pay-method)]
     {:id       pm-id
      :created  (.getCreated pay-method)
-     :default? (= pm-id default-pay-method-id)
      :card     {:brand     (.getBrand card)
                 :exp-year  (.getExpYear card)
                 :exp-month (.getExpMonth card)
                 :last-4    (.getLast4 card)
                 :country   (.getCountry card)}}))
 
+(defn list-payment-methods
+  [customer-id]
+  (let [default-pm-id (-> customer-id Customer/retrieve .getInvoiceSettings .getDefaultPaymentMethod)
+        is-default?   #(= default-pm-id (:id %))]
+    (->> (PaymentMethod/list {"customer" customer-id
+                              "type"     "card"})
+         .getData
+         (mapv (comp #(assoc % :default? (is-default? %))
+                     convert-payment-method)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Customer
+
 (defn- convert-customer
   [customer]
-  (let [sub                (-> customer .getSubscriptions .getData first)
-        default-pay-method (-> customer .getInvoiceSettings .getDefaultPaymentMethod)
-        pay-methods        (-> customer .getId retrieve-payment-methods)
-        avail-plans        (retrieve-available-plans config/stripe-premium-product-id)]
-    (cond-> {:id           (.getId customer)
-             :email        (.getEmail customer)
-             :full-name    (.getName customer)
-             :available-plans (mapv convert-plan avail-plans)
-             :payment-methods (mapv #(convert-payment-method % default-pay-method) pay-methods)}
-      sub (assoc :subscription (convert-subscription sub)))))
+  (let [subs (->> customer .getSubscriptions .getData (mapv convert-subscription))]
+    {:id            (.getId customer)
+     :email         (.getEmail customer)
+     :full-name     (.getName customer)
+     :subscriptions (sort-by :current-period-start subs)}))
+
+(defn get-customer
+  "Retrieves a summary of the given customer ID."
+  [customer-id]
+  (try
+    (let [customer         (-> (Customer/retrieve customer-id) convert-customer)
+          pay-methods      (list-payment-methods customer-id)
+          avail-plans      (list-public-plans config/stripe-premium-product-id)
+          upcoming-invoice (get-upcoming-invoice customer-id)]
+      (cond-> customer
+        pay-methods      (assoc :payment-methods  pay-methods)
+        avail-plans      (assoc :available-plans  avail-plans)
+        upcoming-invoice (assoc :upcoming-invoice upcoming-invoice)))
+    (catch Exception e #_nil (throw e))))
+
+(defn create-customer!
+  "Creates a Customer object in the Stripe API and returns it.
+  See https://stripe.com/docs/api/customers/create?lang=java for options."
+  [& [options]]
+  (-> (Customer/create (or options {}))
+      convert-customer))
+
+(defn update-customer!
+  [customer-id opts]
+  (let [customer (Customer/retrieve customer-id)]
+    (-> (.update customer opts)
+        convert-customer)))
+
+(defn set-customer-default-payment-method!
+  [customer-id pm-id]
+  (update-customer! customer-id {"invoice_settings"
+                                 {"default_payment_method" pm-id}}))
+
+(defn cancel-all-subscriptions!
+  "Flags all of a customers active or trialing subscriptions for cancellation."
+  [{:keys [subscriptions] :as customer}]
+  (doseq [sub subscriptions]
+    (when (not (canceled? sub))
+      (flag-sub-for-cancellation! (:id sub)))))
+
+(defn update-all-subscription-quantities!
+  "Updates the subscription quantities of all active subscriptions. Immediately
+  bills the customer the prorated amount for the subscription that is current
+  (i.e. today falls inside of its period start/end dates)."
+  [{:keys [subscriptions] :as customer} quantity]
+  (let [first-sub (first subscriptions)
+        prorate?  (> quantity (:quantity first-sub))]
+    (update-subscription-quantity! (:id first-sub)
+                                   quantity
+                                   {"prorate" prorate?})
+    (when (and prorate?
+               (not (trialing? first-sub)))
+      (create-invoice! (:id customer) {"subscription" (:id first-sub)
+                                       "auto_advance" true})))
+  (doseq [sub (rest subscriptions)]
+    (update-subscription-quantity! (:id sub) quantity {"prorate" false})))
+
+(defn schedule-new-subscription!
+  "Schedules a new subscription to begin at the end of the currently active one.
+  Does so by flagging the current subscription for cancellation at the end of
+  its cycle, and then creating a new subscription scheduled to begin at that
+  cancellation date. Will never schedule more than one subscription in the
+  future. If there is already a scheduled subscription, updates the plan of that
+  subscription in place. This allows the customer to finish their current
+  subsciption out, and then gracefully transition to a new one. Returns the
+  newly created subscription.
+  Customer must have payment method on file to schedule new subscriptions."
+  [customer-id new-plan-id & [opts item-opts]]
+  (let [customer  (get-customer customer-id)
+        subs      (:subscriptions customer)
+        final-sub (last subs)]
+    (if-not (-> customer :payment-methods seq)
+      (throw (ex-info "Customer must have payment method on file to schedule new subscriptions"
+                      {:key ::need-payment-method}))
+      (if-not final-sub
+        ;; no subs yet, fallback to basic subscription creation
+        (create-subscription! customer-id new-plan-id opts item-opts)
+        ;; this is our one and only subscription, append the new one
+        (let [final-anchor   (:current-period-end final-sub)
+              new-sub-params (merge opts
+                                    {"prorate" false
+                                     "billing_cycle_anchor" final-anchor
+                                     "items" [{"plan"     new-plan-id
+                                               "quantity" (:quantity final-sub)}]})]
+          (if (and (not (canceled? final-sub))
+                   (= 1 (count subs)))
+            (flag-sub-for-cancellation! (:id final-sub))
+            (cancel-sub-now! (:id final-sub)))
+          (create-subscription! customer-id new-plan-id new-sub-params item-opts))))))
+
+(defn end-trial-period!
+  "Ends the trial period on the given customer's primary subscription customer
+  immediately for this plan. Returns the updated subscription, or the unchanged
+  subscription if it's not currently trialing."
+  [customer-id]
+  (let [customer (get-customer customer-id)
+        sub      (-> customer :subscriptions last)]
+    (if-not (-> customer :payment-methods seq)
+      (throw (ex-info "Customer must have payment method on file to end trial period"
+                      {:key ::need-payment-method}))
+      (if (trialing? sub)
+        (update-subscription! (:id sub) {"trial_end" "now"})
+        sub))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Checkout Session
 
 (defn- convert-checkout-session
   [session]
   {:sessionId (.getId session)})
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Stripe API
-
-(defn customer-info
-  "Retrieves a summary of the given customer."
-  [customer-id]
-  (try
-    (let [customer (retrieve-customer-by-id customer-id)]
-      (convert-customer customer))
-    (catch Exception e nil)))
-
-(defn create-stripe-customer!
-  "Creates a Customer object in the Stripe API and returns its Stripe representation.
-  Takes optional metadata to be stored in the Stripe Customer record as a map of
-  string-keys to string values. Be sure to store the returned :id for later recall."
-  [{:keys [email full-name]} & [metadata]]
-  (-> (Customer/create
-       (cond->
-           {"email"       email
-            "name"        full-name
-            "description" "Created by oc.auth.api.payments"}
-         (some? metadata) (assoc "metadata" metadata)))
-      convert-customer))
-
-(defn subscribe-customer-to-plan!
-  "Takes an optional `opts` map, which can include:
-    - `:trial-period-days` number of trial days. if not included, will fallback to the default trial days of the plan"
-  [customer-id plan-id & [opts]]
-  (if (-> (customer-info customer-id) :subscription)
-    (throw (ex-info "Customer already has a primary subscription, cannot subscribe again"
-                    {:customer-id customer-id}))
-    (let [{:keys [trial-period-days]} opts
-          params  (cond-> {"customer" customer-id
-                           "items" [{"plan" plan-id}]}
-                    (some? trial-period-days) (assoc "trial_period_days" trial-period-days)
-                    (nil? trial-period-days)  (assoc "trial_from_plan" true))]
-      (-> (Subscription/create params)
-          convert-subscription))))
-
-(defn report-seats!
-  [customer-id num-seats]
-  (let [customer (customer-info customer-id)]
-    (if-let [sub-item-id (-> customer :subscription :item :id)]
-      (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
-            new-params {"quantity" num-seats}]
-        (-> (.update sub-item new-params)
-            convert-subscription-item))
-      (throw (ex-info "Attempted to report seat usage on non-existent plan"
-                      {:key         ::does-not-exist
-                       :customer-id customer-id
-                       :num-seats   num-seats})))))
-
-(defn change-plan!
-  "Changes the customer's current plan to the new plan with the given ID"
-  [customer-id new-plan-id]
-  (let [customer (customer-info customer-id)]
-    (if-let [sub-item-id (-> customer :subscription :item :id)]
-      (if-not (= new-plan-id (-> customer :subscription :current-plan :id))
-        (let [sub-item   (SubscriptionItem/retrieve sub-item-id)
-              new-params {"plan"     new-plan-id
-                          "quantity" (.getQuantity sub-item)}]
-          (-> (.update sub-item new-params)
-              convert-subscription-item))
-        (throw (ex-info "Cannot change to the current plan"
-                        {:key         ::cannot-change-to-current-plan
-                         :customer-id customer-id
-                         :new-plan-id new-plan-id})))
-      (throw (ex-info "Attempted to change non-existent plan"
-                      {:key         ::does-not-exist
-                       :customer-id customer-id
-                       :new-plan-id new-plan-id})))))
-
-(defn cancel-subscription!
-  "Flags the customer's current subscription for cancellation at the end of its billing cycle."
-  [customer-id]
-  (if-let [sub-id (-> customer-id customer-info :subscription :id)]
-    (let [sub    (Subscription/retrieve sub-id)
-          params {"cancel_at_period_end" true}]
-      (-> (.update sub params)
-          convert-subscription))
-    (throw (ex-info "Cannot cancel non-existent plan"
-                    {:key         ::does-not-exist
-                     :customer-id customer-id}))))
-
 (defn create-checkout-session!
   "Creates a Checkout Session: the context from which we obtain a customer's payment info.
-  See https://stripe.com/docs/payments/checkout/collecting"
-  [customer-id {:keys [success-url
-                       cancel-url]}]
-  (-> (Session/create {"payment_method_types" ["card"]
-                       "mode"                 "setup"
-                       "success_url"          success-url
-                       "cancel_url"           cancel-url
-                       "client_reference_id"  customer-id})
+  Adds the passed `customer-id` as `client_reference_id` for ease of retrieval when the session
+  is completed.
+  See https://stripe.com/docs/api/checkout/sessions/create for options.
+  See https://stripe.com/docs/payments/checkout/collecting for a general guide on Sessions."
+  [customer-id success-url cancel-url opts]
+  (-> (Session/create (merge
+                       {"payment_method_types" ["card"]
+                        "mode"                 "setup"
+                        "client_reference_id"  customer-id
+                        "success_url"          success-url
+                        "cancel_url"           cancel-url}
+                       opts))
       convert-checkout-session))
 
 (defn assoc-session-result-with-customer!
@@ -243,22 +375,8 @@
         pay-method-id       (.getPaymentMethod intent)
         pay-method          (PaymentMethod/retrieve pay-method-id)
         attached-pay-method (.attach pay-method {"customer" customer-id})]
-    (-> (Customer/retrieve customer-id)
-        (.update {"invoice_settings" {"default_payment_method" (.getId attached-pay-method)}})
-        convert-customer)))
+    (set-customer-default-payment-method! customer-id (.getId attached-pay-method))))
 
-(defn end-trial-period!
-  "Ends this user's trial period immediately, and charges the default payment on file
-  in order to activate their subscription."
-  [customer-id]
-  (if-let [sub-id (-> customer-id customer-info :subscription :id)]
-    (let [sub    (Subscription/retrieve sub-id)
-          params {"trial_end" "now"}]
-      (-> (.update sub params)
-          convert-subscription))
-    (throw (ex-info "Cannot end trial on non-existent subscription"
-                    {:key         ::does-not-exist
-                     :customer-id customer-id}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; REPL testing
@@ -266,28 +384,45 @@
 (comment
 
   (def my-id
-    (-> {:email     "test@example.com"
-         :full-name "Test Example"}
-        create-stripe-customer!
-        :id))
+    (:id (create-customer! {"email" "test@example.com"
+                            "name"  "Test Example"})))
 
-  (retrieve-payment-methods my-id)
+  (get-customer my-id)
 
-  (retrieve-upcoming-invoice my-id)
+  ;; monthly
+  (start-trial! my-id "plan_G2sU8JKdWUExVF")
 
-  (retrieve-available-plans config/stripe-premium-product-id)
+  (update-all-subscription-quantities! (get-customer my-id) 10)
 
-  (customer-info my-id)
+  (end-trial-period! my-id)
 
-  (subscribe-customer-to-plan! my-id config/stripe-default-plan-id)
+  ;; annual
+  (schedule-new-subscription! my-id "plan_G2sgUtlXhbVOKu")
 
-  (change-plan! my-id "plan_G12Un6HuO4ihrb")
+  (update-all-subscription-quantities! (get-customer my-id) 18)
 
-  (cancel-subscription! my-id)
+  ;; monthly
+  (schedule-new-subscription! my-id  "plan_G2sU8JKdWUExVF")
 
-  (report-seats! my-id 29)
+  ;; (retrieve-payment-methods my-id)
 
-  (create-checkout-session! my-id {:success-url "https://staging-auth.carrot.io/team/123/customer/checkout-session"
-                                   :cancel-url  "https://staging-auth.carrot.io/team/123/customer/checkout-session/cancel"})
+  ;; (retrieve-upcoming-invoice my-id)
+
+  ;; (retrieve-available-plans config/stripe-premium-product-id)
+
+  ;; (retrieve-customer-by-id my-id)
+
+  ;; (customer-info my-id)
+
+  ;; (subscribe-customer-to-plan! my-id config/stripe-default-plan-id)
+
+  ;; (change-plan! my-id "plan_G12Un6HuO4ihrb")
+
+  ;; (flag-sub-for-cancellation! my-id)
+
+  ;; (report-seats! my-id 29)
+
+  ;; (create-checkout-session! my-id {:success-url "https://staging-auth.carrot.io/team/123/customer/checkout-session"
+  ;;                                  :cancel-url  "https://staging-auth.carrot.io/team/123/customer/checkout-session/cancel"})
 
   )

@@ -66,27 +66,21 @@
   (let [creator      (:user ctx)
         contact      {:email     (:email creator)
                       :full-name (lib-user/name-for creator)}
-        new-customer {:new-customer (payments-res/create-customer! conn team-id contact)}]
-    (payments-res/start-plan! conn team-id config/stripe-default-plan-id)
+        new-customer (payments-res/create-customer! conn team-id contact)]
+    (payments-res/start-new-trial! conn team-id config/stripe-default-plan-id)
     (pasync/report-team-seat-usage! conn team-id)
-    new-customer))
+    {:new-customer new-customer}))
 
-(defn- create-new-subscription!
+(defn- schedule-plan-change!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
-    {:updated-customer (payments-res/start-plan! conn team-id plan-id)}))
-
-(defn- change-subscription-plan!
-  [ctx conn team-id]
-  (when-let [plan-id (:plan-id ctx)]
-    (try
-      {:updated-customer (payments-res/change-plan! conn team-id plan-id)}
-      (catch Exception e
-        (handle-stripe-exception ctx e)))))
+    (payments-res/schedule-new-subscription! conn team-id plan-id)
+    {:updated-customer (payments-res/get-customer conn team-id)}))
 
 (defn- cancel-subscription!
   [ctx conn team-id]
-  {:updated-customer (payments-res/cancel-subscription! conn team-id)})
+  (payments-res/cancel-subscription! conn team-id)
+  {:updated-customer (payments-res/get-customer conn team-id)})
 
 (def ^:private checkout-session-success-path "/payments/callbacks/checkout-session")
 
@@ -149,8 +143,7 @@
                        (create-customer-with-creator-as-contact! ctx conn team-id)))
 
   ;; Actions
-  :put! (fn [ctx] (create-new-subscription! ctx conn team-id))
-  :patch! (fn [ctx] (change-subscription-plan! ctx conn team-id))
+  :put! (fn [ctx] (schedule-plan-change! ctx conn team-id))
   :delete! (fn [ctx] (cancel-subscription! ctx conn team-id))
 
   ;; Responses

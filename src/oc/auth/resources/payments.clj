@@ -56,9 +56,8 @@
                                       "incomplete"
                                       "incomplete_expired")
    :quantity             schema/Int
-   :current-plan         Plan
+   :plan                 Plan
    :item                 SubscriptionItem
-   :upcoming-invoice     Invoice
    })
 
 (def PaymentMethod
@@ -77,8 +76,9 @@
    :email     schema/Str
    :full-name schema/Str
    :available-plans [Plan]
-   (schema/optional-key :subscription) (schema/maybe Subscription)
-   (schema/optional-key :payment-methods) (schema/maybe [PaymentMethod])
+   :subscriptions [(schema/maybe Subscription)]
+   (schema/optional-key :upcoming-invoice) Invoice
+   (schema/optional-key :payment-methods) [PaymentMethod]
    })
 
 (def CustomerContact
@@ -93,55 +93,67 @@
       :stripe-customer-id))
 
 (schema/defn ^:always-validate create-customer! :- Customer
-  [conn team-id :- (:team-id team/Team) contact :- CustomerContact]
+  [conn
+   team-id :- (:team-id team/Team)
+   contact :- CustomerContact]
   {:pre [(db-common/conn? conn)]}
-  (let [stripe-meta {"carrotTeamId" team-id}
-        customer    (stripe/create-stripe-customer! contact stripe-meta)
+  (let [options     {"email"    (:email contact)
+                     "name"     (:full-name contact)
+                     "metadata" {"carrotTeamId" team-id}}
+        customer    (stripe/create-customer! options)
         customer-id (:id customer)]
     (team/update-team! conn team-id {:stripe-customer-id customer-id})
     customer))
 
 (schema/defn ^:always-validate get-customer :- (schema/maybe Customer)
-  [conn team-id :- (:team-id team/Team)]
+  [conn
+   team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
   (when-let [customer-id (get-customer-id conn team-id)]
-    (stripe/customer-info customer-id)))
+    (stripe/get-customer customer-id)))
 
-(schema/defn ^:always-validate start-plan! :- Customer
-  [conn team-id :- (:team-id team/Team) new-plan-id]
+(schema/defn ^:always-validate start-new-trial! :- Subscription
+  [conn
+   team-id :- (:team-id team/Team)
+   plan-id]
   {:pre [(db-common/conn? conn)]}
   (let [customer-id (get-customer-id conn team-id)]
-    (stripe/subscribe-customer-to-plan! customer-id new-plan-id)
-    (stripe/customer-info customer-id)))
+    (stripe/start-trial! customer-id plan-id)))
 
-(schema/defn ^:always-validate change-plan! :- Customer
-  [conn team-id :- (:team-id team/Team) new-plan-id]
+(schema/defn ^:always-validate schedule-new-subscription! :- Subscription
+  [conn
+   team-id :- (:team-id team/Team)
+   new-plan-id]
   {:pre [(db-common/conn? conn)]}
   (let [customer-id (get-customer-id conn team-id)]
-    (stripe/change-plan! customer-id new-plan-id)
-    (stripe/customer-info customer-id)))
+    (stripe/schedule-new-subscription! customer-id new-plan-id)))
 
-(schema/defn ^:always-validate cancel-subscription! :- Customer
-  [conn team-id :- (:team-id team/Team)]
+(schema/defn ^:always-validate cancel-subscription! :- Subscription
+  [conn
+   team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
-  (let [customer-id (get-customer-id conn team-id)]
-    (stripe/cancel-subscription! customer-id)
-    (stripe/customer-info customer-id)))
+  (let [customer-id (get-customer-id conn team-id)
+        customer    (get-customer customer-id)]
+    (stripe/cancel-all-subscriptions! customer)))
 
 (schema/defn ^:always-validate report-latest-team-size!
   [customer-id :- (:id Customer)
    seat-count :- (:quantity Subscription)]
-  (stripe/report-seats! customer-id seat-count))
+  (let [customer (stripe/get-customer customer-id)]
+   (stripe/update-all-subscription-quantities! customer seat-count)))
 
 (schema/defn ^:always-validate create-checkout-session!
-  [conn team-id :- (:team-id team/Team) callback-opts]
+  [conn
+   team-id :- (:team-id team/Team)
+   {:as callback-opts :keys [success-url cancel-url]}]
   (let [customer-id (get-customer-id conn team-id)]
-    (stripe/create-checkout-session! customer-id callback-opts)))
+    (stripe/create-checkout-session! customer-id success-url cancel-url)))
 
 (schema/defn ^:always-validate finish-checkout-session!
   [conn session-id]
   (stripe/assoc-session-result-with-customer! session-id))
 
 (schema/defn ^:always-validate end-trial-period!
-  [conn customer-id :- (:id Customer)]
+  [conn
+   customer-id :- (:id Customer)]
   (stripe/end-trial-period! customer-id))

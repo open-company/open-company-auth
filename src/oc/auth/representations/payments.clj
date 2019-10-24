@@ -4,11 +4,8 @@
             [oc.lib.hateoas :as hateoas]
             [oc.auth.representations.media-types :as mt]))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Customer
-
 (def customer-representation-props
-  [:id :email :full-name :subscription :available-plans :payment-methods])
+  [:id :email :full-name :subscriptions :available-plans :payment-methods :upcoming-invoice])
 
 (defun customer-url
   ([team-id :guard string?] (str "/teams/" team-id "/customer"))
