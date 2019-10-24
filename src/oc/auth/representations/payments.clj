@@ -19,13 +19,9 @@
   [team-id]
   (hateoas/self-link (customer-url team-id) {:content-type mt/payment-customer-media-type}))
 
-(defn- create-subscription-link
+(defn- schedule-plan-change-link
   [team-id]
   (hateoas/update-link (customer-url team-id) {:content-type mt/payment-customer-media-type}))
-
-(defn- change-plan-link
-  [team-id]
-  (hateoas/partial-update-link (customer-url team-id) {:content-type mt/payment-customer-media-type}))
 
 (defn- cancel-subscription-link
   [team-id]
@@ -41,7 +37,7 @@
       (select-keys customer-representation-props)
       (assoc :links [(self-link team-id)
                      (create-subscription-link team-id)
-                     (change-plan-link team-id)
+                     (schedule-plan-change-link team-id)
                      (cancel-subscription-link team-id)
                      (create-checkout-session-link team-id)])
       json/generate-string))
