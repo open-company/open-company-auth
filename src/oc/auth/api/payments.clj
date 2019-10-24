@@ -106,7 +106,7 @@
 (defresource customer [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase)
 
-  :allowed-methods [:options :get :put :patch :delete]
+  :allowed-methods [:options :get :put :delete]
 
   ;; Media type client accepts
   :available-media-types [mt/payment-customer-media-type]
@@ -117,7 +117,6 @@
     :options true
     :get true
     :put true
-    :patch true
     :delete true})
 
   ;; Authorization
@@ -125,7 +124,6 @@
     :options true
     :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))
     :put (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
-    :patch (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     })
 
@@ -133,7 +131,6 @@
     :options false
     :get false
     :put plan-id-from-body
-    :patch plan-id-from-body
     :delete plan-id-from-body})
 
   ;; Existentialism
