@@ -11,6 +11,10 @@
   ([team-id :guard string?] (str "/teams/" team-id "/customer"))
   ([team :guard map?]       (str "/teams/" (:team-id team) "/customer")))
 
+(defun subscribe-url
+  ([team-id :guard string?] (str (customer-url team-id) "/subscribe"))
+  ([team :guard map?]       (str (customer-url team) "/subscribe")))
+
 (defun checkout-session-url
   ([team-id :guard string?] (str (customer-url team-id) "/checkout-session"))
   ([team :guard map?]       (str (customer-url team) "/checkout-session")))
@@ -21,7 +25,7 @@
 
 (defn- schedule-plan-change-link
   [team-id]
-  (hateoas/update-link (customer-url team-id) {:content-type mt/payment-customer-media-type}))
+  (hateoas/create-link (subscription-url team-id) {:content-type mt/payment-customer-media-type}))
 
 (defn- cancel-subscription-link
   [team-id]

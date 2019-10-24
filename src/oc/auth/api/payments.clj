@@ -106,7 +106,7 @@
 (defresource customer [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase)
 
-  :allowed-methods [:options :get :put :delete]
+  :allowed-methods [:options :get :post :delete]
 
   ;; Media type client accepts
   :available-media-types [mt/payment-customer-media-type]
@@ -116,21 +116,21 @@
   :known-content-type? (by-method {
     :options true
     :get true
-    :put true
+    :post true
     :delete true})
 
   ;; Authorization
   :allowed? (by-method {
     :options true
     :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))
-    :put (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     })
 
   :malformed? (by-method {
     :options false
     :get false
-    :put plan-id-from-body
+    :post plan-id-from-body
     :delete plan-id-from-body})
 
   ;; Existentialism
@@ -140,7 +140,7 @@
                        (create-customer-with-creator-as-contact! ctx conn team-id)))
 
   ;; Actions
-  :put! (fn [ctx] (schedule-plan-change! ctx conn team-id))
+  :post! (fn [ctx] (schedule-plan-change! ctx conn team-id))
   :delete! (fn [ctx] (cancel-subscription! ctx conn team-id))
 
   ;; Responses
@@ -148,9 +148,8 @@
                                           (:updated-customer ctx)
                                           (:existing-customer ctx))]
                          (payments-rep/render-customer team-id customer)))
-  :handle-created (fn [ctx] (let [customer (or (:new-customer ctx)
-                                               (:updated-customer ctx)
-                                               (:existing-customer ctx))]
+
+  :handle-created (fn [ctx] (let [customer (:updated-customer ctx)]
                               (payments-rep/render-customer team-id customer)))
   )
 
@@ -209,6 +208,10 @@
   (let [db-pool (-> sys :db-pool :pool)]
     (compojure/routes
      (ANY "/teams/:team-id/customer"
+          [team-id]
+          (pool/with-pool [conn db-pool] (customer conn team-id)))
+
+     (ANY "/teams/:team-id/customer/subscribe"
           [team-id]
           (pool/with-pool [conn db-pool] (customer conn team-id)))
 
