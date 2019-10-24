@@ -148,6 +148,10 @@
                                           (:updated-customer ctx)
                                           (:existing-customer ctx))]
                          (payments-rep/render-customer team-id customer)))
+  :handle-created (fn [ctx] (let [customer (or (:new-customer ctx)
+                                               (:updated-customer ctx)
+                                               (:existing-customer ctx))]
+                              (payments-rep/render-customer team-id customer)))
   )
 
 ;; https://stripe.com/docs/payments/checkout/collecting
