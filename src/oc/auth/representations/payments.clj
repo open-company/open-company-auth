@@ -36,7 +36,6 @@
   (-> customer
       (select-keys customer-representation-props)
       (assoc :links [(self-link team-id)
-                     (create-subscription-link team-id)
                      (schedule-plan-change-link team-id)
                      (cancel-subscription-link team-id)
                      (create-checkout-session-link team-id)])
