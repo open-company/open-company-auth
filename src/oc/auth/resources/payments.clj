@@ -92,7 +92,7 @@
   (-> (team/get-team conn team-id)
       :stripe-customer-id))
 
-(schema/defn ^:always-validate create-customer! :- Customer
+(schema/defn ^:always-validate create-customer!
   [conn
    team-id :- (:team-id team/Team)
    contact :- CustomerContact]
@@ -105,14 +105,14 @@
     (team/update-team! conn team-id {:stripe-customer-id customer-id})
     customer))
 
-(schema/defn ^:always-validate get-customer :- (schema/maybe Customer)
+(schema/defn ^:always-validate get-customer
   [conn
    team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
   (when-let [customer-id (get-customer-id conn team-id)]
     (stripe/get-customer customer-id)))
 
-(schema/defn ^:always-validate start-new-trial! :- Subscription
+(schema/defn ^:always-validate start-new-trial!
   [conn
    team-id :- (:team-id team/Team)
    plan-id]
@@ -120,7 +120,7 @@
   (let [customer-id (get-customer-id conn team-id)]
     (stripe/start-trial! customer-id plan-id)))
 
-(schema/defn ^:always-validate schedule-new-subscription! :- Subscription
+(schema/defn ^:always-validate schedule-new-subscription!
   [conn
    team-id :- (:team-id team/Team)
    new-plan-id]
@@ -128,7 +128,7 @@
   (let [customer-id (get-customer-id conn team-id)]
     (stripe/schedule-new-subscription! customer-id new-plan-id)))
 
-(schema/defn ^:always-validate cancel-subscription! :- Subscription
+(schema/defn ^:always-validate cancel-subscription!
   [conn
    team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
