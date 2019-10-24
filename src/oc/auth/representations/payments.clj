@@ -11,7 +11,7 @@
   ([team-id :guard string?] (str "/teams/" team-id "/customer"))
   ([team :guard map?]       (str "/teams/" (:team-id team) "/customer")))
 
-(defun subscribe-url
+(defun subscription-url
   ([team-id :guard string?] (str (customer-url team-id) "/subscribe"))
   ([team :guard map?]       (str (customer-url team) "/subscribe")))
 
