@@ -216,7 +216,7 @@
 
 (defn list-payment-methods
   [customer-id]
-  (let [default-pm-id (-> customer-id Customer/retrieve .getInvoiceSettings .getDefaultPaymentMethod)
+  (let [default-pm-id (some-> customer-id Customer/retrieve .getInvoiceSettings .getDefaultPaymentMethod)
         is-default?   #(= default-pm-id (:id %))]
     (->> (PaymentMethod/list {"customer" customer-id
                               "type"     "card"})
@@ -230,7 +230,7 @@
 
 (defn- convert-customer
   [customer]
-  (let [subs (->> customer .getSubscriptions .getData (mapv convert-subscription))]
+  (let [subs (some->> customer .getSubscriptions .getData (mapv convert-subscription))]
     {:id            (.getId customer)
      :email         (.getEmail customer)
      :full-name     (.getName customer)
