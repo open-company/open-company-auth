@@ -6,80 +6,11 @@
 
 ;; ----- Schema -----
 
-(def Tier
-  {:flat-amount (schema/maybe schema/Int)
-   :unit-amount (schema/maybe schema/Int)
-   :up-to       (schema/maybe schema/Int)
-   })
-
-(def Plan
-  {:id       schema/Str
-   :amount   (schema/maybe schema/Int)
-   :nickname schema/Str
-   :currency (schema/enum "usd")
-   :active   schema/Bool
-   :interval (schema/enum "month" "year")
-   :tiers    [Tier]
-   })
-
-(def InvoiceLineItem
-  {:id          schema/Str
-   :amount      schema/Int
-   :currency    schema/Str
-   :description schema/Str
-   :quantity    schema/Int
-   })
-
-(def Invoice
-  {:amount-due           schema/Int
-   :currency             schema/Str
-   :total                schema/Int
-   :subtotal             schema/Int
-   :next-payment-attempt schema/Int
-   :line-items           [InvoiceLineItem]})
-
-(def SubscriptionItem
-  {:id schema/Str
-   })
-
 (def Subscription
-  {:id                   schema/Str
-   :current-period-start schema/Int
-   :current-period-end   schema/Int
-   :trial-start          (schema/maybe schema/Int)
-   :trial-end            (schema/maybe schema/Int)
-   :status               (schema/enum "trialing"
-                                      "active"
-                                      "past_due"
-                                      "unpaid"
-                                      "canceled"
-                                      "incomplete"
-                                      "incomplete_expired")
-   :quantity             schema/Int
-   :plan                 Plan
-   :item                 SubscriptionItem
-   })
-
-(def PaymentMethod
-  {:id       schema/Str
-   :created  schema/Int
-   :default? schema/Bool
-   :card     {:brand     schema/Str
-              :exp-year  schema/Int
-              :exp-month schema/Int
-              :last-4    schema/Str
-              :country   schema/Str
-              }})
+  {:quantity schema/Int})
 
 (def Customer
-  {:id        schema/Str
-   :email     schema/Str
-   :full-name schema/Str
-   :available-plans [Plan]
-   :subscriptions [(schema/maybe Subscription)]
-   (schema/optional-key :upcoming-invoice) Invoice
-   (schema/optional-key :payment-methods) [PaymentMethod]
-   })
+  {:id schema/Str})
 
 (def CustomerContact
   {:email     schema/Str
