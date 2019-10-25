@@ -77,9 +77,8 @@
   [conn
    team-id :- (:team-id team/Team)
    {:as callback-opts :keys [success-url cancel-url]}]
-  (let [customer-id     (get-customer-id conn team-id)
-        {:keys [email]} (stripe/get-customer customer-id)]
-    (stripe/create-checkout-session! customer-id success-url cancel-url {"customer_email" email})))
+  (let [customer-id (get-customer-id conn team-id)]
+    (stripe/create-checkout-session! customer-id success-url cancel-url)))
 
 (schema/defn ^:always-validate finish-checkout-session!
   [conn session-id]
