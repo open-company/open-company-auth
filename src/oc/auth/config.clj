@@ -78,7 +78,7 @@
 (defonce slack-client-secret (env :open-company-slack-client-secret))
 (defonce slack-verification-token (env :open-company-slack-verification-token))
 (defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
-(defonce slack-comment-scope "users:read,users:read.email,team:read,channels:read,channels:history")
+(defonce slack-comment-scope "users:read,users:read.email,team:read,channels:read")
 (defonce slack-unfurl-scope "links:read,links:write")
 (defonce slack-bot-scope (str slack-comment-scope
                               ","
