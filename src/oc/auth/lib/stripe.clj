@@ -78,17 +78,22 @@
    :currency (.getCurrency plan)
    :active   (.getActive plan)
    :interval (.getInterval plan)
-   :tiers    (mapv convert-tier (.getTiers plan))})
+   :tiers    (mapv convert-tier (.getTiers plan))
+   :public?  (-> plan .getMetadata (get "isPublic") (= "true"))})
+
+(defn list-plans
+  "Returns a list of available plans of the given product."
+  [product-id]
+  (->> (Plan/list {"product" product-id})
+       (.getData)
+       (mapv convert-plan)))
 
 (defn list-public-plans
   "Returns a list of available plans of the given product that have
   `isPublic=true` set in their metadata map."
   [product-id]
-  (let [is-public? #(-> % .getMetadata (get "isPublic"))]
-    (->> (Plan/list {"product" product-id})
-         (.getData)
-         (filter is-public?)
-         (mapv convert-plan))))
+  (->> (list-plans product-id)
+       (filter :public?)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -404,25 +409,7 @@
   ;; monthly
   (schedule-new-subscription! my-id  "plan_G2sU8JKdWUExVF")
 
-  ;; (retrieve-payment-methods my-id)
 
-  ;; (retrieve-upcoming-invoice my-id)
-
-  ;; (retrieve-available-plans config/stripe-premium-product-id)
-
-  ;; (retrieve-customer-by-id my-id)
-
-  ;; (customer-info my-id)
-
-  ;; (subscribe-customer-to-plan! my-id config/stripe-default-plan-id)
-
-  ;; (change-plan! my-id "plan_G12Un6HuO4ihrb")
-
-  ;; (flag-sub-for-cancellation! my-id)
-
-  ;; (report-seats! my-id 29)
-
-  ;; (create-checkout-session! my-id {:success-url "https://staging-auth.carrot.io/team/123/customer/checkout-session"
-  ;;                                  :cancel-url  "https://staging-auth.carrot.io/team/123/customer/checkout-session/cancel"})
+  (list-public-plans "prod_FzTa1EB3fhgK6J")
 
   )
