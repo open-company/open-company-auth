@@ -241,32 +241,38 @@
      :full-name     (.getName customer)
      :subscriptions (sort-by :current-period-start subs)}))
 
+(defn- enrich-customer
+  [customer]
+  (let [customer-id      (:id customer)
+        pay-methods      (list-payment-methods customer-id)
+        avail-plans      (list-public-plans config/stripe-premium-product-id)
+        upcoming-invoice (get-upcoming-invoice customer-id)]
+    (cond-> customer
+      pay-methods      (assoc :payment-methods  pay-methods)
+      avail-plans      (assoc :available-plans  avail-plans)
+      upcoming-invoice (assoc :upcoming-invoice upcoming-invoice))))
+
 (defn get-customer
   "Retrieves a summary of the given customer ID."
   [customer-id]
-  (try
-    (let [customer         (-> (Customer/retrieve customer-id) convert-customer)
-          pay-methods      (list-payment-methods customer-id)
-          avail-plans      (list-public-plans config/stripe-premium-product-id)
-          upcoming-invoice (get-upcoming-invoice customer-id)]
-      (cond-> customer
-        pay-methods      (assoc :payment-methods  pay-methods)
-        avail-plans      (assoc :available-plans  avail-plans)
-        upcoming-invoice (assoc :upcoming-invoice upcoming-invoice)))
-    (catch Exception e #_nil (throw e))))
+  (-> (Customer/retrieve customer-id)
+      convert-customer
+      enrich-customer))
 
 (defn create-customer!
   "Creates a Customer object in the Stripe API and returns it.
   See https://stripe.com/docs/api/customers/create?lang=java for options."
   [& [options]]
   (-> (Customer/create (or options {}))
-      convert-customer))
+      convert-customer
+      enrich-customer))
 
 (defn update-customer!
   [customer-id opts]
   (let [customer (Customer/retrieve customer-id)]
     (-> (.update customer opts)
-        convert-customer)))
+        convert-customer
+        enrich-customer)))
 
 (defn set-customer-default-payment-method!
   [customer-id pm-id]
