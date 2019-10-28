@@ -358,7 +358,7 @@
   is completed.
   See https://stripe.com/docs/api/checkout/sessions/create for options.
   See https://stripe.com/docs/payments/checkout/collecting for a general guide on Sessions."
-  [customer-id success-url cancel-url opts]
+  [customer-id success-url cancel-url & [opts]]
   (-> (Session/create (merge
                        {"payment_method_types" ["card"]
                         "mode"                 "setup"
