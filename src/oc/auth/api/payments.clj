@@ -15,7 +15,6 @@
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
-            [oc.auth.lib.stripe :as stripe]
             [clojure.edn :as edn])
   (:import [java.util Base64]))
 
