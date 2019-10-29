@@ -20,8 +20,7 @@
 
 (defn- get-customer-id
   [conn team-id]
-  (-> (team/get-team conn team-id)
-      :stripe-customer-id))
+  (:stripe-customer-id (team/get-team conn team-id)))
 
 (schema/defn ^:always-validate create-customer!
   [conn

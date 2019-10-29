@@ -4,11 +4,7 @@
   "
   (:require [clojure.core.async :as async :refer (<! >!!)]
             [taoensso.timbre :as timbre]
-            [cheshire.core :as json]
             [schema.core :as schema]
-            [oc.lib.schema :as lib-schema]
-            [oc.lib.time :as oc-time]
-            [oc.auth.config :as config]
             [oc.auth.resources.payments :as pay-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.team :as team-res]))

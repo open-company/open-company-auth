@@ -11,7 +11,6 @@
             [oc.auth.async.payments :as pasync]
             [oc.lib.api.common :as api-common]
             [oc.lib.db.pool :as pool]
-            [oc.lib.oauth :as oauth]
             [cheshire.core :as json]
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
@@ -54,12 +53,6 @@
     true))
 
 ;; ----- Actions -----
-
-(defn- handle-stripe-exception
-  [ctx e]
-  (case (-> e ex-data :key)
-    ::stripe/cannot-change-to-current-plan ctx
-    (throw e)))
 
 (defn- create-customer-with-creator-as-contact!
   [ctx conn team-id]

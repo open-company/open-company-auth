@@ -1,6 +1,5 @@
 (ns oc.auth.lib.stripe
-  (:require [clojure.set :as cset]
-            [oc.auth.config :as config])
+  (:require [oc.auth.config :as config])
   (:import [com.stripe Stripe]
            [com.stripe.model Customer Subscription SubscriptionItem Plan Invoice SetupIntent PaymentMethod]
            [com.stripe.model.checkout Session]
@@ -20,10 +19,12 @@
   [java-date]
   (quot (.getTime java-date) 1000))
 
-(defn- stripe-now
-  "Timestamp of the moment this function is called according to Stripe"
-  []
-  (date->timestamp (Date.)))
+;; please eastwood
+;;
+;; (defn- stripe-now
+;;   "Timestamp of the moment this function is called according to Stripe"
+;;   []
+;;   (date->timestamp (Date.)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -51,14 +52,14 @@
 (defn get-upcoming-invoice
   [customer-id]
   (try
-    (-> (Invoice/upcoming {"customer" customer-id})
-        convert-invoice)
+    (convert-invoice
+     (Invoice/upcoming {"customer" customer-id}))
     (catch Exception e nil)))
 
 (defn create-invoice!
   [customer-id & [opts]]
-  (-> (Invoice/create (merge {"customer" customer-id} opts))
-      convert-invoice))
+  (convert-invoice
+   (Invoice/create (merge {"customer" customer-id} opts))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -92,8 +93,7 @@
   "Returns a list of available plans of the given product that have
   `isPublic=true` set in their metadata map."
   [product-id]
-  (->> (list-plans product-id)
-       (filter :public?)))
+  (filter :public? (list-plans product-id)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -105,16 +105,16 @@
 
 (defn get-subscription-item
   [item-id]
-  (-> (SubscriptionItem/retrieve item-id)
-      convert-subscription-item))
+  (convert-subscription-item
+   (SubscriptionItem/retrieve item-id)))
 
 (defn update-subscription-item!
   "Updates the plan or quantity of an item on a current subscription.
   See https://stripe.com/docs/api/subscription_items/update?lang=java for options."
   [item-id opts]
   (let [sub-item (SubscriptionItem/retrieve item-id)]
-    (-> (.update sub-item opts)
-        convert-subscription-item)))
+    (convert-subscription-item
+     (.update sub-item opts))))
 
 (defn update-subscription-item-plan!
   [item-id new-plan-id]
@@ -123,8 +123,8 @@
 (defn delete-subscription-item!
   [item-id]
   (let [item (SubscriptionItem/retrieve item-id)]
-    (-> (.delete item)
-        convert-subscription-item)))
+    (convert-subscription-item
+     (.delete item))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -147,8 +147,8 @@
 
 (defn get-subscription
   [sub-id]
-  (-> (Subscription/retrieve sub-id)
-      convert-subscription))
+  (convert-subscription
+   (Subscription/retrieve sub-id)))
 
 (defn trialing?
   [{:keys [status] :as sub}]
@@ -172,8 +172,8 @@
         sub (merge {"customer" customer-id
                     "items"    items}
                    opts)]
-    (-> (Subscription/create sub)
-        convert-subscription)))
+    (convert-subscription
+     (Subscription/create sub))))
 
 (defn start-trial!
   [customer-id plan-id & [opts item-opts]]
@@ -183,8 +183,8 @@
 (defn update-subscription!
   [sub-id opts]
   (let [sub (Subscription/retrieve sub-id)]
-    (-> (.update sub opts)
-        convert-subscription)))
+    (convert-subscription
+     (.update sub opts))))
 
 (defn update-subscription-quantity!
   [sub-id quantity & [opts]]
@@ -283,7 +283,7 @@
   "Flags all of a customers active or trialing subscriptions for cancellation."
   [{:keys [subscriptions] :as customer}]
   (doseq [sub subscriptions]
-    (when (not (canceled? sub))
+    (when-not (canceled? sub)
       (flag-sub-for-cancellation! (:id sub)))))
 
 (defn update-all-subscription-quantities!
@@ -365,14 +365,14 @@
   See https://stripe.com/docs/api/checkout/sessions/create for options.
   See https://stripe.com/docs/payments/checkout/collecting for a general guide on Sessions."
   [customer-id success-url cancel-url & [opts]]
-  (-> (Session/create (merge
-                       {"payment_method_types" ["card"]
-                        "mode"                 "setup"
-                        "client_reference_id"  customer-id
-                        "success_url"          success-url
-                        "cancel_url"           cancel-url}
-                       opts))
-      convert-checkout-session))
+  (convert-checkout-session
+   (Session/create (merge
+                    {"payment_method_types" ["card"]
+                     "mode"                 "setup"
+                     "client_reference_id"  customer-id
+                     "success_url"          success-url
+                     "cancel_url"           cancel-url}
+                    opts))))
 
 (defn assoc-session-result-with-customer!
   "Callback for the session created with `create-checkout-session!`. Once customer
@@ -417,5 +417,11 @@
 
 
   (list-public-plans "prod_FzTa1EB3fhgK6J")
+
+  (let [now            (stripe-now)
+        one-month      (* 60 60 24 30)
+        month-from-now (+ now one-month)]
+    (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now
+                                                               "prorate" false}))
 
   )
