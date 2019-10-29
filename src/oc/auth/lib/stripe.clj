@@ -11,21 +11,6 @@
 (set! (Stripe/apiKey) config/stripe-secret-key)
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Stripe utils
-
-(defn- date->timestamp
-  "Converts a java.util.Date object to a Stripe timestamp"
-  [java-date]
-  (quot (.getTime java-date) 1000))
-
-;; please eastwood
-;;
-;; (defn- stripe-now
-;;   "Timestamp of the moment this function is called according to Stripe"
-;;   []
-;;   (date->timestamp (Date.)))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Invoice
@@ -423,5 +408,20 @@
         month-from-now (+ now one-month)]
     (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now
                                                                "prorate" false}))
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Stripe time utilities
+
+  (defn- date->timestamp
+    "Converts a java.util.Date object to a Stripe timestamp"
+    [java-date]
+    (quot (.getTime java-date) 1000))
+
+
+  (defn- stripe-now
+    "Timestamp of the moment this function is called according to Stripe"
+    []
+    (date->timestamp (Date.)))
+
 
   )
