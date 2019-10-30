@@ -74,23 +74,25 @@
   (payments-res/cancel-subscription! conn team-id)
   {:updated-customer (payments-res/get-customer conn team-id)})
 
-(def ^:private checkout-session-success-path "/payments/callbacks/checkout-session")
+(def ^:private checkout-session-success-path "/payments/callbacks/checkout-session/success")
+(def ^:private checkout-session-cancel-path "/payments/callbacks/checkout-session/cancel")
 
-(defn- wrap-redirect-success-url
-  [state]
-  (let [encode #(.. (Base64/getUrlEncoder)
-                    (encodeToString (-> % pr-str .getBytes)))]
-    (str config/auth-server-url
-         checkout-session-success-path
-         "?sessionId={CHECKOUT_SESSION_ID}"
-         (when state (str "&state=" (encode state))))))
+(defn- wrap-redirect-urls
+  [redirect-urls]
+  (let [encode          #(.. (Base64/getUrlEncoder)
+                             (encodeToString (-> % pr-str .getBytes)))
+        wrap-url        (fn [path]
+                          (str config/auth-server-url path "?sessionId={CHECKOUT_SESSION_ID}&state=" (encode redirect-urls)))
+        wrapped-success (wrap-url checkout-session-success-path)
+        wrapped-cancel  (wrap-url checkout-session-cancel-path)]
+    {:success-url wrapped-success
+     :cancel-url  wrapped-cancel}))
 
 (defn- create-checkout-session!
   [ctx conn team-id]
-  (let [redirects   (:checkout-redirects ctx)
-        success-url (wrap-redirect-success-url redirects)
-        callbacks   (assoc redirects :success-url success-url)
-        session     (payments-res/create-checkout-session! conn team-id callbacks)]
+  (let [redirects    (:checkout-redirects ctx)
+        callbacks    (wrap-redirect-urls redirects)
+        session      (payments-res/create-checkout-session! conn team-id callbacks)]
     {:new-session session}))
 
 ;; ----- Resources -----
@@ -187,12 +189,17 @@
                               (payments-rep/render-checkout-session session)))
   )
 
-(defn checkout-session-callback [conn session-id state]
+(defn checkout-session-success [conn session-id state]
   (let [decoder   (Base64/getUrlDecoder)
         redirects (->> state (.decode decoder) (String.) edn/read-string)
-        customer  (payments-res/finish-checkout-session! conn session-id)]
+        customer (payments-res/finish-checkout-session! conn session-id)]
     (payments-res/end-trial-period! conn (:id customer))
     (response/redirect (:success-url redirects))))
+
+(defn checkout-session-cancel [conn session-id state]
+  (let [decoder   (Base64/getUrlDecoder)
+        redirects (->> state (.decode decoder) (String.) edn/read-string)]
+    (response/redirect (:cancel-url redirects))))
 
 ;; ----- Routes -----
 
@@ -213,5 +220,9 @@
 
      (ANY checkout-session-success-path
           [sessionId state] ;; obtained from query params
-          (pool/with-pool [conn db-pool] (checkout-session-callback conn sessionId state)))
+          (pool/with-pool [conn db-pool] (checkout-session-success conn sessionId state)))
+
+     (ANY checkout-session-cancel-path
+          [sessionId state] ;; obtained from query params
+          (pool/with-pool [conn db-pool] (checkout-session-cancel conn sessionId state)))
      )))
