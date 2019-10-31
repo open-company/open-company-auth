@@ -59,7 +59,8 @@
 (defn report-team-seat-usage!
   [conn team-id]
   (let [customer-id (:stripe-customer-id (team-res/get-team conn team-id))
-        team-users  (user-res/list-users conn team-id)
+        active?     #(= "active" (:status %))
+        team-users  (filter active? (user-res/list-users conn team-id))
         seat-count  (count team-users)
         trigger     (->team-report-trigger {:customer-id customer-id
                                             :seats       seat-count})]
