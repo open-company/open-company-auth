@@ -272,7 +272,7 @@
 (defresource user [conn user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
-  :allowed-methods [:options :get :post :patch :delete]
+  :allowed-methods [:options :get :post :patch]
 
   ;; Media type client accepts
   :available-media-types [mt/user-media-type]
@@ -282,16 +282,14 @@
     :options false
     :get false
     :post false
-    :patch (fn [ctx] (api-common/malformed-json? ctx))
-    :delete false})
+    :patch (fn [ctx] (api-common/malformed-json? ctx))})
   
   ;; Media type client sends
   :known-content-type? (by-method {
                           :options true
                           :get true
                           :post true
-                          :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))
-                          :delete true})
+                          :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
   :initialize-context (fn [ctx]
                         (or (allow-superuser-token ctx)
@@ -303,16 +301,14 @@
     :options true
     :get (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
     :post (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
-    :patch (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
-    :delete (fn [ctx] (allow-user-and-team-admins conn ctx user-id))})
+    :patch (fn [ctx] (allow-user-and-team-admins conn ctx user-id))})
 
   ;; Validations
   :processable? (by-method {
     :get true
     :options true
     :post (fn [ctx] (can-resend-verificaiton-email? conn user-id))
-    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))
-    :delete true})
+    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
@@ -327,7 +323,6 @@
   ;; Acctions
   :post! (fn [ctx] (resend-verification-email conn ctx user-id))
   :patch! (fn [ctx] (update-user conn ctx user-id))
-  :delete! (fn [_] (delete-user conn user-id))
 
   ;; Responses
   :handle-ok (by-method {
