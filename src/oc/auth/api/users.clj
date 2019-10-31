@@ -170,12 +170,6 @@
 
     (do (timbre/error "Failed updating user:" user-id) false)))
 
-(defn- delete-user [conn user-id]
-  (timbre/info "Deleting user:" user-id)
-  (if (user-res/delete-user! conn user-id)
-    (do (timbre/info "Deleted user:" user-id) true)
-    (do (timbre/error "Failed deleting user:" user-id) false)))
-
 (defn password-reset-request [conn email]
   (timbre/info "Password reset request for:" email)
   (if-let [user (user-res/get-user-by-email conn email)]
