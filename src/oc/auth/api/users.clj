@@ -174,8 +174,9 @@
 (defn- delete-user [conn user-id]
   (timbre/info "Deleting user:" user-id)
   (if (user-res/delete-user! conn user-id)
-    (do (doseq [team (->> user-id (user-res/get-user conn) :teams)]
-          (payments/report-team-seat-usage! conn (:team-id team)))
+    (do (when config/payments-enabled? 
+          (doseq [team (->> user-id (user-res/get-user conn) :teams)]
+            (payments/report-team-seat-usage! conn (:team-id team))))
         (timbre/info "Deleted user:" user-id)
         true)
     (do (timbre/error "Failed deleting user:" user-id) false)))

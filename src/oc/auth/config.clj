@@ -107,6 +107,10 @@
 (defonce email-domain-blacklist (rest (clojure.string/split
                                   (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
 
+;; ----- OpenCompany -----
+
+(defonce payments-enabled? (bool (env :payments-enabled)))
+
 ;; ----- Stripe -----
 
 (defonce stripe-secret-key         (env :stripe-secret-key))

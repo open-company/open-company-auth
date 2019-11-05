@@ -99,7 +99,7 @@
                           (dissoc :admin :org-name :logo-url :logo-width :logo-height :note :slack-id :slack-org-id)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
-      (do (payments/report-team-seat-usage! conn team-id)
+      (do (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
           (handle-invite conn sender team new-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
 
@@ -117,7 +117,7 @@
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (do (payments/report-team-seat-usage! conn team-id)
+      (do (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
           (handle-invite conn sender team new-user true admin? (-> invite
                                                                    (assoc :bot-token bot-token)
                                                                    (assoc :bot-user-id bot-user-id)))) ; recurse
@@ -132,8 +132,7 @@
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (if (= status :active)
         (do
-          ;; TODO need to send a welcome to the team email
-          (payments/report-team-seat-usage! conn team-id)
+          (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
           user)
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
