@@ -132,6 +132,11 @@
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (if (= status :active)
         (do
+          ;; TODO this is the case of an existing user being added to an additional team.
+          ;; We don't yet handle this case very well. They won't have access until they
+          ;; logout/login or their JWT expires, and they won't really know they got added
+          ;; to a new team unless they happen to notice the org dropdown in the UI.
+          ;; Need to send them a welcome to the team email.
           (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
           user)
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
