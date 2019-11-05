@@ -5,8 +5,7 @@
             [schema.core :as schema]
             [oc.lib.db.common :as db-common]
             [oc.lib.schema :as lib-schema]
-            [oc.auth.config :as c]
-            ))
+            [oc.auth.config :as c]))
 
 ;; ----- RethinkDB metadata -----
 
