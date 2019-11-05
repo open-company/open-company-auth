@@ -69,7 +69,8 @@
     "AWS SNS notification topic ARN: " c/aws-sns-auth-topic-arn "\n"
     "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
-    "Sentry: " c/dsn "\n\n"
+    "Sentry: " c/dsn "\n"
+    "Payments?: " c/payments-enabled? "\n\n"
     (when c/intro? "Ready to serve...\n"))))
 
 ;; Ring app definition
