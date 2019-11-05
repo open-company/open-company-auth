@@ -12,7 +12,7 @@
             [oc.auth.config :as config]
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
-            [oc.auth.async.payments :as pasync]
+            [oc.auth.async.payments :as payments]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
@@ -99,7 +99,7 @@
                           (dissoc :admin :org-name :logo-url :logo-width :logo-height :note :slack-id :slack-org-id)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
-      (do (pasync/report-team-seat-usage! conn team-id)
+      (do (payments/report-team-seat-usage! conn team-id)
           (handle-invite conn sender team new-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
 
@@ -117,7 +117,7 @@
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (do (pasync/report-team-seat-usage! conn team-id)
+      (do (payments/report-team-seat-usage! conn team-id)
           (handle-invite conn sender team new-user true admin? (-> invite
                                                                    (assoc :bot-token bot-token)
                                                                    (assoc :bot-user-id bot-user-id)))) ; recurse
@@ -133,7 +133,7 @@
       (if (= status :active)
         (do
           ;; TODO need to send a welcome to the team email
-          (pasync/report-team-seat-usage! conn team-id)
+          (payments/report-team-seat-usage! conn team-id)
           user)
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))

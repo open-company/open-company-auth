@@ -21,7 +21,7 @@
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.user :as user-rep]
-            [oc.auth.async.payments :as pasync]))
+            [oc.auth.async.payments :as payments]))
 
 ;; ----- Validations -----
 
@@ -175,7 +175,7 @@
   (timbre/info "Deleting user:" user-id)
   (if (user-res/delete-user! conn user-id)
     (do (doseq [team (->> user-id (user-res/get-user conn) :teams)]
-          (pasync/report-team-seat-usage! conn (:team-id team)))
+          (payments/report-team-seat-usage! conn (:team-id team)))
         (timbre/info "Deleted user:" user-id)
         true)
     (do (timbre/error "Failed deleting user:" user-id) false)))

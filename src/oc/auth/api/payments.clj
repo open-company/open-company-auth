@@ -6,9 +6,9 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.payments :as payments-rep]
             [oc.auth.resources.payments :as payments-res]
+            [oc.auth.async.payments :as payments-async]
             [oc.auth.resources.user :as user-res]
             [oc.auth.resources.team :as team-res]
-            [oc.auth.async.payments :as pasync]
             [oc.lib.api.common :as api-common]
             [oc.lib.db.pool :as pool]
             [cheshire.core :as json]
@@ -65,7 +65,7 @@
                       :full-name (lib-user/name-for creator)}
         new-customer (payments-res/create-customer! conn team-id contact)]
     (payments-res/start-new-trial! conn team-id config/stripe-default-plan-id)
-    (pasync/report-team-seat-usage! conn team-id)
+    (payments-async/report-team-seat-usage! conn team-id)
     {:new-customer new-customer}))
 
 (defn- schedule-plan-change!
