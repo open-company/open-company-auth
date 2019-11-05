@@ -18,6 +18,11 @@
             [clojure.edn :as edn])
   (:import [java.util Base64]))
 
+;; ----- URLs ------
+
+(def ^:private checkout-session-success-path "/payments/callbacks/checkout-session/success")
+(def ^:private checkout-session-cancel-path "/payments/callbacks/checkout-session/cancel")
+
 ;; ----- Validations -----
 
 ;; FIXME: starting to complect with team
@@ -73,9 +78,6 @@
   [ctx conn team-id]
   (payments-res/cancel-subscription! conn team-id)
   {:updated-customer (payments-res/get-customer conn team-id)})
-
-(def ^:private checkout-session-success-path "/payments/callbacks/checkout-session/success")
-(def ^:private checkout-session-cancel-path "/payments/callbacks/checkout-session/cancel")
 
 (defn- wrap-redirect-urls
   [redirect-urls]
@@ -224,5 +226,4 @@
 
      (ANY checkout-session-cancel-path
           [sessionId state] ;; obtained from query params
-          (pool/with-pool [conn db-pool] (checkout-session-cancel conn sessionId state)))
-     )))
+          (pool/with-pool [conn db-pool] (checkout-session-cancel conn sessionId state))))))
