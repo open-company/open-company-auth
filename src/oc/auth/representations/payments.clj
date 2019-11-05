@@ -45,8 +45,7 @@
                      (create-checkout-session-link team-id)])
       json/generate-string))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Checkout Session
+;; -----  Checkout Session
 
 (def checkout-session-representation-props
   [:sessionId])
