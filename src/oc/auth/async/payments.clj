@@ -70,6 +70,11 @@
                          customer-id))
       (send-team-report-trigger! trigger))))
 
+(defn report-all-seat-usage!
+  [conn team-ids]
+  (doseq [tid team-ids]
+    (report-team-seat-usage! conn tid)))
+
 ;; ----- Component start/stop -----
 
 (defn start

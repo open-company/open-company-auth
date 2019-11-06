@@ -167,10 +167,6 @@
             update-result (user-res/update-user! conn user-id updated-user)]
     (do
       (timbre/info "Updated user:" user-id)
-      (when config/payments-enabled? ; activating user can change team seat count
-        (doseq [team-id (:teams update-result)]
-          (payments/report-team-seat-usage! conn team-id)))
-
       {:updated-user update-result})
 
     (do (timbre/error "Failed updating user:" user-id) false)))
