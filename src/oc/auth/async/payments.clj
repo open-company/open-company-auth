@@ -58,17 +58,17 @@
 
 (defn report-team-seat-usage!
   [conn team-id]
-  (let [customer-id (:stripe-customer-id (team-res/get-team conn team-id))
-        active?     #(#{"active" "unverified"} (:status %))
-        team-users  (filter active? (user-res/list-users conn team-id))
-        seat-count  (count team-users)
-        trigger     (->team-report-trigger {:customer-id customer-id
+  (when-let [customer-id (:stripe-customer-id (team-res/get-team conn team-id))] ;; Early on there's no customer yet
+    (let [active?     #(#{"active" "unverified"} (:status %))
+          team-users  (filter active? (user-res/list-users conn team-id))
+          seat-count  (count team-users)
+          trigger     (->team-report-trigger {:customer-id customer-id
                                             :seats       seat-count})]
-    (timbre/info (format "Reporting %d seats used to payment service for team %s (%s)"
+      (timbre/info (format "Reporting %d seats used to payment service for team %s (%s)"
                          seat-count
                          team-id
                          customer-id))
-    (send-team-report-trigger! trigger)))
+      (send-team-report-trigger! trigger))))
 
 ;; ----- Component start/stop -----
 
