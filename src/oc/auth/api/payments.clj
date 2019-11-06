@@ -127,7 +127,7 @@
     :options false
     :get false
     :post plan-id-from-body
-    :delete plan-id-from-body})
+    :delete false})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [customer (payments-res/get-customer conn team-id)]
@@ -138,6 +138,8 @@
   ;; Actions
   :post! (fn [ctx] (schedule-plan-change! ctx conn team-id))
   :delete! (fn [ctx] (cancel-subscription! ctx conn team-id))
+
+  :respond-with-entity? true
 
   ;; Responses
   :handle-ok (fn [ctx] (let [customer (or (:new-customer ctx)
