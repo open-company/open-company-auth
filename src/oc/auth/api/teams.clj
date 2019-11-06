@@ -99,8 +99,7 @@
                           (dissoc :admin :org-name :logo-url :logo-width :logo-height :note :slack-id :slack-org-id)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
-      (do (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
-          (handle-invite conn sender team new-user true admin? invite)) ; recurse
+      (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
 
   ;; No user yet, Slack invite
@@ -117,10 +116,9 @@
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (do (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
-          (handle-invite conn sender team new-user true admin? (-> invite
-                                                                   (assoc :bot-token bot-token)
-                                                                   (assoc :bot-user-id bot-user-id)))) ; recurse
+      (handle-invite conn sender team new-user true admin? (-> invite
+                                                             (assoc :bot-token bot-token)
+                                                             (assoc :bot-user-id bot-user-id))) ; recurse
       (do (timbre/error "Failed adding user:" slack-id) false))))
 
   ;; User exists, but not a team member yet
@@ -131,14 +129,12 @@
     (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (if (= status :active)
-        (do
-          ;; TODO this is the case of an existing user being added to an additional team.
-          ;; We don't yet handle this case very well. They won't have access until they
-          ;; logout/login or their JWT expires, and they won't really know they got added
-          ;; to a new team unless they happen to notice the org dropdown in the UI.
-          ;; Need to send them a welcome to the team email.
-          (when config/payments-enabled? (payments/report-team-seat-usage! conn team-id))
-          user)
+        ;; TODO this is the case of an existing user being added to an additional team.
+        ;; We don't yet handle this case very well. They won't have access until they
+        ;; logout/login or their JWT expires, and they won't really know they got added
+        ;; to a new team unless they happen to notice the org dropdown in the UI.
+        ;; Need to send them a welcome to the team email.
+        user
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
