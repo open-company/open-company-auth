@@ -63,7 +63,7 @@
    team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
   (let [customer-id (get-customer-id conn team-id)
-        customer    (get-customer customer-id)]
+        customer    (stripe/get-customer customer-id)]
     (stripe/cancel-all-subscriptions! customer)))
 
 (schema/defn ^:always-validate report-latest-team-size!
