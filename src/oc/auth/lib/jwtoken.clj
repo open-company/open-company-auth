@@ -13,7 +13,7 @@
   (if-let [jwtoken (jwt/generate jwt-user config/passphrase)]
     (do
       (when config/payments-enabled?
-        (payments-async/report-all-seat-usage! conn (map :team-id (:teams jwt-user))))
+        (payments-async/report-all-seat-usage! conn (:teams jwt-user)))
       (user-res/update-user! conn (:user-id jwt-user) {:last-token-at (db-common/current-timestamp)})
       jwtoken)
     false))
