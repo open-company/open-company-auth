@@ -5,15 +5,11 @@
            [com.stripe.model.checkout Session]
            [java.util Date]))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Configuration
+;; ----- Configuration -----
 
 (set! (Stripe/apiKey) config/stripe-secret-key)
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Invoice
+;; ----- Invoice -----
 
 (defn- convert-invoice-line-item
   [line-item]
@@ -46,9 +42,7 @@
   (convert-invoice
    (Invoice/create (merge {"customer" customer-id} opts))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Plan
+;; ----- Plan -----
 
 (defn- convert-tier
   [tier]
@@ -80,9 +74,7 @@
   [product-id]
   (filter :public? (list-plans product-id)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; SubscriptionItem
+;; ----- SubscriptionItem -----
 
 (defn- convert-subscription-item
   [sub-item]
@@ -111,9 +103,7 @@
     (convert-subscription-item
      (.delete item))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Subscription
+;; ----- Subscription -----
 
 (defn- convert-subscription
   [sub]
@@ -188,9 +178,7 @@
     (.cancel sub {"invoice_now" false
                   "prorate"     false})))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Payment Methods
+;; ----- Payment Method -----
 
 (defn- convert-payment-method
   [pay-method]
@@ -214,9 +202,7 @@
          (mapv (comp #(assoc % :default? (is-default? %))
                      convert-payment-method)))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Customer
+;; ----- Customer -----
 
 (defn- convert-customer
   [customer]
@@ -335,9 +321,7 @@
         (update-subscription! (:id sub) {"trial_end" "now"})
         sub))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Checkout Session
+;; ----- Checkout Session -----
 
 (defn- convert-checkout-session
   [session]
@@ -373,9 +357,7 @@
         attached-pay-method (.attach pay-method {"customer" customer-id})]
     (set-customer-default-payment-method! customer-id (.getId attached-pay-method))))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; REPL testing
+;; ----- REPL testing -----
 
 (comment
 
@@ -409,8 +391,7 @@
     (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now
                                                                "prorate" false}))
 
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; Stripe time utilities
+  ;; ----- Stripe time utilities -----
 
   (defn- date->timestamp
     "Converts a java.util.Date object to a Stripe timestamp"
@@ -422,6 +403,4 @@
     "Timestamp of the moment this function is called according to Stripe"
     []
     (date->timestamp (Date.)))
-
-
-  )
+)
