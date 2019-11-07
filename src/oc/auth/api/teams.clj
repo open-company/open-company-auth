@@ -12,7 +12,6 @@
             [oc.auth.config :as config]
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
-            [oc.auth.async.payments :as payments]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
