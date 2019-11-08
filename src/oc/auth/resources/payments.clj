@@ -40,7 +40,8 @@
    team-id :- (:team-id team/Team)]
   {:pre [(db-common/conn? conn)]}
   (when-let [customer-id (get-customer-id conn team-id)]
-    (stripe/get-customer customer-id)))
+    (stripe/enrich-customer
+     (stripe/get-customer customer-id))))
 
 (schema/defn ^:always-validate start-new-trial!
   [conn
