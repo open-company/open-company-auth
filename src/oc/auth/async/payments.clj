@@ -43,15 +43,14 @@
         (timbre/debug "Processing message on payments channel...")
         (if (:stop message)
           (do (reset! payments-go false) (timbre/info "Payments loop stopped."))
-          (async/thread
-            (try
-              (handle-payments-message message)
-              ;; we're overwhelming Stripe, slow down
-              (catch RateLimitException e
-                (<! (async/timeout 500))
-                (async/put! payments-chan message))
-              (catch Exception e
-                (timbre/error e)))))))))
+          (try
+            (handle-payments-message message)
+            ;; we're overwhelming Stripe, slow down
+            (catch RateLimitException e
+              (<! (async/timeout 1000))
+              (async/put! payments-chan message))
+            (catch Exception e
+              (timbre/error e))))))))
 
 ;; ----- Payments triggering -----
 
