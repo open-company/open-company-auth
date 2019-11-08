@@ -212,7 +212,7 @@
      :full-name     (.getName customer)
      :subscriptions (sort-by :current-period-start subs)}))
 
-(defn- enrich-customer
+(defn enrich-customer
   [customer]
   (let [customer-id      (:id customer)
         pay-methods      (list-payment-methods customer-id)
@@ -226,9 +226,8 @@
 (defn get-customer
   "Retrieves a summary of the given customer ID."
   [customer-id]
-  (-> (Customer/retrieve customer-id)
-      convert-customer
-      enrich-customer))
+  (convert-customer
+   (Customer/retrieve customer-id)))
 
 (defn create-customer!
   "Creates a Customer object in the Stripe API and returns it.

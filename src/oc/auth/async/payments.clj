@@ -7,7 +7,8 @@
             [schema.core :as schema]
             [oc.auth.resources.payments :as pay-res]
             [oc.auth.resources.user :as user-res]
-            [oc.auth.resources.team :as team-res]))
+            [oc.auth.resources.team :as team-res])
+  (:import [com.stripe.exception RateLimitException]))
 
 ;; ----- core.async -----
 
@@ -35,17 +36,21 @@
 (defn- payments-loop []
   (reset! payments-go true)
   (timbre/info "Starting payments loop...")
-  (async/go (while @payments-go
-    (timbre/debug "Payments loop waiting...")
-    (let [message (<! payments-chan)]
-      (timbre/debug "Processing message on payments channel...")
-      (if (:stop message)
-        (do (reset! payments-go false) (timbre/info "Payments loop stopped."))
-        (async/thread
+  (async/go
+    (while @payments-go
+      (timbre/debug "Payments loop waiting...")
+      (let [message (<! payments-chan)]
+        (timbre/debug "Processing message on payments channel...")
+        (if (:stop message)
+          (do (reset! payments-go false) (timbre/info "Payments loop stopped."))
           (try
             (handle-payments-message message)
-          (catch Exception e
-            (timbre/error e)))))))))
+            ;; we're overwhelming Stripe, slow down
+            (catch RateLimitException e
+              (<! (async/timeout 1000))
+              (async/put! payments-chan message))
+            (catch Exception e
+              (timbre/error e))))))))
 
 ;; ----- Payments triggering -----
 
