@@ -62,7 +62,7 @@
   [ctx conn team-id]
   (let [;; FIXME: starting to complect with team
         team         (team-res/get-team conn team-id)
-        first-admin  (-> team :admins first)
+        first-admin  (->> team :admins first (user-res/get-user conn))
         contact      {:email     (:email first-admin)
                       :full-name (lib-user/name-for first-admin)}
         new-customer (payments-res/create-customer! conn team-id contact)]
