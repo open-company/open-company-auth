@@ -64,7 +64,8 @@
 (defn list-plans
   "Returns a list of available plans of the given product."
   [product-id]
-  (->> (Plan/list {"product" product-id})
+  (->> (Plan/list {"product" product-id
+                   "limit"   100})
        (.getData)
        (mapv convert-plan)))
 
