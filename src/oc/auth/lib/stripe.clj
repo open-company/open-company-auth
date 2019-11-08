@@ -311,7 +311,7 @@
   immediately for this plan. Returns the updated subscription, or the unchanged
   subscription if it's not currently trialing."
   [customer-id]
-  (let [customer (get-customer customer-id)
+  (let [customer (-> customer-id get-customer enrich-customer)
         sub      (-> customer :subscriptions last)]
     (if-not (-> customer :payment-methods seq)
       (throw (ex-info "Customer must have payment method on file to end trial period"
