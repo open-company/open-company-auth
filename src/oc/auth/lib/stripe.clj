@@ -284,7 +284,7 @@
   newly created subscription.
   Customer must have payment method on file to schedule new subscriptions."
   [customer-id new-plan-id & [opts item-opts]]
-  (let [customer  (get-customer customer-id)
+  (let [customer  (-> customer-id get-customer enrich-customer)
         subs      (:subscriptions customer)
         final-sub (last subs)]
     (if-not (-> customer :payment-methods seq)
