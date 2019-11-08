@@ -364,19 +364,19 @@
     (:id (create-customer! {"email" "test@example.com"
                             "name"  "Test Example"})))
 
-  (get-customer my-id)
+  (-> my-id get-customer enrich-customer)
 
   ;; monthly
   (start-trial! my-id "plan_G2sU8JKdWUExVF")
 
-  (update-all-subscription-quantities! (get-customer my-id) 10)
+  (update-all-subscription-quantities! (-> my-id get-customer enrich-customer) 10)
 
   (end-trial-period! my-id)
 
   ;; annual
   (schedule-new-subscription! my-id "plan_G2sgUtlXhbVOKu")
 
-  (update-all-subscription-quantities! (get-customer my-id) 18)
+  (update-all-subscription-quantities! (-> my-id get-customer enrich-customer) 18)
 
   ;; monthly
   (schedule-new-subscription! my-id  "plan_G2sU8JKdWUExVF")
