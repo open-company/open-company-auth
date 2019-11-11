@@ -58,11 +58,13 @@
 
 ;; ----- Actions -----
 
-(defn- create-customer-with-creator-as-contact!
+(defn- create-customer-with-admin-as-contact!
   [ctx conn team-id]
-  (let [creator      (:user ctx)
-        contact      {:email     (:email creator)
-                      :full-name (lib-user/name-for creator)}
+  (let [;; FIXME: starting to complect with team
+        team         (team-res/get-team conn team-id)
+        first-admin  (->> team :admins first (user-res/get-user conn))
+        contact      {:email     (:email first-admin)
+                      :full-name (lib-user/name-for first-admin)}
         new-customer (payments-res/create-customer! conn team-id contact)]
     (payments-res/start-new-trial! conn team-id config/stripe-default-plan-id)
     (payments-async/report-team-seat-usage! conn team-id)
@@ -133,7 +135,7 @@
   :exists? (fn [ctx] (if-let [customer (payments-res/get-customer conn team-id)]
                        {:existing-customer customer}
                        ;; on-demand creation
-                       (create-customer-with-creator-as-contact! ctx conn team-id)))
+                       (create-customer-with-admin-as-contact! ctx conn team-id)))
 
   ;; Actions
   :post! (fn [ctx] (schedule-plan-change! ctx conn team-id))
