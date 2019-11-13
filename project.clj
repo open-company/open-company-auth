@@ -51,6 +51,8 @@
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
+    ;; Java library for the Stripe API https://github.com/stripe/stripe-java
+    [com.stripe/stripe-java "13.1.0"]
 
     [open-company/lib "0.17.20-alpha" :exclusions [clj-http org.clojure/data.json]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
