@@ -216,7 +216,7 @@
 
 (defn- delete-invite-link [conn team-id existing-team user]
   (timbre/info "Deleting invite-link for team" team-id "requested by" (:user-id user))
-  (if-let [updated-team (team-res/update-team! conn team-id (dissoc existing-team :invite-token))]
+  (if-let [updated-team (team-res/update-team! conn team-id (assoc existing-team :invite-token nil))]
     (do
       (timbre/info "Invite link for team" team-id "deleted.")
       {:updated-team updated-team})
