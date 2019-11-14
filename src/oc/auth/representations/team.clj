@@ -9,11 +9,14 @@
             [oc.auth.representations.slack-auth :as slack]
             [oc.auth.representations.google-auth :as google]))
 
-(def representation-props [:team-id :logo-url :name :users :created-at :updated-at])
+(def representation-props [:team-id :logo-url :name :users :created-at :updated-at :invite-token])
 
 (defun url
   ([team-id :guard string?] (str "/teams/" team-id))
   ([team :guard map?] (url (:team-id team))))
+
+(defn- invite-token-url [invite-token]
+  (str config/ui-server-url "/invite?invite-token=" invite-token))
 
 (defn- self-link [team-id] (hateoas/self-link (url team-id) {:accept mt/team-media-type}))
 
@@ -50,6 +53,15 @@
 (defn channels-link [team-id]
   (hateoas/link-map "channels" hateoas/GET (str (url team-id) "/channels") {:accept mt/slack-channel-collection-media-type}))
 
+(defn create-invite-token-link [team-id]
+  (hateoas/link-map "create-invite-link" hateoas/POST (str (url team-id) "/invite-link") {:content-type mt/invite-media-type}))
+
+(defn invite-token-link [invite-token]
+  (hateoas/link-map "invite-token" hateoas/GET (invite-token-url invite-token) {}))
+
+(defn delete-invite-token-link [team-id]
+  (hateoas/link-map "delete-invite-link" hateoas/DELETE (str (url team-id) "/invite-link") {:content-type mt/invite-media-type}))
+
 (defn- admin-links
   "HATEOAS links for a team resource for a team admin."
   ([team] (admin-links team nil))
@@ -68,7 +80,12 @@
       (add-google-auth-link team-id)
       (delete-link team-id)
       (roster-link team-id)
-      (channels-link team-id)]))))
+      (channels-link team-id)
+      (when (seq (:invite-token team))
+        (invite-token-link (:invite-token team)))
+      (if (seq (:invite-token team))
+        (delete-invite-token-link team-id)
+        (create-invite-token-link team-id))]))))
 
 (defn- id-token-links
   "HATEOAS links for a team resource for a user authenticated with the id-token only."

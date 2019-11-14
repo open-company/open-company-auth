@@ -203,6 +203,27 @@
     (do (timbre/info "Deleted team:" team-id) true)
     (do (timbre/error "Failed deleting team:" team-id) false)))
 
+(defn- create-invite-link [conn team-id existing-team user]
+  (timbre/info "Creating invite-link for team" team-id "requested by" (:user-id user))
+  (if-let* [new-invite-link (str (java.util.UUID/randomUUID))
+            updated-team (team-res/update-team! conn team-id (assoc existing-team :invite-token new-invite-link))]
+    (do
+      (timbre/info "Invite link for team" team-id "created:" new-invite-link)
+      {:updated-team updated-team})
+    (do
+      (timbre/info "Failed creating invite link for team" team-id)
+      false)))
+
+(defn- delete-invite-link [conn team-id existing-team user]
+  (timbre/info "Deleting invite-link for team" team-id "requested by" (:user-id user))
+  (if-let [updated-team (team-res/update-team! conn team-id (dissoc existing-team :invite-token))]
+    (do
+      (timbre/info "Invite link for team" team-id "deleted.")
+      {:updated-team updated-team})
+    (do
+      (timbre/info "Failed deleting invite link for team" team-id)
+      false)))
+
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 (defresource team-list [conn]
@@ -533,6 +554,54 @@
                              channels (slack/channels-for slack-orgs)]
                           (slack-org-rep/render-channel-list team-id channels))))
 
+;; A resource for invite users using a team link
+(defresource invite-link [conn team-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post :delete]
+
+  ;; Media type client accepts
+  :available-media-types [mt/invite-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/invite-media-type)
+
+  ;; Malformed?
+  :malformed? false
+
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :post (fn [ctx] (api-common/known-content-type? ctx mt/invite-media-type))
+    :delete (fn [ctx] (api-common/known-content-type? ctx mt/invite-media-type))})
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true 
+    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx]
+              (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                        _invite-link (:invite-token team)]
+                {:existing-team team}
+                false)) ; No team by that ID or invite-token already exists
+
+  ;; Validations
+  :processable? true
+
+  ;; Actions
+  :post! (fn [ctx] (create-invite-link conn team-id (:existing-team ctx) (:user ctx))) ; create invite link
+
+  :delete! (fn [ctx] (delete-invite-link conn team-id (:existing-team ctx) (:user ctx))) ; delete invite link
+
+  ;; Responses
+  :respond-with-entity? true
+  :post-enacted? true
+  :handle-created (fn [ctx]
+                    (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx))))
+  :handle-ok (fn [ctx]
+               (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)))))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -552,6 +621,11 @@
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
       (ANY "/teams/:team-id/admins/:user-id/" [team-id user-id]
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
+      ;; Invite team link
+      (ANY "/teams/:team-id/invite-link" [team-id]
+        (pool/with-pool [conn db-pool] (invite-link conn team-id)))
+      (ANY "/teams/:team-id/invite-link/" [team-id]
+        (pool/with-pool [conn db-pool] (invite-link conn team-id)))
       ;; Email domain operations
       (OPTIONS "/teams/:team-id/email-domains" [team-id]
         (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
