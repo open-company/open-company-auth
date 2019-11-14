@@ -20,7 +20,8 @@
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.media-types :as mt]
-            [oc.auth.representations.user :as user-rep]))
+            [oc.auth.representations.user :as user-rep]
+            [oc.auth.async.payments :as payments]))
 
 ;; ----- Validations -----
 
@@ -173,7 +174,11 @@
 (defn- delete-user [conn user-id]
   (timbre/info "Deleting user:" user-id)
   (if (user-res/delete-user! conn user-id)
-    (do (timbre/info "Deleted user:" user-id) true)
+    (do (when config/payments-enabled? 
+          (doseq [team (->> user-id (user-res/get-user conn) :teams)]
+            (payments/report-team-seat-usage! conn (:team-id team))))
+        (timbre/info "Deleted user:" user-id)
+        true)
     (do (timbre/error "Failed deleting user:" user-id) false)))
 
 (defn password-reset-request [conn email]

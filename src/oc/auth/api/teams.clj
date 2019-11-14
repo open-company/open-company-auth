@@ -115,11 +115,11 @@
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
               new-user (user-res/create-user! conn oc-user)]
-      (handle-invite conn sender team new-user true admin? (-> invite 
-                                                              (assoc :bot-token bot-token)
-                                                              (assoc :bot-user-id bot-user-id))) ; recurse
+      (handle-invite conn sender team new-user true admin? (-> invite
+                                                             (assoc :bot-token bot-token)
+                                                             (assoc :bot-user-id bot-user-id))) ; recurse
       (do (timbre/error "Failed adding user:" slack-id) false))))
-  
+
   ;; User exists, but not a team member yet
   ([conn sender team user member? :guard not admin? invite]
   (let [team-id (:team-id team)
@@ -128,7 +128,12 @@
     (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (if (= status :active)
-        user ; TODO need to send a welcome to the team email
+        ;; TODO this is the case of an existing user being added to an additional team.
+        ;; We don't yet handle this case very well. They won't have access until they
+        ;; logout/login or their JWT expires, and they won't really know they got added
+        ;; to a new team unless they happen to notice the org dropdown in the UI.
+        ;; Need to send them a welcome to the team email.
+        user
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
