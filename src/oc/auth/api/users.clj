@@ -146,9 +146,9 @@
         (send-verification-email updated-user true)
         {:updated-user updated-user}))))
 
-(defn- create-user [conn {email :email password :password :as user-props}]
-  (timbre/info "Creating user:" email)
-  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
+(defn- create-user [conn {email :email password :password :as user-props} {team-id :team-id :as _existing-team}]
+  (timbre/info "Creating user:" email "in team " team-id)
+  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password) team-id)
             user-id (:user-id created-user)
             admin-teams (user-res/admin-of conn user-id)]
     (do
@@ -233,6 +233,16 @@
 (defresource user-create [conn]
   (api-common/open-company-anonymous-resource config/passphrase) ; verify validity of JWToken if it's provided
 
+  ;; Override the initialize-context key to read the invite-token if necessary
+  :initialize-context (fn [ctx]
+                        (let [bearer (-> ctx :request :headers api-common/get-token)
+                              is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
+                              jwtoken (when-not is-team-token? (api-common/read-token (get-in ctx [:request :headers]) config/passphrase))]
+                          (if is-team-token?
+                            {:jwtoken false
+                             :invite-token bearer}
+                            jwtoken)))
+
   :allowed-methods [:options :post]
 
   ;; Media type client accepts
@@ -253,13 +263,16 @@
                          (string? (-> ctx :data :last-name))))})
 
   ;; Existentialism
-  :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
+  :exists? (fn [ctx]
+             (let [team (when (:invite-token ctx) (team-res/get-team-by-invite-token conn (:invite-token ctx)))]
+               {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))
+                :existing-team team}))
 
   ;; Actions
   :post-to-existing? false
   :put-to-existing? true ; needed for a 409 conflict
   :conflict? :existing-user
-  :post! (fn [ctx] (create-user conn (:data ctx))) 
+  :post! (fn [ctx] (create-user conn (:data ctx) (:existing-team ctx))) 
 
   ;; Responses
   :handle-conflict (ring-response {:status 409})

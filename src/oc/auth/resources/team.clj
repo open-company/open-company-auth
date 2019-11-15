@@ -99,6 +99,12 @@
   {:pre [(db-common/conn? conn)]}
   (db-common/read-resource conn table-name team-id))
 
+(schema/defn ^:always-validate get-team-by-invite-token :- (schema/maybe Team)
+  "Given the one-time-use token of the user, retrieve them from the database, or return nil if user doesn't exist."
+  [conn token :- lib-schema/NonBlankStr]
+  {:pre [(db-common/conn? conn)]}
+  (first (db-common/read-resources conn table-name "invite-token" token)))
+
 (schema/defn ^:always-validate update-team! :- Team
   "
   Given an updated team property map, update the team and return the updated team on success.
