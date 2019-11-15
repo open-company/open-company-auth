@@ -21,8 +21,7 @@
   (cond
     invite-token-team
     (json/generate-string
-      {:links [email-auth/create-link]
-       :team (select-keys invite-token-team [:name :team-id :logo-url :logo-width :logo-height])}
+      (team-rep/invite-token-settings invite-token-team)
       {:pretty config/pretty?})
     user
     ;; auth'd settings

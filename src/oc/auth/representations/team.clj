@@ -7,7 +7,8 @@
             [oc.auth.config :as config]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.slack-auth :as slack]
-            [oc.auth.representations.google-auth :as google]))
+            [oc.auth.representations.google-auth :as google]
+            [oc.auth.representations.email-auth :as email]))
 
 (def representation-props [:team-id :logo-url :name :users :created-at :updated-at :invite-token])
 
@@ -148,3 +149,7 @@
                                     :else (member-links %)))
                             (map #(dissoc % :admins)))}}
     {:pretty config/pretty?}))
+
+(defn invite-token-settings [invite-token-team]
+  {:links [email/create-link]
+   :team (select-keys invite-token-team [:name :logo-url :logo-width :logo-height])})
