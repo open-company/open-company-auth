@@ -147,12 +147,12 @@
         {:updated-user updated-user}))))
 
 (defn- create-user [conn {email :email password :password :as user-props} {team-id :team-id :as _existing-team}]
-  (timbre/info "Creating user:" email "in team " team-id)
+  (timbre/info "Creating user:" email "(invite token team-id " team-id ")")
   (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password) team-id)
             user-id (:user-id created-user)
             admin-teams (user-res/admin-of conn user-id)]
     (do
-      (timbre/info "Created user:" email)
+      (timbre/info "Created user:" email "with teams" (:teams created-user) "and status" (:status created-user))
       (send-verification-email created-user)
       (timbre/info "Sending notification to SNS topic for:" user-id "(" email ")")
       (notification/send-trigger! (notification/->trigger created-user))
