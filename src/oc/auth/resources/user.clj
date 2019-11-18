@@ -203,7 +203,7 @@
   {:pre [(db-common/conn? conn)]}
   (let [email (:email user)
         email-domain (last (s/split email #"\@"))
-        email-teams (map :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
+        email-teams (mapv :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
         existing-teams (vec (set (concat email-teams (:teams user))))
         with-invite-token-teams (if invite-token-team-id
                                   (vec (set (conj existing-teams invite-token-team-id)))
@@ -212,8 +212,16 @@
                     (team-res/create-team! conn (team-res/->team {} (:user-id user))))
         teams (if new-team [(:team-id new-team)] with-invite-token-teams)
         user-with-teams (assoc user :teams teams)
-        user-with-status (if (or new-team invite-token-team-id)
-                            (assoc user-with-teams :status :unverified) ; new team, so no need to pre-verify
+        user-with-status (if (or ;; user is creating a new team, no need to pre-verify
+                                 new-team
+                                 ;; User is signing in via invite token
+                                 (and invite-token-team-id
+                                          ;; or has no related teams for email domain
+                                      (or (empty? email-teams)
+                                          ;; or the only email domain team is the same of the invite token
+                                          (and (= (count email-teams) 1)
+                                               (= (first email-teams) invite-token-team-id)))))
+                            (assoc user-with-teams :status :unverified) ; let user in even if not verified
                             user-with-teams)]
     (db-common/create-resource conn table-name user-with-status (db-common/current-timestamp)))))
 
