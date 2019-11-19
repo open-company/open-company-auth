@@ -47,9 +47,9 @@
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     [clj-http "3.10.0"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
-    [org.clojure/data.json "0.2.6"]
+    [org.clojure/data.json "0.2.7"]
     ;; Java library for the Stripe API https://github.com/stripe/stripe-java
-    [com.stripe/stripe-java "15.3.0"]
+    [com.stripe/stripe-java "15.4.0"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
@@ -101,7 +101,7 @@
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
-        [lein-kibit "0.1.7" :exclusions [org.clojure/clojure rewrite-clj org.clojure/tools.reader]]
+        [lein-kibit "0.1.8" :exclusions [org.clojure/clojure rewrite-clj org.clojure/tools.reader]]
         ;; Dependency of lein-kibit and lein-zprint https://github.com/xsc/rewrite-clj
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.1" :exclusions [org.clojure/tools.reader]]
