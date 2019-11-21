@@ -338,6 +338,13 @@
                      "cancel_url"           cancel-url}
                     opts))))
 
+(defn customer-from-session
+  "Retrieve the customer from the sessionID"
+  [session-id]
+  (let [session  (Session/retrieve session-id)
+        customer-id (.getClientReferenceId session)]
+    (get-customer customer-id)))
+
 (defn assoc-session-result-with-customer!
   "Callback for the session created with `create-checkout-session!`. Once customer
   has entered payment method info, this callback should be invoked in order to

@@ -15,13 +15,26 @@
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
-            [clojure.edn :as edn])
-  (:import [java.util Base64]))
+            [clojure.edn :as edn]
+            [ring.util.codec :as codec]
+            [ring.util.request :as request]
+            [clojure.walk :refer (keywordize-keys)])
+  (:import [java.util Base64]
+           [java.net URL]))
 
 ;; ----- URLs ------
 
 (def ^:private checkout-session-success-path "/payments/callbacks/checkout-session/success")
 (def ^:private checkout-session-cancel-path "/payments/callbacks/checkout-session/cancel")
+
+;; ----- Utilities -----
+
+;; From https://github.com/ring-clojure/ring/blob/master/ring-core/src/ring/middleware/params.clj
+(defn- parse-params [params encoding]
+  (let [params (codec/form-decode params encoding)]
+    (if (map? params)
+      (keywordize-keys params)
+      {})))
 
 ;; ----- Validations -----
 
@@ -195,11 +208,29 @@
                               (payments-rep/render-checkout-session session)))
   )
 
-(defn checkout-session-success [conn session-id state]
+(defn checkout-session-success [conn req session-id state]
   (let [decoder   (Base64/getUrlDecoder)
         redirects (->> state (.decode decoder) (String.) edn/read-string)
-        customer (payments-res/finish-checkout-session! conn session-id)]
-    (payments-res/end-trial-period! conn (:id customer))
+        success-url (:success-url redirects)
+        parsed-success-url (URL. success-url)
+        encoding (or (request/character-encoding req)
+                     "UTF-8")
+        success-url-params (parse-params (.getQuery parsed-success-url) encoding)
+        current-customer (payments-res/customer-from-session session-id)
+        current-subscription (-> current-customer :subscriptions first)]
+    ;; In case they want to switch to a different plan
+    ;; while they are still on trial (and so have only one subscription still)
+    ;; and the new plan does exist
+    (when (and (seq (:update-plan success-url-params))
+               (= (count (:subscriptions current-customer)) 1)
+               (= (:status current-subscription) "trialing")
+               (not= (-> current-subscription :plan :id) (:update-plan success-url-params))
+               (some #(when (= (:id %) (:update-plan success-url-params)) %) (:available-plans current-customer)))
+      (payments-res/update-subscription-item-plan! (-> current-subscription :item :id) (:update-plan success-url-params)))
+    ;; finish checkout to actually charge the newly added card
+    (payments-res/finish-checkout-session! conn session-id)
+    ;; finish the trial period if still trialing
+    (payments-res/end-trial-period! conn (:id current-customer))
     (response/redirect (:success-url redirects))))
 
 (defn checkout-session-cancel [conn session-id state]
@@ -225,8 +256,8 @@
           (pool/with-pool [conn db-pool] (checkout-session conn team-id)))
 
      (ANY checkout-session-success-path
-          [sessionId state] ;; obtained from query params
-          (pool/with-pool [conn db-pool] (checkout-session-success conn sessionId state)))
+          [sessionId state :as req] ;; obtained from query params
+          (pool/with-pool [conn db-pool] (checkout-session-success conn req sessionId state)))
 
      (ANY checkout-session-cancel-path
           [sessionId state] ;; obtained from query params
