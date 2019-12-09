@@ -12,6 +12,7 @@
             [oc.auth.config :as config]
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
+            [oc.auth.async.payments :as payments]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
@@ -208,6 +209,20 @@
     (do (timbre/info "Deleted team:" team-id) true)
     (do (timbre/error "Failed deleting team:" team-id) false)))
 
+(defn- remove-team-member [conn team-id member-id admin?]
+  (timbre/info "Removing user" member-id "from team" team-id)
+  (let [updated-user (user-res/remove-team conn member-id team-id)]
+    (when admin?
+      (timbre/info "User is an admin, removing from admins of team" team-id)
+      (team-res/remove-admin conn team-id member-id))
+    (when (empty? (:teams updated-user))
+      (timbre/info "User has no other team left, deleting user" member-id)
+      (user-res/delete-user! conn member-id))
+    (when config/payments-enabled? 
+      (payments/report-team-seat-usage! conn team-id))
+    (timbre/info "User" member-id "removed from team" team-id)
+    {:updated-team (team-res/get-team conn team-id)}))
+
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 (defresource team-list [conn]
@@ -372,6 +387,36 @@
   ;; Responses
   :respond-with-entity? false
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
+  :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
+
+(defresource member [conn team-id member-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :delete]
+
+  ;; Media type client accepts
+  :available-media-types [mt/user-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
+
+  ;; Media type client sends
+  :malformed? false ; no check, this media type is blank
+
+  ;; Auhorization
+  :allowed? (by-method {
+    :options true
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                               user (and (lib-schema/unique-id? member-id) (user-res/get-user conn member-id))
+                               member? ((set (:teams user)) (:team-id team))]
+                        {:existing-user user :admin? ((set (:admins team)) member-id)}
+                        false)) ; no team, no user, or user not a member of the team
+
+  ;; Actions
+  :delete! (fn [ctx] (remove-team-member conn team-id member-id (:admin? ctx)))
+
+  ;; Responses
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
 
 ;; A resource for the email domains of a particular team
@@ -552,6 +597,9 @@
       ;; Invite user to team
       (ANY "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       (ANY "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      ;; Remove user from team
+      (ANY "/teams/:team-id/users/:member-id" [team-id member-id] (pool/with-pool [conn db-pool] (member conn team-id member-id)))
+      (ANY "/teams/:team-id/users/:member-id/" [team-id member-id] (pool/with-pool [conn db-pool] (member conn team-id member-id)))
       ;; Team admin operations
       (ANY "/teams/:team-id/admins/:user-id" [team-id user-id]
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))

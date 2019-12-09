@@ -33,6 +33,9 @@
 (defn- admin-url [team-id user-id]
   (s/join "/" ["/teams" team-id "admins" user-id]))
 
+(defn- team-member-url [team-id user-id]
+  (s/join "/" ["/teams" team-id "users" user-id]))
+
 (defn- self-link [user-id] (hateoas/self-link (url user-id) {:accept mt/user-media-type}))
 
 (defn- item-link [user-id] (hateoas/item-link (url user-id) {:accept mt/user-media-type}))
@@ -44,7 +47,7 @@
 
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id) {:ref mt/user-media-type}))
 
-(defn- remove-link [user-id] (hateoas/remove-link (url user-id) {} {:ref mt/user-media-type}))
+(defn- remove-link [team-id user-id] (hateoas/remove-link (team-member-url team-id user-id) {} {:ref mt/user-media-type}))
 
 (defn- resend-verification-email-link [user-id]
   (hateoas/link-map "resend-verification" hateoas/POST (str (url user-id) "/verify") {}))
@@ -103,7 +106,7 @@
       (item-link user-id)
       (partial-update-link user-id)
       (admin-action-link team-id user-id (:admin? user))
-      (remove-link user-id)])))
+      (remove-link team-id user-id)])))
 
 (defn- user-links
   "HATEOAS links for a user resource"

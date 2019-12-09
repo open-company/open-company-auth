@@ -146,7 +146,8 @@
   (let [items     [(merge {"plan" plan-id}
                           item-opts)]
         sub (merge {"customer" customer-id
-                    "items"    items}
+                    "items"    items
+                    "prorate"  false}
                    opts)]
     (convert-subscription
      (Subscription/create sub))))
@@ -160,7 +161,8 @@
   [sub-id opts]
   (let [sub (Subscription/retrieve sub-id)]
     (convert-subscription
-     (.update sub opts))))
+     (.update sub (merge {"prorate" false}
+                         opts)))))
 
 (defn update-subscription-quantity!
   [sub-id quantity & [opts]]
@@ -262,17 +264,11 @@
   bills the customer the prorated amount for the subscription that is current
   (i.e. today falls inside of its period start/end dates)."
   [{:keys [subscriptions] :as customer} quantity]
-  (let [first-sub (first subscriptions)
-        prorate?  (> quantity (:quantity first-sub))]
+  (let [first-sub (first subscriptions)]
     (update-subscription-quantity! (:id first-sub)
-                                   quantity
-                                   {"prorate" prorate?})
-    (when (and prorate?
-               (not (trialing? first-sub)))
-      (create-invoice! (:id customer) {"subscription" (:id first-sub)
-                                       "auto_advance" true})))
+                                   quantity))
   (doseq [sub (rest subscriptions)]
-    (update-subscription-quantity! (:id sub) quantity {"prorate" false})))
+    (update-subscription-quantity! (:id sub) quantity)))
 
 (defn schedule-new-subscription!
   "Schedules a new subscription to begin at the end of the currently active one.
@@ -297,8 +293,7 @@
         ;; this is our one and only subscription, append the new one
         (let [final-anchor   (:current-period-end final-sub)
               new-sub-params (merge opts
-                                    {"prorate" false
-                                     "billing_cycle_anchor" final-anchor
+                                    {"billing_cycle_anchor" final-anchor
                                      "items" [{"plan"     new-plan-id
                                                "quantity" (:quantity final-sub)}]})]
           (if (and (not (canceled? final-sub))
@@ -388,8 +383,7 @@
   (let [now            (stripe-now)
         one-month      (* 60 60 24 30)
         month-from-now (+ now one-month)]
-    (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now
-                                                               "prorate" false}))
+    (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now}))
 
   ;; ----- Stripe time utilities -----
 
