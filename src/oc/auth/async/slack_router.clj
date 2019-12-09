@@ -1,6 +1,7 @@
 (ns oc.auth.async.slack-router
-  "Consume slack messages from SQS. This SQS queue is subscribed to the Slack
-   message SNS topic.
+  "
+  Consume slack messages from SQS. This SQS queue is subscribed to the Slack
+  message SNS topic.
   "
   (:require
    [clojure.core.async :as async :refer (<!! >!!)]
@@ -78,7 +79,7 @@
   (let [c {:storage-server-url config/storage-server-url
            :auth-server-url config/auth-server-url
            :passphrase config/passphrase}
-        orgs (storage-lib/orgs-team-for c {:user-id (first (:admins team))} (:team-id team))]
+        orgs (storage-lib/orgs-for c {:user-id (first (:admins team))} (:team-id team))]
     (timbre/info "Notify bot removed for team:" (:team-id team) "for orgs:" (clojure.string/join ", " (mapv :slug orgs)))
     (doseq [org orgs]
       (email-admins-via-sqs conn org (:admins team)))
@@ -93,7 +94,7 @@
      (str "<!here> Carrot bot was removed for the following orgs:"
       (clojure.string/join ","
        (map #(str
-              " <" config/dashboard-endpoint "/orgs/" (:slug %)
+              " <" config/dashboard-url "/orgs/" (:slug %)
               "|" (:name %) " (" (count (:admins team)) " admin" (when (not= (count (:admins team)) 1) "s") ")>")
         orgs))))))
 

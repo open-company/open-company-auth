@@ -53,6 +53,7 @@
 (defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
 (defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
 (defonce storage-server-url (or (env :storage-server-url) "http://localhost:3001"))
+(defonce dashboard-url (or (env :oc-dashboard-endpoint) "http://localhost:4001"))
 
 ;; ----- AWS SQS -----
 
@@ -80,16 +81,17 @@
 (defonce slack-client-secret (env :open-company-slack-client-secret))
 (defonce slack-verification-token (env :open-company-slack-verification-token))
 (defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
-(defonce slack-comment-scope "users:read,users:read.email,team:read,channels:read")
-(defonce slack-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (str slack-comment-scope
-                              ","
-                              slack-unfurl-scope
-                              ",bot,chat:write:bot"))
+(defonce slack-bot-share-scope "channels:read,chat:write")
+(defonce slack-bot-notifications-scope "team:read,users:read,users:read.email,im:read,im:write,im:history")
+(defonce slack-bot-unfurl-scope "links:read,links:write")
+(defonce slack-bot-scope (clojure.string/join ["bot,commands"
+                                               slack-bot-share-scope
+                                               slack-bot-notifications-scope
+                                               slack-bot-unfurl-scope]))
 (defonce slack-customer-support-webhook (env :oc-customer-support-webhook))
-(defonce dashboard-endpoint (or (env :oc-dashboard-endpoint) "http://localhost:4001"))
 
 ;; ----- Google Oauth -----
+
 (defonce google-login-uri "https://accounts.google.com")
 (defonce google
   {:success-uri "/google/lander"
@@ -112,12 +114,12 @@
 (defonce email-domain-blacklist (rest (clojure.string/split
                                   (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
 
-;; ----- OpenCompany -----
-
-(defonce payments-enabled? (bool (env :payments-enabled)))
-
 ;; ----- Stripe -----
 
 (defonce stripe-secret-key         (env :stripe-secret-key))
 (defonce stripe-premium-product-id (env :stripe-premium-product-id))
 (defonce stripe-default-plan-id    (env :stripe-default-plan-id))
+
+;; ----- OpenCompany -----
+
+(defonce payments-enabled? (bool (env :payments-enabled)))
