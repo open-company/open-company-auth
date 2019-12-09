@@ -84,10 +84,10 @@
 (defonce slack-bot-share-scope "channels:read,chat:write")
 (defonce slack-bot-notifications-scope "team:read,users:read,users:read.email,im:read,im:write,im:history")
 (defonce slack-bot-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (clojure.string/join ["bot,commands"
-                                               slack-bot-share-scope
-                                               slack-bot-notifications-scope
-                                               slack-bot-unfurl-scope]))
+(defonce slack-bot-scope (clojure.string/join "," ["bot,commands"
+                                                   slack-bot-share-scope
+                                                   slack-bot-notifications-scope
+                                                   slack-bot-unfurl-scope]))
 (defonce slack-customer-support-webhook (env :oc-customer-support-webhook))
 
 ;; ----- Google Oauth -----
