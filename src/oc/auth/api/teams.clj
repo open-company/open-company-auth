@@ -84,6 +84,15 @@
   ;; No team to invite to!
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
 
+  ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
+  ([conn sender team user true _admin? :guard not invite :guard :admin]
+  (let [team-id (:team-id team)
+        user-id (:user-id user)]
+    (timbre/info "Making user:" user-id "an admin of team:" team-id)
+    (if-let [updated-team (team-res/add-admin conn team-id user-id)]
+      (handle-invite conn sender team user true true invite) ; recurse
+      (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
+
   ;; An already active team member... who is inviting this person, yoh?
   ([_conn _sender team user :guard #(= :active (keyword (:status %))) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
@@ -135,15 +144,6 @@
       ;; Need to send them a welcome to the team email.
       (handle-invite conn sender team updated-user true admin? invite) ; recurse  
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
-
-  ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
-  ([conn sender team user true _admin? :guard not invite :guard :admin]
-  (let [team-id (:team-id team)
-        user-id (:user-id user)]
-    (timbre/info "Making user:" user-id "an admin of team:" team-id)
-    (if-let [updated-team (team-res/add-admin conn team-id user-id)]
-      (handle-invite conn sender team user true true invite) ; recurse
-      (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; Non-active team member, needs a Slack invite/re-invite
   ([conn sender team user :guard #(not= :active (keyword (:status %))) true _admin? invite :guard :slack-id]
