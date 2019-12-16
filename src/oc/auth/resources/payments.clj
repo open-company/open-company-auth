@@ -43,6 +43,10 @@
     (stripe/enrich-customer
      (stripe/get-customer customer-id))))
 
+(schema/defn ^:always-validate customer-from-session
+  [session-id]
+  (stripe/enrich-customer (stripe/customer-from-session session-id)))
+
 (schema/defn ^:always-validate start-new-trial!
   [conn
    team-id :- (:team-id team/Team)
@@ -66,6 +70,11 @@
   (let [customer-id (get-customer-id conn team-id)
         customer    (stripe/get-customer customer-id)]
     (stripe/cancel-all-subscriptions! customer)))
+
+(schema/defn ^:always-validate update-subscription-item-plan!
+  [item-id
+   plan-id]
+  (stripe/update-subscription-item-plan! item-id plan-id))
 
 (schema/defn ^:always-validate report-latest-team-size!
   [customer-id :- (:id Customer)
