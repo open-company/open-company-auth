@@ -9,26 +9,29 @@
    :state        {:team-id "open-company-auth"}})
 
 (defn- slack-auth-url
-  ([scope] (slack-auth-url scope nil))
-  ([scope state]
+  ([scope-type scope] (slack-auth-url scope nil))
+  ([scope-type scope state]
    {:pre [(string? scope)
           (or (nil? state) (map? state))]}
    (let [orig-state (:state slack)
-         slack-state (oauth/encode-state-string (merge orig-state state))]
-     (str "https://slack.com/oauth/authorize?client_id="
+         slack-state (oauth/encode-state-string (merge orig-state state))
+         scope-name (if (= scope-type :bot) "scope" "user_scope")]
+     (str config/slack-oauth-url
+          "?client_id="
           config/slack-client-id
           "&redirect_uri="
           config/auth-server-url (:redirectURI slack)
+          "&install_redirect=update-to-granular-scopes"
+          (str "&" scope-name "=")
+          scope
           "&state="
-          slack-state
-          "&scope="
-          scope))))
+          slack-state))))
 
 (defn- slack-link
   [rel scope state]
   (hateoas/link-map rel
     hateoas/GET
-    (slack-auth-url scope state)
+    (slack-auth-url (keyword rel) scope state)
     {:accept "application/jwt"}
     {:auth-source "slack"
     :authentication "oauth"}))

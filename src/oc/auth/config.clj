@@ -77,17 +77,22 @@
 
 ;; ----- Slack -----
 
+;; Secrets
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
 (defonce slack-verification-token (env :open-company-slack-verification-token))
+
+;; OAuth configuration
+(defonce slack-oauth-url "https://slack.com/oauth/v2/authorize")
 (defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
 (defonce slack-bot-share-scope "channels:read,chat:write")
-(defonce slack-bot-notifications-scope "team:read,users:read,users:read.email,im:read,im:write,im:history")
+(defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
 (defonce slack-bot-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (clojure.string/join "," ["bot,commands"
+(defonce slack-bot-scope (clojure.string/join "," ["commands"
                                                    slack-bot-share-scope
                                                    slack-bot-notifications-scope
                                                    slack-bot-unfurl-scope]))
+;; Bot/App uninstall reporting
 (defonce slack-customer-support-webhook (env :oc-customer-support-webhook))
 
 ;; ----- Google Oauth -----
