@@ -59,7 +59,7 @@
     [org.clojure/data.json "0.2.7"]
     ;; Java library for the Stripe API https://github.com/stripe/stripe-java
     [com.stripe/stripe-java "16.2.0"]
-    ;; Not used directly, dependency of data.json and clj-slack
+    ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
     [org.clojure/tools.logging "0.5.0"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
