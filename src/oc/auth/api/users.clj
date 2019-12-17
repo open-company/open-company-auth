@@ -466,7 +466,7 @@
 
   :post! (fn [{:keys [existing-user expo-push-token] :as ctx}]
            (timbre/info "Storing Expo push token: " expo-push-token "for user" (-> ctx :user :user-id))
-           (let [push-tokens (into #{} (:expo-push-tokens existing-user []))
+           (let [push-tokens (set (:expo-push-tokens existing-user []))
                  new-push-tokens (conj push-tokens expo-push-token)
                  user-update {:expo-push-tokens (seq new-push-tokens)}
                  new-ctx (assoc ctx :user-update user-update)]
