@@ -18,12 +18,12 @@
     [org.clojure/tools.cli "0.4.2"]
     [http-kit "2.4.0-alpha4"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-devel "1.7.1"]
+    [ring/ring-devel "1.8.0"]
     ;; Web application library https://github.com/ring-clojure/ring
     ;; NB: clj-time pulled in by oc.lib
     ;; NB: joda-time pulled in by oc.lib via clj-time
     ;; NB: commons-codec pulled in by oc.lib
-    [ring/ring-core "1.7.1" :exclusions [clj-time joda-time commons-codec]]
+    [ring/ring-core "1.8.0" :exclusions [clj-time joda-time commons-codec]]
     ;; CORS library https://github.com/jumblerg/ring.middleware.cors
     [jumblerg/ring.middleware.cors "1.0.1"]
     ;; Ring logging https://github.com/nberger/ring-logger-timbre
@@ -35,26 +35,42 @@
     ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    [org.julienxx/clj-slack "0.6.3" :exclusions [clj-http org.clojure/data.json]]
+    ;; NB: org.clojure/tools.logging pulled in manually
+    [org.julienxx/clj-slack "0.6.3" :exclusions [clj-http org.clojure/data.json org.clojure/tools.logging]]
     ;; For google oauth2
-    [stuarth/clj-oauth2 "0.3.2"]
+    ;; NB: commons-codec pulled in by oc.lib
+    [stuarth/clj-oauth2 "0.3.2" :exclusions [commons-codec]]
     ;; Security library https://github.com/funcool/buddy
-    [buddy "2.0.0"]
+    ;; NB: commons-codec pulled in by oc.lib
+    ;; NB: buddy/buddy-core pulled in by buddy-auth
+    ;; NB: buddy/buddy-sign pulled in by buddy-auth    
+    [buddy "2.0.0" :exclusions [commons-codec buddy/buddy-core buddy/buddy-sign]]
     ;; Authentication for ring https://github.com/funcool/buddy-auth
-    [buddy/buddy-auth "2.2.0"]
+    ;; NB: funcool/cuerdas pulled in by oc.lib
+    [buddy/buddy-auth "2.2.0" :exclusions [funcool/cuerdas]]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "0.4.16"]
+    [zprint "0.5.3"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
-    [clj-http "3.10.0"]
+    ;; NB: org.apache.httpcomponents/httpclient pulled in by oc.lib
+    ;; NB: commons-codec pulled in by oc.lib
+    ;; NB: riddley pulled in by oc.lib via aleph → manifold
+    [clj-http "3.10.0" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
-    [org.clojure/data.json "0.2.6"]
+    [org.clojure/data.json "0.2.7"]
+    ;; Java library for the Stripe API https://github.com/stripe/stripe-java
+    [com.stripe/stripe-java "16.2.0"]
+    ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
+    [org.clojure/tools.logging "0.5.0"]
+
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
-    ;; Java library for the Stripe API https://github.com/stripe/stripe-java
-    [com.stripe/stripe-java "13.1.0"]
-
-    [open-company/lib "0.17.18-alpha" :exclusions [clj-http org.clojure/data.json]]
+    ;; NB: org.clojure/tools.logging pulled in manually
+    ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
+    [open-company/lib "0.17.24.1" :exclusions [clj-http
+                                               org.clojure/data.json
+                                               org.clojure/tools.logging
+                                               org.bouncycastle/bcpkix-jdk15on]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -95,13 +111,13 @@
       ]
       :plugins [
         ;; Example-based testing https://github.com/marick/lein-midje
-        [lein-midje "3.2.1"]
+        [lein-midje "3.2.2"]
         ;; Linter https://github.com/jonase/eastwood
         [jonase/eastwood "0.3.6"]
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
-        [lein-kibit "0.1.7" :exclusions [org.clojure/clojure rewrite-clj org.clojure/tools.reader]]
+        [lein-kibit "0.1.8" :exclusions [org.clojure/clojure rewrite-clj org.clojure/tools.reader]]
         ;; Dependency of lein-kibit and lein-zprint https://github.com/xsc/rewrite-clj
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.1" :exclusions [org.clojure/tools.reader]]
@@ -145,7 +161,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "0.3.16" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "0.5.3" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 

@@ -119,6 +119,10 @@
    :slack-domain (:slack-domain slack-org)
    :links links}))
 
+(defn invite-token-settings [invite-token-team]
+  {:links [email/create-link]
+   :team (select-keys invite-token-team [:name :logo-url :logo-width :logo-height])})
+
 (defn render-team
   "Given a team map, create a JSON representation of the team for the REST API."
   [team]
@@ -149,7 +153,3 @@
                                     :else (member-links %)))
                             (map #(dissoc % :admins)))}}
     {:pretty config/pretty?}))
-
-(defn invite-token-settings [invite-token-team]
-  {:links [email/create-link]
-   :team (select-keys invite-token-team [:name :logo-url :logo-width :logo-height])})

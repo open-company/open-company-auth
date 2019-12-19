@@ -12,6 +12,7 @@
             [oc.auth.config :as config]
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
+            [oc.auth.async.payments :as payments]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
@@ -83,6 +84,15 @@
   ;; No team to invite to!
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
 
+  ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
+  ([conn sender team user true _admin? :guard not invite :guard :admin]
+  (let [team-id (:team-id team)
+        user-id (:user-id user)]
+    (timbre/info "Making user:" user-id "an admin of team:" team-id)
+    (if-let [updated-team (team-res/add-admin conn team-id user-id)]
+      (handle-invite conn sender team user true true invite) ; recurse
+      (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
+
   ;; An already active team member... who is inviting this person, yoh?
   ([_conn _sender team user :guard #(= :active (keyword (:status %))) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
@@ -127,24 +137,13 @@
         status (keyword (:status user))]
     (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
-      (if (= status :active)
-        ;; TODO this is the case of an existing user being added to an additional team.
-        ;; We don't yet handle this case very well. They won't have access until they
-        ;; logout/login or their JWT expires, and they won't really know they got added
-        ;; to a new team unless they happen to notice the org dropdown in the UI.
-        ;; Need to send them a welcome to the team email.
-        user
-        (handle-invite conn sender team updated-user true admin? invite)) ; recurse
+      ;; TODO this is the case of an existing user being added to an additional team.
+      ;; We don't yet handle this case very well. They won't have access until they
+      ;; logout/login or their JWT expires, and they won't really know they got added
+      ;; to a new team unless they happen to notice the org dropdown in the UI.
+      ;; Need to send them a welcome to the team email.
+      (handle-invite conn sender team updated-user true admin? invite) ; recurse  
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
-
-  ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
-  ([conn sender team user true _admin? :guard not invite :guard :admin]
-  (let [team-id (:team-id team)
-        user-id (:user-id user)]
-    (timbre/info "Making user:" user-id "an admin of team:" team-id)
-    (if-let [updated-team (team-res/add-admin conn team-id user-id)]
-      (handle-invite conn sender team user true true invite) ; recurse
-      (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; Non-active team member, needs a Slack invite/re-invite
   ([conn sender team user :guard #(not= :active (keyword (:status %))) true _admin? invite :guard :slack-id]
@@ -201,12 +200,25 @@
 
     (do (timbre/error "Failed updating team:" team-id) false)))
 
-
 (defn- delete-team [conn team-id]
   (timbre/info "Deleting team:" team-id)
   (if (team-res/delete-team! conn team-id)
     (do (timbre/info "Deleted team:" team-id) true)
     (do (timbre/error "Failed deleting team:" team-id) false)))
+
+(defn- remove-team-member [conn team-id member-id admin?]
+  (timbre/info "Removing user" member-id "from team" team-id)
+  (let [updated-user (user-res/remove-team conn member-id team-id)]
+    (when admin?
+      (timbre/info "User is an admin, removing from admins of team" team-id)
+      (team-res/remove-admin conn team-id member-id))
+    (when (empty? (:teams updated-user))
+      (timbre/info "User has no other team left, deleting user" member-id)
+      (user-res/delete-user! conn member-id))
+    (when config/payments-enabled? 
+      (payments/report-team-seat-usage! conn team-id))
+    (timbre/info "User" member-id "removed from team" team-id)
+    {:updated-team (team-res/get-team conn team-id)}))
 
 (defn- create-invite-link [conn team-id existing-team user]
   (timbre/info "Creating invite-link for team" team-id "requested by" (:user-id user))
@@ -393,6 +405,36 @@
   ;; Responses
   :respond-with-entity? false
   :handle-created (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response)))
+  :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
+
+(defresource member [conn team-id member-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :delete]
+
+  ;; Media type client accepts
+  :available-media-types [mt/user-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
+
+  ;; Media type client sends
+  :malformed? false ; no check, this media type is blank
+
+  ;; Auhorization
+  :allowed? (by-method {
+    :options true
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                               user (and (lib-schema/unique-id? member-id) (user-res/get-user conn member-id))
+                               member? ((set (:teams user)) (:team-id team))]
+                        {:existing-user user :admin? ((set (:admins team)) member-id)}
+                        false)) ; no team, no user, or user not a member of the team
+
+  ;; Actions
+  :delete! (fn [ctx] (remove-team-member conn team-id member-id (:admin? ctx)))
+
+  ;; Responses
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
 
 ;; A resource for the email domains of a particular team
@@ -621,6 +663,9 @@
       ;; Invite user to team
       (ANY "/teams/:team-id/users" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
       (ANY "/teams/:team-id/users/" [team-id] (pool/with-pool [conn db-pool] (invite conn team-id)))
+      ;; Remove user from team
+      (ANY "/teams/:team-id/users/:member-id" [team-id member-id] (pool/with-pool [conn db-pool] (member conn team-id member-id)))
+      (ANY "/teams/:team-id/users/:member-id/" [team-id member-id] (pool/with-pool [conn db-pool] (member conn team-id member-id)))
       ;; Team admin operations
       (ANY "/teams/:team-id/admins/:user-id" [team-id user-id]
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))

@@ -1,5 +1,6 @@
 (ns oc.auth.lib.stripe
-  (:require [oc.auth.config :as config])
+  (:require [oc.auth.config :as config]
+            [taoensso.timbre :as timbre])
   (:import [com.stripe Stripe]
            [com.stripe.model Customer Subscription SubscriptionItem Plan Invoice SetupIntent PaymentMethod]
            [com.stripe.model.checkout Session]
@@ -90,16 +91,19 @@
   "Updates the plan or quantity of an item on a current subscription.
   See https://stripe.com/docs/api/subscription_items/update?lang=java for options."
   [item-id opts]
+  (timbre/debug "Update subscription item" item-id "with options" opts)
   (let [sub-item (SubscriptionItem/retrieve item-id)]
     (convert-subscription-item
      (.update sub-item opts))))
 
 (defn update-subscription-item-plan!
   [item-id new-plan-id]
+  (timbre/debug "Update subscription item" item-id "with plan-id" new-plan-id)
   (update-subscription-item! item-id {"plan" new-plan-id}))
 
 (defn delete-subscription-item!
   [item-id]
+    (timbre/debug "Delete subscription item" item-id)
   (let [item (SubscriptionItem/retrieve item-id)]
     (convert-subscription-item
      (.delete item))))
@@ -143,27 +147,33 @@
   "Subscribes the customer to the given plan and returns the subscription.
   See https://stripe.com/docs/api/subscriptions/create?lang=java for options."
   [customer-id plan-id & [opts item-opts]]
+  (timbre/debug "Creating subscription for customer" customer-id "plan-id" plan-id)
   (let [items     [(merge {"plan" plan-id}
                           item-opts)]
         sub (merge {"customer" customer-id
-                    "items"    items}
+                    "items"    items
+                    "prorate"  false}
                    opts)]
     (convert-subscription
      (Subscription/create sub))))
 
 (defn start-trial!
   [customer-id plan-id & [opts item-opts]]
+  (timbre/debug "Start trial for customer" customer-id "plan-id" plan-id)
   (let [trial-opts {"trial_from_plan" true}]
     (create-subscription! customer-id plan-id (merge opts trial-opts) item-opts)))
 
 (defn update-subscription!
   [sub-id opts]
+  (timbre/debug "Updating subscription" sub-id)
   (let [sub (Subscription/retrieve sub-id)]
     (convert-subscription
-     (.update sub opts))))
+     (.update sub (merge {"prorate" false}
+                         opts)))))
 
 (defn update-subscription-quantity!
   [sub-id quantity & [opts]]
+  (timbre/debug "Updating subscription" sub-id "quantity" quantity)
   (update-subscription! sub-id (merge {"quantity" quantity}
                                       opts)))
 
@@ -175,6 +185,7 @@
 (defn cancel-sub-now!
   "Cancels a subscription immediately."
   [sub-id]
+  (timbre/debug "Cancel sub now" sub-id)
   (let [sub (Subscription/retrieve sub-id)]
     (.cancel sub {"invoice_now" false
                   "prorate"     false})))
@@ -234,12 +245,14 @@
   "Creates a Customer object in the Stripe API and returns it.
   See https://stripe.com/docs/api/customers/create?lang=java for options."
   [& [options]]
+  (timbre/debug "Creacting customer with options" options)
   (-> (Customer/create (or options {}))
       convert-customer
       enrich-customer))
 
 (defn update-customer!
   [customer-id opts]
+  (timbre/debug "Updating customer" customer-id "options" opts)
   (let [customer (Customer/retrieve customer-id)]
     (-> (.update customer opts)
         convert-customer
@@ -247,12 +260,14 @@
 
 (defn set-customer-default-payment-method!
   [customer-id pm-id]
+  (timbre/debug "Set default payment method for customer" customer-id "payment method id" pm-id)
   (update-customer! customer-id {"invoice_settings"
                                  {"default_payment_method" pm-id}}))
 
 (defn cancel-all-subscriptions!
   "Flags all of a customers active or trialing subscriptions for cancellation."
   [{:keys [subscriptions] :as customer}]
+  (timbre/debug "Cancel all subscription for customer" (:id customer))
   (doseq [sub subscriptions]
     (when-not (canceled? sub)
       (flag-sub-for-cancellation! (:id sub)))))
@@ -262,17 +277,12 @@
   bills the customer the prorated amount for the subscription that is current
   (i.e. today falls inside of its period start/end dates)."
   [{:keys [subscriptions] :as customer} quantity]
-  (let [first-sub (first subscriptions)
-        prorate?  (> quantity (:quantity first-sub))]
+  (timbre/debug "Update all subscriptions for customer" (:id customer) "quantity" quantity)
+  (let [first-sub (first subscriptions)]
     (update-subscription-quantity! (:id first-sub)
-                                   quantity
-                                   {"prorate" prorate?})
-    (when (and prorate?
-               (not (trialing? first-sub)))
-      (create-invoice! (:id customer) {"subscription" (:id first-sub)
-                                       "auto_advance" true})))
+                                   quantity))
   (doseq [sub (rest subscriptions)]
-    (update-subscription-quantity! (:id sub) quantity {"prorate" false})))
+    (update-subscription-quantity! (:id sub) quantity)))
 
 (defn schedule-new-subscription!
   "Schedules a new subscription to begin at the end of the currently active one.
@@ -285,6 +295,7 @@
   newly created subscription.
   Customer must have payment method on file to schedule new subscriptions."
   [customer-id new-plan-id & [opts item-opts]]
+  (timbre/debug "Scheduling new subscription for" customer-id "new plan" new-plan-id)
   (let [customer  (-> customer-id get-customer enrich-customer)
         subs      (:subscriptions customer)
         final-sub (last subs)]
@@ -297,10 +308,10 @@
         ;; this is our one and only subscription, append the new one
         (let [final-anchor   (:current-period-end final-sub)
               new-sub-params (merge opts
-                                    {"prorate" false
-                                     "billing_cycle_anchor" final-anchor
+                                    {"billing_cycle_anchor" final-anchor
                                      "items" [{"plan"     new-plan-id
                                                "quantity" (:quantity final-sub)}]})]
+          (timbre/debug "Customer has" (count subs) "subscriptions")
           (if (and (not (canceled? final-sub))
                    (= 1 (count subs)))
             (flag-sub-for-cancellation! (:id final-sub))
@@ -342,6 +353,13 @@
                      "success_url"          success-url
                      "cancel_url"           cancel-url}
                     opts))))
+
+(defn customer-from-session
+  "Retrieve the customer from the sessionID"
+  [session-id]
+  (let [session  (Session/retrieve session-id)
+        customer-id (.getClientReferenceId session)]
+    (get-customer customer-id)))
 
 (defn assoc-session-result-with-customer!
   "Callback for the session created with `create-checkout-session!`. Once customer
@@ -388,8 +406,7 @@
   (let [now            (stripe-now)
         one-month      (* 60 60 24 30)
         month-from-now (+ now one-month)]
-    (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now
-                                                               "prorate" false}))
+    (create-subscription! my-id config/stripe-default-plan-id {"billing_cycle_anchor" month-from-now}))
 
   ;; ----- Stripe time utilities -----
 
