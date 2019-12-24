@@ -134,23 +134,29 @@
 
       ;; Token check is A-OK
       (when (= type "event_callback")
-        (let [event-type (:type event)]
-          (when (= event-type "tokens_revoked")
+        (let [event-type (:type event)
+              bot-tokens (-> event :tokens :bot)]
+          ;; If message is for a token revoked of a bot (we ignore revoke for users atm)
+          (when (and (= event-type "tokens_revoked")
+                     (seq bot-tokens))
             (let [slack-team-id (:team_id body)]
               (pool/with-pool [conn db-pool]
                 (let [teams (team-res/list-teams-by-index conn :slack-orgs slack-team-id [:slack-orgs :admins])
                       slack-org (slack-res/get-slack-org conn slack-team-id)]
-                  (slack-res/delete-slack-org! conn slack-team-id)
-                  (doseq [team teams]
-                    ;; Remove the slack org from the team
-                    (team-res/remove-slack-org conn
-                                               (:team-id team)
-                                               slack-team-id)
-                    (cleanup-team-users conn team slack-org)
-                    ;; If we have the webhook setup send the message in Slack
-                    ;; notifying the remove of the bot
-                    (when config/slack-customer-support-webhook
-                      (notify-bot-removed conn team))))))))))))
+                  ;; If the bot id is the same of our bot:
+                  (when (some #(= (:bot-user-id slack-org) %) bot-tokens)
+                    (slack-res/delete-slack-org! conn slack-team-id)
+                    (doseq [team teams]
+                      ;; Remove the slack org from the team
+                      (team-res/remove-slack-org conn
+                                                 (:team-id team)
+                                                 slack-team-id)
+                      (cleanup-team-users conn team slack-org)
+                      ;; If we have the webhook setup send the message in Slack
+                      ;; notifying the remove of the bot
+                      (when config/slack-customer-support-webhook
+                        (notify-bot-removed conn team)))))))))))))
+
 ;; ----- SQS handling -----
 
 (defn- read-message-body
