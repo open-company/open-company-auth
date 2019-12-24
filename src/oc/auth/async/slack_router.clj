@@ -54,19 +54,25 @@
 
       ;; Token check is A-OK
       (when (= type "event_callback")
-        (let [event-type (:type event)]
-          (when (= event-type "tokens_revoked")
+        (let [event-type (:type event)
+              bot-tokens (-> event :tokens :bot)]
+          ;; If message is for a token revoked of a bot (we ignore revoke for users atm)
+          (when (and (= event-type "tokens_revoked")
+                     (seq bot-tokens))
             (let [slack-team-id (:team_id body)]
               (pool/with-pool [conn db-pool]
-                (let [teams (team-res/list-teams-by-index
+                (let [slack-org (slack-res/get-slack-org conn slack-team-id)
+                      teams (team-res/list-teams-by-index
                              conn
                              :slack-orgs
                              slack-team-id)]
-                  (slack-res/delete-slack-org! conn slack-team-id)
-                  (doseq [team teams]
-                    (team-res/remove-slack-org conn
-                                               (:team-id team)
-                                               slack-team-id)))))))))))
+                  ;; If the bot id is the same of our bot:
+                  (when (some #(= (:bot-user-id slack-org) %) bot-tokens)
+                    (slack-res/delete-slack-org! conn slack-team-id)
+                    (doseq [team teams]
+                      (team-res/remove-slack-org conn
+                                                 (:team-id team)
+                                                 slack-team-id))))))))))))
 ;; ----- SQS handling -----
 
 (defn- read-message-body
