@@ -15,13 +15,27 @@
             [oc.lib.user :as lib-user]
             [if-let.core :refer (if-let*)]
             [schema.core :as schema]
-            [clojure.edn :as edn])
-  (:import [java.util Base64]))
+            [clojure.edn :as edn]
+            [ring.util.codec :as codec]
+            [ring.util.request :as request]
+            [clojure.walk :refer (keywordize-keys)]
+            [taoensso.timbre :as timbre])
+  (:import [java.util Base64]
+           [java.net URL]))
 
 ;; ----- URLs ------
 
 (def ^:private checkout-session-success-path "/payments/callbacks/checkout-session/success")
 (def ^:private checkout-session-cancel-path "/payments/callbacks/checkout-session/cancel")
+
+;; ----- Utilities -----
+
+;; From https://github.com/ring-clojure/ring/blob/master/ring-core/src/ring/middleware/params.clj
+(defn- parse-params [params encoding]
+  (let [params (codec/form-decode params encoding)]
+    (if (map? params)
+      (keywordize-keys params)
+      {})))
 
 ;; ----- Validations -----
 
@@ -60,6 +74,7 @@
 
 (defn- create-customer-with-admin-as-contact!
   [ctx conn team-id]
+  (timbre/info "Creating customer for team" team-id)
   (let [;; FIXME: starting to complect with team
         team         (team-res/get-team conn team-id)
         first-admin  (->> team :admins first (user-res/get-user conn))
@@ -68,17 +83,20 @@
         new-customer (payments-res/create-customer! conn team-id contact)]
     (payments-res/start-new-trial! conn team-id config/stripe-default-plan-id)
     (payments-async/report-team-seat-usage! conn team-id)
+    (timbre/info "Customer created" (:id new-customer) "with email" (:email contact))
     {:new-customer new-customer}))
 
 (defn- schedule-plan-change!
   [ctx conn team-id]
   (when-let [plan-id (:plan-id ctx)]
     (payments-res/schedule-new-subscription! conn team-id plan-id)
+    (timbre/info "Scheduled plan change for team" team-id "to plan" plan-id)
     {:updated-customer (payments-res/get-customer conn team-id)}))
 
 (defn- cancel-subscription!
   [ctx conn team-id]
   (payments-res/cancel-subscription! conn team-id)
+  (timbre/info "Cancelled subscription for team" team-id)
   {:updated-customer (payments-res/get-customer conn team-id)})
 
 (defn- wrap-redirect-urls
@@ -94,6 +112,7 @@
 
 (defn- create-checkout-session!
   [ctx conn team-id]
+  (timbre/info "Creating checkout session for team" team-id)
   (let [redirects    (:checkout-redirects ctx)
         callbacks    (wrap-redirect-urls redirects)
         session      (payments-res/create-checkout-session! conn team-id callbacks)]
@@ -195,14 +214,37 @@
                               (payments-rep/render-checkout-session session)))
   )
 
-(defn checkout-session-success [conn session-id state]
+(defn checkout-session-success [conn req session-id state]
+  (timbre/info "Checkout success redirect" session-id)
   (let [decoder   (Base64/getUrlDecoder)
         redirects (->> state (.decode decoder) (String.) edn/read-string)
-        customer (payments-res/finish-checkout-session! conn session-id)]
-    (payments-res/end-trial-period! conn (:id customer))
+        success-url (:success-url redirects)
+        parsed-success-url (URL. success-url)
+        encoding (or (request/character-encoding req)
+                     "UTF-8")
+        success-url-params (parse-params (.getQuery parsed-success-url) encoding)
+        current-customer (payments-res/customer-from-session session-id)
+        current-subscription (-> current-customer :subscriptions first)
+        should-switch-plan? (and (seq (:update-plan success-url-params))
+                                 (= (count (:subscriptions current-customer)) 1)
+                                 (= (:status current-subscription) "trialing")
+                                 (not= (-> current-subscription :plan :id) (:update-plan success-url-params))
+                                 (some #(when (= (:id %) (:update-plan success-url-params)) %) (:available-plans current-customer)))]
+    (timbre/info "Checkout session with switch plan" (:update-plan success-url-params) "will update?" should-switch-plan?)
+    ;; In case they want to switch to a different plan
+    ;; while they are still on trial (and so have only one subscription still)
+    ;; and the new plan does exist
+    (when should-switch-plan?
+      (payments-res/update-subscription-item-plan! (-> current-subscription :item :id) (:update-plan success-url-params)))
+    ;; finish checkout to actually charge the newly added card
+    (payments-res/finish-checkout-session! conn session-id)
+    ;; finish the trial period if still trialing
+    (payments-res/end-trial-period! conn (:id current-customer))
+    (timbre/info "Checkout success redirecting to web UI for" session-id)
     (response/redirect (:success-url redirects))))
 
 (defn checkout-session-cancel [conn session-id state]
+  (timbre/info "Checkout cancel redirect" session-id)
   (let [decoder   (Base64/getUrlDecoder)
         redirects (->> state (.decode decoder) (String.) edn/read-string)]
     (response/redirect (:cancel-url redirects))))
@@ -225,8 +267,8 @@
           (pool/with-pool [conn db-pool] (checkout-session conn team-id)))
 
      (ANY checkout-session-success-path
-          [sessionId state] ;; obtained from query params
-          (pool/with-pool [conn db-pool] (checkout-session-success conn sessionId state)))
+          [sessionId state :as req] ;; obtained from query params
+          (pool/with-pool [conn db-pool] (checkout-session-success conn req sessionId state)))
 
      (ANY checkout-session-cancel-path
           [sessionId state] ;; obtained from query params
