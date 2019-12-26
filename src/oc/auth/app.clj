@@ -67,6 +67,7 @@
     "AWS SQS slack queue: " c/aws-sqs-slack-router-auth-queue "\n"
     "AWS SQS expo queue: " c/aws-sqs-expo-queue "\n"
     "AWS SNS notification topic ARN: " c/aws-sns-auth-topic-arn "\n"
+    "Slack customer support webhook: " c/slack-customer-support-webhook "\n"
     "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
     "Sentry: " c/dsn "\n"

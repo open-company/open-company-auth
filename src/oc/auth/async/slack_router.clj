@@ -80,29 +80,32 @@
            :auth-server-url config/auth-server-url
            :passphrase config/passphrase}
         orgs (storage-lib/orgs-for c {:user-id (first (:admins team))} (:team-id team))]
-    (timbre/info "Notify bot removed for team:" (:team-id team) "for orgs:" (clojure.string/join ", " (mapv :slug orgs)))
+    
+    (timbre/info "Email notify bot removed for team members of:" (:team-id team)
+                 "for orgs:" (clojure.string/join ", " (mapv :slug orgs)))
     (doseq [org orgs]
       (email-admins-via-sqs conn org (:admins team)))
-    (slack-lib/message-webhook
-     config/slack-customer-support-webhook
-     (str "Carrot Auth Service"
-      (cond
-       (= config/short-server-name "staging")
-       " (staging)"
-       (= config/short-server-name "localhost")
-       " (localhost)"))
-     (str "<!here> Carrot bot was removed for the following orgs:"
-      (clojure.string/join ","
-       (map #(str
-              " <" config/dashboard-url "/orgs/" (:slug %)
-              "|" (:name %) " (" (count (:admins team)) " admin" (when (not= (count (:admins team)) 1) "s") ")>")
-        orgs))))))
+    
+    ;; If we have the webhook setup send the message in Slack
+    (when config/slack-customer-support-webhook
+      (timbre/info "Notifying Slack webdook of bot removal for team:" (:team-id team))
+      (slack-lib/message-webhook
+        config/slack-customer-support-webhook
+        (str "Carrot Auth Service"
+          (cond
+            (= config/short-server-name "staging") " (staging)"
+            (= config/short-server-name "localhost") " (localhost)"))
+          (str "<!here> Carrot bot was removed for the following orgs:"
+          (clojure.string/join ","
+            (map #(str " <" config/dashboard-url "/orgs/" (:slug %)
+                       "|" (:name %) " (" (count (:admins team))
+                       " admin" (when (not= (count (:admins team)) 1) "s") ")>")
+              orgs)))))))
 
-(defn slack-event
+(defn- slack-event
   "
-  Handle a message event from Slack. Ignore events that aren't threaded, or that are from us.
-  Idea here is to do very minimal processing and get a 200 back to Slack as fast as possible as this is a 'fire hose'
-  of requests. So minimal logging and minimal handling of the request.
+  Handle a message event from Slack.
+
   Message events look like:
   {'token' 'IxT9ZaxvjqRdKxYtWdTw21Xv',
    'team_id' 'T06SBMH60',
@@ -122,40 +125,34 @@
   "
   [db-pool body]
   (let [type (:type body)
-        token (:token body)
         event (:event body)
         channel (:channel event)
         thread (:thread_ts event)]
-    ;; Token check
-    (if-not (= token config/slack-verification-token)
-
-      ;; Eghads! It might be a Slack impersonator!
-      (timbre/warn "Slack verification token mismatch, request provided:" token)
-
-      ;; Token check is A-OK
-      (when (= type "event_callback")
-        (let [event-type (:type event)
-              bot-tokens (-> event :tokens :bot)]
-          ;; If message is for a token revoked of a bot (we ignore revoke for users atm)
-          (when (and (= event-type "tokens_revoked")
-                     (seq bot-tokens))
-            (let [slack-team-id (:team_id body)]
-              (pool/with-pool [conn db-pool]
-                (let [teams (team-res/list-teams-by-index conn :slack-orgs slack-team-id [:slack-orgs :admins])
-                      slack-org (slack-res/get-slack-org conn slack-team-id)]
-                  ;; If the bot id is the same of our bot:
-                  (when (some #(= (:bot-user-id slack-org) %) bot-tokens)
-                    (slack-res/delete-slack-org! conn slack-team-id)
-                    (doseq [team teams]
-                      ;; Remove the slack org from the team
-                      (team-res/remove-slack-org conn
-                                                 (:team-id team)
-                                                 slack-team-id)
-                      (cleanup-team-users conn team slack-org)
-                      ;; If we have the webhook setup send the message in Slack
-                      ;; notifying the remove of the bot
-                      (when config/slack-customer-support-webhook
-                        (notify-bot-removed conn team)))))))))))))
+    (timbre/debug "Processing Slack event:" body)
+    (when (= type "event_callback")
+      (let [event-type (:type event)
+            bot-tokens (-> event :tokens :bot)]
+        ;; If message is for a token revoked of a bot (we ignore revoke for users atm)
+        (when (and (= event-type "tokens_revoked")
+                   (seq bot-tokens))
+          (let [slack-team-id (:team_id body)]
+            (timbre/info "Handling Slack token revocation for team:" slack-team-id
+                         " and bot with token:" bot-tokens)
+            (pool/with-pool [conn db-pool]
+              (let [teams (team-res/list-teams-by-index conn :slack-orgs slack-team-id [:slack-orgs :admins])
+                    slack-org (slack-res/get-slack-org conn slack-team-id)]
+                ;; If the bot id is the same of our bot:
+                (when (some #(= (:bot-user-id slack-org) %) bot-tokens)
+                  (timbre/info "Deleting Slack org:" slack-team-id)
+                  (slack-res/delete-slack-org! conn slack-team-id)
+                  (doseq [team teams]
+                    ;; Remove the slack org from the team
+                    (team-res/remove-slack-org conn
+                                               (:team-id team)
+                                               slack-team-id)
+                    (cleanup-team-users conn team slack-org)
+                    (timbre/info "Notifying of bot removal for:" slack-team-id)
+                    (notify-bot-removed conn team)))))))))))
 
 ;; ----- SQS handling -----
 

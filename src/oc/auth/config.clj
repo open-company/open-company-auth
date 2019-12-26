@@ -79,7 +79,6 @@
 
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
-(defonce slack-verification-token (env :open-company-slack-verification-token))
 (defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
 (defonce slack-bot-share-scope "channels:read")
 (defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
@@ -88,7 +87,7 @@
                                                    slack-bot-share-scope
                                                    slack-bot-notifications-scope
                                                    slack-bot-unfurl-scope]))
-(defonce slack-customer-support-webhook (env :oc-customer-support-webhook))
+(defonce slack-customer-support-webhook (env :open-company-slack-customer-support-webhook))
 
 ;; ----- Google Oauth -----
 
