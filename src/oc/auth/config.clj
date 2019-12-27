@@ -83,7 +83,7 @@
 (defonce slack-bot-share-scope "channels:read")
 (defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
 (defonce slack-bot-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (clojure.string/join "," ["bot,commands"
+(defonce slack-bot-scope (clojure.string/join "," ["bot," ;; "commands" need perm in prod app
                                                    slack-bot-share-scope
                                                    slack-bot-notifications-scope
                                                    slack-bot-unfurl-scope]))
