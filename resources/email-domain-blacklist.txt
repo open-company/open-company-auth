@@ -1,4 +1,4 @@
-/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of Oct. 2, 2018 */
+/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of November 19, 2019 */
 0-mail.com
 027168.com
 0815.su
@@ -190,6 +190,7 @@ animalwoman.net
 anjungcafe.com
 annsmail.com
 ano-mail.net
+anonmails.de
 anonymous.to
 anote.com
 another.com
@@ -363,6 +364,7 @@ bluehyppo.com
 bluemail.ch
 bluemail.dk
 bluesfan.com
+bluewin.ch
 blueyonder.co.uk
 blushmail.com
 blutig.me
@@ -579,7 +581,6 @@ colleges.com
 columbus.rr.com
 columbusrr.com
 columnist.com
-comcast.com
 comcast.net
 comic.com
 communityconnect.com
@@ -912,6 +913,7 @@ excite.it
 execs.com
 exemail.com.au
 exg6.exghost.com
+existiert.net
 expressasia.com
 extenda.net
 extended.com
@@ -1370,6 +1372,7 @@ hotmail.co.za
 hotmail.com
 hotmail.com.au
 hotmail.com.br
+hotmail.com.tr
 hotmail.de
 hotmail.es
 hotmail.fi
@@ -1530,6 +1533,7 @@ irangate.net
 iraqmail.com
 ireland.com
 irelandmail.com
+iremail.de
 irj.hu
 iroid.com
 isellcars.com
@@ -1778,7 +1782,9 @@ maennerversteherin.com
 maennerversteherin.de
 maffia.hu
 magicmail.co.za
+magspam.net
 mahmoodweb.com
+mail.bg
 mail-awu.de
 mail-box.cz
 mail-center.com
@@ -3108,6 +3114,7 @@ mailchoose.co
 mailcity.com
 mailclub.fr
 mailclub.net
+maildrop.cc
 maildrop.gq
 maildx.com
 mailed.ro
@@ -3124,7 +3131,6 @@ mailhaven.com
 mailhood.com
 mailimate.com
 mailinatar.com
-mailinator.com
 mailinator.org
 mailinator.us
 mailinblack.com
@@ -3289,6 +3295,9 @@ mt2015.com
 mt2016.com
 mttestdriver.com
 muehlacker.tk
+muell.icu
+muellmail.com
+muellemail.com
 mundomail.net
 munich.com
 music.com
@@ -3452,6 +3461,7 @@ nullbox.info
 nur-fuer-spam.de
 nus.edu.sg
 nwldx.com
+nwytg.net
 nxt.ru
 ny.com
 nybella.com
@@ -3470,6 +3480,7 @@ office-dateien.de
 office-email.com
 offroadwarrior.com
 oicexchange.com
+oida.icu
 oikrach.com
 okbank.com
 okhuman.com
@@ -3569,6 +3580,7 @@ pakistanmail.com
 pakistanoye.com
 palestinemail.com
 pandora.be
+papierkorb.me
 parkjiyoon.com
 parsmail.com
 partlycloudy.com
@@ -3992,6 +4004,7 @@ spambob.com
 spambob.org
 spambog.net
 spambooger.com
+spam.care
 spamcero.com
 spamdecoy.net
 spameater.com
@@ -4352,6 +4365,7 @@ ukmail.org
 ukmax.com
 ukr.net
 uku.co.uk
+ultra.fyi
 ultapulta.com
 ultrapostman.com
 ummah.org
@@ -4382,6 +4396,7 @@ upf.org
 uplipht.com
 ureach.com
 urgentmail.biz
+urhen.com
 uroid.com
 usa.com
 usa.net

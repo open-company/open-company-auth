@@ -58,7 +58,7 @@
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "0.2.7"]
     ;; Java library for the Stripe API https://github.com/stripe/stripe-java
-    [com.stripe/stripe-java "16.2.0"]
+    [com.stripe/stripe-java "16.4.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
     [org.clojure/tools.logging "0.5.0"]
 
@@ -67,10 +67,10 @@
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.24.1" :exclusions [clj-http
-                                               org.clojure/data.json
-                                               org.clojure/tools.logging
-                                               org.bouncycastle/bcpkix-jdk15on]]
+    [open-company/lib "0.17.24.3" :exclusions [clj-http
+                                                      org.clojure/data.json
+                                                      org.clojure/tools.logging
+                                                      org.bouncycastle/bcpkix-jdk15on]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
