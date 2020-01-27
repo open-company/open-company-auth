@@ -50,10 +50,12 @@
 
 ;; ----- URLs -----
 
-(defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
-(defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
-(defonce storage-server-url (or (env :storage-server-url) "http://localhost:3001"))
-(defonce dashboard-url (or (env :oc-dashboard-endpoint) "http://localhost:4001"))
+(defonce host "localhost")
+
+(defonce auth-server-url (or (env :auth-server-url) (str "http://" host ":" auth-server-port)))
+(defonce ui-server-url (or (env :ui-server-url) (str "http://" host ":3559")))
+(defonce storage-server-url (or (env :storage-server-url) (str "http://" host ":3001")))
+(defonce dashboard-url (or (env :oc-dashboard-endpoint) (str "http://" host ":4001")))
 
 ;; ----- AWS SQS -----
 
