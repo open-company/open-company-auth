@@ -50,7 +50,7 @@
 
 ;; ----- URLs -----
 
-(defonce host "localhost")
+(defonce host (or (env :local-dev-host) "localhost"))
 
 (defonce auth-server-url (or (env :auth-server-url) (str "http://" host ":" auth-server-port)))
 (defonce ui-server-url (or (env :ui-server-url) (str "http://" host ":3559")))
