@@ -24,7 +24,6 @@
    [oc.auth.api.google :as google-api]
    [oc.auth.api.users :as users-api]
    [oc.auth.api.teams :as teams-api]
-   [oc.auth.api.payments :as payments-api]
    [oc.auth.async.slack-router :as slack-router]
    [oc.auth.async.expo :as expo]))
 
@@ -52,8 +51,7 @@
     (slack-api/routes sys)
     (google-api/routes sys)
     (users-api/routes sys)
-    (teams-api/routes sys)
-    (payments-api/routes sys)))
+    (teams-api/routes sys)))
 
 ;; ----- System Startup -----
 
@@ -66,6 +64,7 @@
     "AWS SQS bot queue: " c/aws-sqs-bot-queue "\n"
     "AWS SQS slack queue: " c/aws-sqs-slack-router-auth-queue "\n"
     "AWS SQS expo queue: " c/aws-sqs-expo-queue "\n"
+    "AWS SQS payments queue: " c/aws-sqs-payments-queue "\n"
     "AWS SNS notification topic ARN: " c/aws-sns-auth-topic-arn "\n"
     "Slack customer support webhook: " c/slack-customer-support-webhook "\n"
     "Trace: " c/liberator-trace "\n"

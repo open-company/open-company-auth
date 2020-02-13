@@ -66,6 +66,7 @@
 (defonce aws-sqs-email-queue (env :aws-sqs-email-queue))
 (defonce aws-sqs-slack-router-auth-queue (env :aws-sqs-slack-router-auth-queue))
 (defonce aws-sqs-expo-queue (env :aws-sqs-expo-queue))
+(defonce aws-sqs-payments-queue (env :aws-sqs-payments-queue))
 
 (defonce aws-sns-auth-topic-arn (env :aws-sns-auth-topic-arn))
 
@@ -114,12 +115,6 @@
 
 (defonce email-domain-blacklist (rest (clojure.string/split
                                   (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
-
-;; ----- Stripe -----
-
-(defonce stripe-secret-key         (env :stripe-secret-key))
-(defonce stripe-premium-product-id (env :stripe-premium-product-id))
-(defonce stripe-default-plan-id    (env :stripe-default-plan-id))
 
 ;; ----- OpenCompany -----
 

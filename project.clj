@@ -16,7 +16,7 @@
     [org.clojure/clojure "1.10.1"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "0.4.2"]
-    [http-kit "2.4.0-alpha4"] ; Web client/server http://http-kit.org/
+    [http-kit "2.4.0-alpha5"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.8.0"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -57,17 +57,15 @@
     [clj-http "3.10.0" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "0.2.7"]
-    ;; Java library for the Stripe API https://github.com/stripe/stripe-java
-    [com.stripe/stripe-java "16.4.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
-    [org.clojure/tools.logging "0.5.0"]
+    [org.clojure/tools.logging "0.6.0"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.24.3" :exclusions [clj-http
+    [open-company/lib "0.17.25.2" :exclusions [clj-http
                                                       org.clojure/data.json
                                                       org.clojure/tools.logging
                                                       org.bouncycastle/bcpkix-jdk15on]]
@@ -140,6 +138,7 @@
         :aws-sqs-bot-queue "CHANGE-ME"
         :aws-sqs-email-queue "CHANGE-ME"
         :aws-sqs-slack-router-auth-queue "CHANGE-ME"
+        :aws-sqs-payments-queue "OPTIONAL"
         :aws-sqs-expo-queue "CHANGE-ME"
         :aws-sns-auth-topic-arn "" ; SNS topic to publish notifications (optional)
         :log-level "debug"
@@ -151,7 +150,7 @@
         ;; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-checkall "0.1.1"]
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint
-        [lein-pprint "1.2.0"]
+        [lein-pprint "1.3.2"]
         ;; Check for outdated dependencies https://github.com/xsc/lein-ancient
         [lein-ancient "0.6.15"]
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
