@@ -15,8 +15,8 @@
     ;; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/clojure "1.10.1"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
-    [org.clojure/tools.cli "0.4.2"]
-    [http-kit "2.4.0-alpha5"] ; Web client/server http://http-kit.org/
+    [org.clojure/tools.cli "1.0.194"]
+    [http-kit "2.4.0-alpha6"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.8.0"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -56,9 +56,9 @@
     ;; NB: riddley pulled in by oc.lib via aleph → manifold
     [clj-http "3.10.0" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
-    [org.clojure/data.json "0.2.7"]
+    [org.clojure/data.json "1.0.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
-    [org.clojure/tools.logging "0.6.0"]
+    [org.clojure/tools.logging "1.0.0"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
@@ -111,7 +111,7 @@
         ;; Example-based testing https://github.com/marick/lein-midje
         [lein-midje "3.2.2"]
         ;; Linter https://github.com/jonase/eastwood
-        [jonase/eastwood "0.3.6"]
+        [jonase/eastwood "0.3.10"]
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
