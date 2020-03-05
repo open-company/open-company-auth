@@ -205,9 +205,10 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :aws-sqs-email-queue "CHANGE-ME"
     :aws-sqs-slack-router-auth-queue "CHANGE-ME"
     :aws-sns-auth-topic-arn "CHANGE-ME"
-    :aws-sqs-payments-queue "OPTIONAL"
+    :aws-sqs-payments-queue "" ; Queue to send team size changes to (optional)
     :aws-sqs-expo-queue "CHANGE-ME"
     :aws-lambda-expo-prefix "CHANGE-ME"
+    :aws-sns-auth-topic-arn "" ; SNS topic to publish notifications (optional)
     :log-level "debug"
   }
 ```

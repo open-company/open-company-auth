@@ -118,4 +118,4 @@
 
 ;; ----- OpenCompany -----
 
-(defonce payments-enabled? (bool (env :payments-enabled)))
+(defonce payments-enabled? (not (clojure.string/blank? aws-sqs-payments-queue)))
