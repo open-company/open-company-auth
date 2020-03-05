@@ -207,6 +207,7 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :aws-sns-auth-topic-arn "CHANGE-ME"
     :aws-sqs-payments-queue "OPTIONAL"
     :aws-sqs-expo-queue "CHANGE-ME"
+    :aws-lambda-expo-prefix "CHANGE-ME"
     :log-level "debug"
   }
 ```
