@@ -14,6 +14,7 @@
 
 (defonce prod? (= "production" (env :env)))
 (defonce intro? (not prod?))
+(defonce short-server-name (or (env :short-server-name) "localhost"))
 
 ;; ----- Sentry -----
 
@@ -51,6 +52,8 @@
 
 (defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
 (defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
+(defonce storage-server-url (or (env :storage-server-url) "http://localhost:3001"))
+(defonce dashboard-url (or (env :oc-dashboard-endpoint) "http://localhost:4001"))
 
 ;; ----- AWS SQS -----
 
@@ -76,7 +79,6 @@
 
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
-(defonce slack-verification-token (env :open-company-slack-verification-token))
 (defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
 (defonce slack-comment-scope "users:read,users:read.email,team:read,channels:read")
 (defonce slack-unfurl-scope "links:read,links:write")
@@ -84,6 +86,7 @@
                               ","
                               slack-unfurl-scope
                               ",commands,bot,chat:write:bot"))
+(defonce slack-customer-support-webhook (env :open-company-slack-customer-support-webhook))
 
 ;; ----- Google Oauth -----
 
@@ -108,3 +111,13 @@
 
 (defonce email-domain-blacklist (rest (clojure.string/split
                                   (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
+
+;; ----- Stripe -----
+
+(defonce stripe-secret-key         (env :stripe-secret-key))
+(defonce stripe-premium-product-id (env :stripe-premium-product-id))
+(defonce stripe-default-plan-id    (env :stripe-default-plan-id))
+
+;; ----- OpenCompany -----
+
+(defonce payments-enabled? (bool (env :payments-enabled)))

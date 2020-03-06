@@ -145,13 +145,13 @@
         (send-verification-email updated-user true)
         {:updated-user updated-user}))))
 
-(defn- create-user [conn {email :email password :password :as user-props}]
-  (timbre/info "Creating user:" email)
-  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
+(defn- create-user [conn {email :email password :password :as user-props} {team-id :team-id :as _existing-team}]
+  (timbre/info "Creating user:" email "(invite token team-id " team-id ")")
+  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password) team-id)
             user-id (:user-id created-user)
             admin-teams (user-res/admin-of conn user-id)]
     (do
-      (timbre/info "Created user:" email)
+      (timbre/info "Created user:" email "with teams" (:teams created-user) "and status" (:status created-user))
       (send-verification-email created-user)
       (timbre/info "Sending notification to SNS topic for:" user-id "(" email ")")
       (notification/send-trigger! (notification/->trigger created-user))
@@ -169,12 +169,6 @@
       {:updated-user update-result})
 
     (do (timbre/error "Failed updating user:" user-id) false)))
-
-(defn- delete-user [conn user-id]
-  (timbre/info "Deleting user:" user-id)
-  (if (user-res/delete-user! conn user-id)
-    (do (timbre/info "Deleted user:" user-id) true)
-    (do (timbre/error "Failed deleting user:" user-id) false)))
 
 (defn password-reset-request [conn email]
   (timbre/info "Password reset request for:" email)
@@ -228,6 +222,16 @@
 (defresource user-create [conn]
   (api-common/open-company-anonymous-resource config/passphrase) ; verify validity of JWToken if it's provided
 
+  ;; Override the initialize-context key to read the invite-token if necessary
+  :initialize-context (fn [ctx]
+                        (let [bearer (-> ctx :request :headers api-common/get-token)
+                              is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
+                              jwtoken (when-not is-team-token? (api-common/read-token (get-in ctx [:request :headers]) config/passphrase))]
+                          (if is-team-token?
+                            {:jwtoken false
+                             :invite-token bearer}
+                            jwtoken)))
+
   :allowed-methods [:options :post]
 
   ;; Media type client accepts
@@ -248,13 +252,16 @@
                          (string? (-> ctx :data :last-name))))})
 
   ;; Existentialism
-  :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
+  :exists? (fn [ctx]
+             (let [team (when (:invite-token ctx) (team-res/get-team-by-invite-token conn (:invite-token ctx)))]
+               {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))
+                :existing-team team}))
 
   ;; Actions
   :post-to-existing? false
   :put-to-existing? true ; needed for a 409 conflict
   :conflict? :existing-user
-  :post! (fn [ctx] (create-user conn (:data ctx))) 
+  :post! (fn [ctx] (create-user conn (:data ctx) (:existing-team ctx))) 
 
   ;; Responses
   :handle-conflict (ring-response {:status 409})
@@ -272,7 +279,7 @@
 (defresource user [conn user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
-  :allowed-methods [:options :get :post :patch :delete]
+  :allowed-methods [:options :get :post :patch]
 
   ;; Media type client accepts
   :available-media-types [mt/user-media-type]
@@ -282,16 +289,14 @@
     :options false
     :get false
     :post false
-    :patch (fn [ctx] (api-common/malformed-json? ctx))
-    :delete false})
+    :patch (fn [ctx] (api-common/malformed-json? ctx))})
   
   ;; Media type client sends
   :known-content-type? (by-method {
                           :options true
                           :get true
                           :post true
-                          :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))
-                          :delete true})
+                          :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
   :initialize-context (fn [ctx]
                         (or (allow-superuser-token ctx)
@@ -303,16 +308,14 @@
     :options true
     :get (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
     :post (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
-    :patch (fn [ctx] (allow-user-and-team-admins conn ctx user-id))
-    :delete (fn [ctx] (allow-user-and-team-admins conn ctx user-id))})
+    :patch (fn [ctx] (allow-user-and-team-admins conn ctx user-id))})
 
   ;; Validations
   :processable? (by-method {
     :get true
     :options true
     :post (fn [ctx] (can-resend-verificaiton-email? conn user-id))
-    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))
-    :delete true})
+    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
@@ -327,7 +330,6 @@
   ;; Acctions
   :post! (fn [ctx] (resend-verification-email conn ctx user-id))
   :patch! (fn [ctx] (update-user conn ctx user-id))
-  :delete! (fn [_] (delete-user conn user-id))
 
   ;; Responses
   :handle-ok (by-method {
@@ -477,7 +479,7 @@
 
   :post! (fn [{:keys [existing-user expo-push-token] :as ctx}]
            (timbre/info "Storing Expo push token: " expo-push-token "for user" (-> ctx :user :user-id))
-           (let [push-tokens (into #{} (:expo-push-tokens existing-user []))
+           (let [push-tokens (set (:expo-push-tokens existing-user []))
                  new-push-tokens (conj push-tokens expo-push-token)
                  user-update {:expo-push-tokens (seq new-push-tokens)}
                  new-ctx (assoc ctx :user-update user-update)]
