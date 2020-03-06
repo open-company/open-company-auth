@@ -63,7 +63,7 @@
     (pool/with-pool [conn db-pool]
       (doseq [[push-token user-id] push-token->user-id]
         (let [user            (user-res/get-user conn user-id)
-              old-push-tokens (into #{} (:expo-push-tokens user))
+              old-push-tokens (set (:expo-push-tokens user))
               new-push-tokens (seq (disj old-push-tokens push-token))]
           (sentry/capture config/dsn {:message "Removing bad push tokens from user"
                                       :extra {:user-id user-id

@@ -1,0 +1,10 @@
+(ns oc.auth.db.migrations.team-invite-token
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.config :as config]
+            [oc.auth.resources.team :as t]))
+
+(defn up [conn]
+  ;; Do great things
+  (println (m/create-index conn t/table-name "invite-token"))
+  true) ; return true on success

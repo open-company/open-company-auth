@@ -8,6 +8,7 @@
             [oc.auth.async.slack-router :as slack-router]
             [oc.auth.async.notification :as notification]
             [oc.auth.async.slack-api-calls :as slack-api-calls]
+            [oc.auth.async.payments :as payments]
             [oc.auth.config :as c]))
 
 (defrecord HttpKit [options handler server]
@@ -89,6 +90,7 @@
     (timbre/info "[async-consumers] starting")
     (notification/start) ; core.async channel consumer for notification events
     (slack-api-calls/start component)
+    (payments/start)
     (timbre/info "[async-consumers] started")
     (assoc component :async-consumers true))
 
@@ -98,6 +100,7 @@
         (timbre/info "[async-consumers] stopping")
         (notification/stop) ; core.async channel consumer for notification events
         (slack-api-calls/stop)
+        (payments/stop)
         (timbre/info "[async-consumers] stopped")
         (dissoc component :async-consumers))
     component)))
