@@ -15,8 +15,7 @@
     ;; Lisp on the JVM http://clojure.org/documentation
     [org.clojure/clojure "1.10.1"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
-    [org.clojure/tools.cli "0.4.2"]
-    [http-kit "2.4.0-alpha4"] ; Web client/server http://http-kit.org/
+    [org.clojure/tools.cli "1.0.194"]
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.8.0"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -56,21 +55,21 @@
     ;; NB: riddley pulled in by oc.lib via aleph → manifold
     [clj-http "3.10.0" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
-    [org.clojure/data.json "0.2.7"]
+    [org.clojure/data.json "1.0.0"]
     ;; Java library for the Stripe API https://github.com/stripe/stripe-java
     [com.stripe/stripe-java "16.4.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
-    [org.clojure/tools.logging "0.5.0"]
+    [org.clojure/tools.logging "1.0.0"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.24.3" :exclusions [clj-http
-                                                      org.clojure/data.json
-                                                      org.clojure/tools.logging
-                                                      org.bouncycastle/bcpkix-jdk15on]]
+    [open-company/lib "0.17.26-alpha1" :exclusions [clj-http
+                                                    org.clojure/data.json
+                                                    org.clojure/tools.logging
+                                                    org.bouncycastle/bcpkix-jdk15on]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -113,7 +112,7 @@
         ;; Example-based testing https://github.com/marick/lein-midje
         [lein-midje "3.2.2"]
         ;; Linter https://github.com/jonase/eastwood
-        [jonase/eastwood "0.3.6"]
+        [jonase/eastwood "0.3.10"]
         ;; Static code search for non-idiomatic code https://github.com/jonase/kibit
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: org.clojure/tools.reader pulled in manually
@@ -151,7 +150,7 @@
         ;; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-checkall "0.1.1"]
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint
-        [lein-pprint "1.2.0"]
+        [lein-pprint "1.3.2"]
         ;; Check for outdated dependencies https://github.com/xsc/lein-ancient
         [lein-ancient "0.6.15"]
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
