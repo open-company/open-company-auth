@@ -16,7 +16,6 @@
     [org.clojure/clojure "1.10.1"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "1.0.194"]
-    [http-kit "2.4.0-alpha6"] ; Web client/server http://http-kit.org/
     ;; Web application library https://github.com/ring-clojure/ring
     [ring/ring-devel "1.8.0"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -65,10 +64,10 @@
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.25.2" :exclusions [clj-http
-                                                      org.clojure/data.json
-                                                      org.clojure/tools.logging
-                                                      org.bouncycastle/bcpkix-jdk15on]]
+    [open-company/lib "0.17.26-alpha1" :exclusions [clj-http
+                                                    org.clojure/data.json
+                                                    org.clojure/tools.logging
+                                                    org.bouncycastle/bcpkix-jdk15on]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -79,6 +78,7 @@
     ;; Timbre - Pure Clojure/Script logging library https://github.com/ptaoussanis/timbre
     ;; Amazonica - A comprehensive Clojure client for the AWS API. https://github.com/mcohen01/amazonica
     ;; Raven - Interface to Sentry error reporting https://github.com/sethtrain/raven-clj
+    ;; http-kit - HTTP client and server https://github.com/http-kit/http-kit
     ;; Cheshire - JSON encoding / decoding https://github.com/dakrone/cheshire
     ;; clj-jwt - A Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
     ;; clj-time - Date and time lib https://github.com/clj-time/clj-time
