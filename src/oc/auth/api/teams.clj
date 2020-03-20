@@ -554,7 +554,7 @@
           bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
           slack-bot-ids (map :bot-user-id (filter :bot-user-id slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
           slack-users (mapcat #(slack/user-list %) bot-tokens) ; Slack roster of users
-          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium]) ; OC roster of users
+          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium :timezone :blurb :title :profiles]) ; OC roster of users
           oc-users-with-admin (map #(if (admins (:user-id %)) (assoc % :admin? true) %) oc-users)
           oc-users-with-slack (map #(assoc % :slack-bot-ids slack-bot-ids) oc-users-with-admin)
           slack-emails (set (map :email slack-users)) ; email of Slack users

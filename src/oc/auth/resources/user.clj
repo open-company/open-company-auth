@@ -63,16 +63,19 @@
           :last-name (schema/pred allowed-name?)
           :avatar-url (schema/maybe schema/Str)
 
-          (schema/optional-key :title) (schema/maybe schema/Str)
-
-          (schema/optional-key :timezone) (schema/maybe schema/Str) ; want it missing at first so we can default it on the client
-
           :digest-medium (schema/pred #(digest-mediums (keyword %)))
           :notification-medium (schema/pred #(mediums (keyword %)))
           :reminder-medium (schema/pred #(mediums (keyword %)))
 
           (schema/optional-key :last-token-at) lib-schema/ISO8601
-          (schema/optional-key :qsg-checklist) QSGChecklist}
+          (schema/optional-key :qsg-checklist) QSGChecklist
+          ;; User profile
+          (schema/optional-key :title) (schema/maybe schema/Str)
+
+          (schema/optional-key :timezone) (schema/maybe schema/Str) ; want it missing at first so we can default it on the client
+
+          (schema/optional-key :blurb) (schema/maybe schema/Str)
+          (schema/optional-key :profiles) {schema/Keyword schema/Str}}
           lib-schema/slack-users
           lib-schema/google-users))
 
