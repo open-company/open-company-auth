@@ -71,11 +71,11 @@
           (schema/optional-key :qsg-checklist) QSGChecklist
           ;; User profile
           (schema/optional-key :title) (schema/maybe schema/Str)
-
           (schema/optional-key :timezone) (schema/maybe schema/Str) ; want it missing at first so we can default it on the client
-
           (schema/optional-key :blurb) (schema/maybe schema/Str)
+          (schema/optional-key :location) (schema/maybe schema/Str)
           (schema/optional-key :profiles) {schema/Keyword schema/Str}}
+          ;; Third party user's data
           lib-schema/slack-users
           lib-schema/google-users))
 
