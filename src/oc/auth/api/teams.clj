@@ -649,6 +649,35 @@
   :handle-ok (fn [ctx]
                (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)))))
 
+;; A resource for roster of team users for a particular team
+(defresource active-users [conn team-id]
+  (api-common/open-company-id-token-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :get]
+
+  ;; Media type client accepts
+  :available-media-types [mt/user-collection-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-collection-media-type)
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true
+    :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+                       {:existing-team team}
+                       false))
+
+  ;; Responses
+  :handle-ok (fn [ctx]
+    (let [team (:existing-team ctx)
+          admins (set (:admins team))
+          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium :timezone :blurb :location :title :profiles]) ; OC roster of users
+          active-users (filter #(#{"active" "unverified"} (:status %)) oc-users)
+          oc-users-with-admin (map #(if (admins (:user-id %)) (assoc % :admin? true) %) active-users)]
+      (user-rep/render-active-users-list team-id oc-users-with-admin))))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -703,4 +732,7 @@
       (ANY "/teams/:team-id/roster/" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id)))
       ;; Team's Slack channels
       (ANY "/teams/:team-id/channels" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id)))
-      (ANY "/teams/:team-id/channels/" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id))))))
+      (ANY "/teams/:team-id/channels/" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id)))
+      ;; Active users
+      (ANY "/teams/:team-id/active-users" [team-id] (pool/with-pool [conn db-pool] (active-users conn team-id)))
+      (ANY "/teams/:team-id/active-users/" [team-id] (pool/with-pool [conn db-pool] (active-users conn team-id))))))
