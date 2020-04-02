@@ -66,7 +66,7 @@
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.26.3" :exclusions [clj-http
+    [open-company/lib "0.17.25.3" :exclusions [clj-http
                                                     org.clojure/data.json
                                                     org.clojure/tools.logging
                                                     org.bouncycastle/bcpkix-jdk15on]]
