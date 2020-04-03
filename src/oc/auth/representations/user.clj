@@ -188,3 +188,15 @@
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
                     :items (map #(select-keys % team-user-representation-props) users)}}
       {:pretty config/pretty?})))
+
+(defn render-active-users-list
+  "Given a team-id and a sequence of active user maps, create a JSON representation of a list of users for the REST API."
+  [team-id users]
+  (let [url (str (team-rep/url team-id) "/active-users")]
+    (json/generate-string
+      {:team-id team-id
+       :collection {:version hateoas/json-collection-version
+                    :href url
+                    :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
+                    :items (map #(select-keys % team-user-representation-props) users)}}
+      {:pretty config/pretty?})))
