@@ -21,7 +21,7 @@
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-medium :notification-medium :reminder-medium :timezone
                :created-at :updated-at :slack-users :status :qsg-checklist
-               :expo-push-tokens])
+               :expo-push-tokens :title :blurb :location :profiles])
 (def representation-props (concat slack-props oc-props))
 (def team-user-representation-props (concat representation-props [:admin?]))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
@@ -181,6 +181,18 @@
   "Given a team-id and a sequence of user maps, create a JSON representation of a list of users for the REST API."
   [team-id users]
   (let [url (str (team-rep/url team-id) "/roster")]
+    (json/generate-string
+      {:team-id team-id
+       :collection {:version hateoas/json-collection-version
+                    :href url
+                    :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
+                    :items (map #(select-keys % team-user-representation-props) users)}}
+      {:pretty config/pretty?})))
+
+(defn render-active-users-list
+  "Given a team-id and a sequence of active user maps, create a JSON representation of a list of users for the REST API."
+  [team-id users]
+  (let [url (str (team-rep/url team-id) "/active-users")]
     (json/generate-string
       {:team-id team-id
        :collection {:version hateoas/json-collection-version
