@@ -109,7 +109,7 @@
   [conn new-user teams slack-org]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
   (let [new-user-digest (if (contains? slack-org :bot-token)
-                          (merge new-user {:digest-medium :slack
+                          (merge new-user {:digest-medium :email
                                            :notification-medium :slack
                                            :reminder-medium :slack})
                           new-user)
