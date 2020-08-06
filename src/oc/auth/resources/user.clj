@@ -205,6 +205,7 @@
         (update :digest-medium #(or % :email)) ; lowest common denominator
         (update :notification-medium #(or % :email)) ; lowest common denominator
         (update :reminder-medium #(or % :email)) ; lowest common denominator
+        (update :digest-delivery #(or % config/digest-times))
         (assoc :status :pending)
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
