@@ -21,7 +21,7 @@
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :digest-medium :notification-medium :reminder-medium :timezone
                :created-at :updated-at :slack-users :status :qsg-checklist
-               :expo-push-tokens :title :blurb :location :profiles])
+               :expo-push-tokens :title :blurb :location :profiles :digest-delivery :digest-last-at])
 (def representation-props (concat slack-props oc-props))
 (def team-user-representation-props (concat representation-props [:admin?]))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])

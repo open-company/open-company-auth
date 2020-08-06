@@ -124,3 +124,7 @@
 ;; ----- OpenCompany -----
 
 (defonce payments-enabled? (bool (env :payments-enabled)))
+
+;; ----- Digest -----
+
+(defonce digest-times (set (map keyword (clojure.string/split (or (env :digest-times) "700,1200,1700") #","))))

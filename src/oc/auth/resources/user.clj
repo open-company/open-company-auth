@@ -9,7 +9,9 @@
             [oc.lib.db.common :as db-common]
             [oc.lib.jwt :as jwt]
             [oc.lib.schema :as lib-schema]
-            [oc.auth.resources.team :as team-res]))
+            [clojure.set :refer (subset?)]
+            [oc.auth.resources.team :as team-res]
+            [oc.auth.config :as config]))
 
 ;; ----- RethinkDB metadata -----
 
@@ -34,7 +36,14 @@
   #{:pending :unverified :active})
 
 (def mediums #{:email :slack :in-app})
-(def digest-mediums (disj mediums :in-app))
+(def digest-mediums #{:email})
+(defn digest-times
+  "Possible values for times are:
+  - empty set
+  - all combinations of the allowed times"
+  [times]
+  (let [times-kw (set (map keyword times))]
+    (subset? times-kw config/digest-times)))
 
 (def QSGChecklist
   {(schema/optional-key :should-show-qsg?) (schema/maybe schema/Bool)
@@ -63,9 +72,12 @@
           :last-name (schema/pred allowed-name?)
           :avatar-url (schema/maybe schema/Str)
 
-          :digest-medium (schema/pred #(digest-mediums (keyword %)))
           :notification-medium (schema/pred #(mediums (keyword %)))
           :reminder-medium (schema/pred #(mediums (keyword %)))
+          ;; Digest
+          :digest-medium (schema/pred #(digest-mediums (keyword %)))
+          (schema/optional-key :digest-delivery) (schema/maybe (schema/pred digest-times))
+          (schema/optional-key :digest-last-at) (schema/maybe lib-schema/ISO8601)
 
           (schema/optional-key :last-token-at) lib-schema/ISO8601
           (schema/optional-key :qsg-checklist) QSGChecklist
@@ -104,7 +116,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create or update."
-  #{:user-id :password :password-hash :created-at :udpated-at :links :slack-display-name})
+  #{:user-id :password :password-hash :created-at :udpated-at :links :slack-display-name :digest-last-at})
 
 (def ignored-properties
   "Properties of a resource that are ignored during an update."
