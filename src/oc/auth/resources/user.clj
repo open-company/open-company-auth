@@ -25,7 +25,7 @@
        (not (re-matches #".*\d.*" name)) ; don't allow any numeral
        (= (count name) (.codePointCount name 0 (count name))))) ; same # of characters as Unicode points
 
-(def statuses 
+(def statuses
   "
   Possible user statuses:
 
@@ -65,7 +65,7 @@
           (schema/optional-key :one-time-token) lib-schema/UUIDStr
           (schema/optional-key :expo-push-tokens) [lib-schema/NonBlankStr]
 
-          :email (schema/maybe lib-schema/EmailAddress)          
+          :email (schema/maybe lib-schema/EmailAddress)
           (schema/optional-key :password-hash) lib-schema/NonBlankStr
 
           :first-name (schema/pred allowed-name?)
@@ -77,7 +77,7 @@
           ;; Digest
           :digest-medium (schema/pred #(digest-mediums (keyword %)))
           (schema/optional-key :digest-delivery) (schema/maybe (schema/pred digest-times))
-          (schema/optional-key :digest-last-at) (schema/maybe lib-schema/ISO8601)
+          (schema/optional-key :latest-digest-deliveries) [{:org-id lib-schema/UniqueID :timestamp lib-schema/ISO8601}]
 
           (schema/optional-key :last-token-at) lib-schema/ISO8601
           (schema/optional-key :qsg-checklist) QSGChecklist
@@ -188,8 +188,8 @@
   ([user-props password :- lib-schema/NonBlankStr]
     (-> (->user user-props)
       (assoc :password-hash (password-hash password)) ; add hashed password
-      (assoc :one-time-token (str (java.util.UUID/randomUUID))))) ; add one-time-token for email verification 
-      
+      (assoc :one-time-token (str (java.util.UUID/randomUUID))))) ; add one-time-token for email verification
+
   ([user-props]
   {:pre [(map? user-props)]}
   (let [ts (db-common/current-timestamp)]
@@ -272,7 +272,7 @@
 
   Throws a runtime exception if the merge of the prior user and the updated user property map doesn't conform
   to the User schema.
-  
+
   NOTE: doesn't update teams, see: `add-team`, `remove-team`
   NOTE: doesn't update one-time token, see: `add-token`, `remove-token`
   NOTE: doesn't handle case of user-id change.
@@ -358,8 +358,8 @@
 
   Additional fields can be optionally specified."
   ([conn] (list-users conn []))
-  
-  ([conn :guard db-common/conn? 
+
+  ([conn :guard db-common/conn?
     additional-keys :guard additional-keys?]
   (db-common/read-resources conn table-name
     (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams])))

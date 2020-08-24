@@ -17,20 +17,20 @@
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "1.0.194"]
     ;; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-devel "1.8.0"]
+    [ring/ring-devel "2.0.0-alpha1"]
     ;; Web application library https://github.com/ring-clojure/ring
     ;; NB: clj-time pulled in by oc.lib
     ;; NB: joda-time pulled in by oc.lib via clj-time
     ;; NB: commons-codec pulled in by oc.lib
-    [ring/ring-core "1.8.0" :exclusions [clj-time joda-time commons-codec]]
+    [ring/ring-core "2.0.0-alpha1" :exclusions [clj-time joda-time commons-codec]]
     ;; CORS library https://github.com/jumblerg/ring.middleware.cors
     [jumblerg/ring.middleware.cors "1.0.1"]
     ;; Ring logging https://github.com/nberger/ring-logger-timbre
     ;; NB: com.taoensso/encore pulled in by oc.lib
     ;; NB: com.taoensso/timbre pulled in by oc.lib
-    [ring-logger-timbre "0.7.6" :exclusions [com.taoensso/encore com.taoensso/timbre]] 
+    [ring-logger-timbre "0.7.6" :exclusions [com.taoensso/encore com.taoensso/timbre]]
     ;; Web routing https://github.com/weavejester/compojure
-    [compojure "1.6.1"]
+    [compojure "1.6.2"]
     ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
@@ -42,24 +42,24 @@
     ;; Security library https://github.com/funcool/buddy
     ;; NB: commons-codec pulled in by oc.lib
     ;; NB: buddy/buddy-core pulled in by buddy-auth
-    ;; NB: buddy/buddy-sign pulled in by buddy-auth    
+    ;; NB: buddy/buddy-sign pulled in by buddy-auth
     [buddy "2.0.0" :exclusions [commons-codec buddy/buddy-core buddy/buddy-sign]]
     ;; Authentication for ring https://github.com/funcool/buddy-auth
     ;; NB: funcool/cuerdas pulled in by oc.lib
     [buddy/buddy-auth "2.2.0" :exclusions [funcool/cuerdas]]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "0.5.4"]
+    [zprint "1.0.0"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     ;; NB: org.apache.httpcomponents/httpclient pulled in by oc.lib
     ;; NB: commons-codec pulled in by oc.lib
     ;; NB: riddley pulled in by oc.lib via aleph → manifold
-    [clj-http "3.10.0" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
+    [clj-http "3.10.2" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "1.0.0"]
     ;; Java library for the Stripe API https://github.com/stripe/stripe-java
-    [com.stripe/stripe-java "16.4.0"]
+    [com.stripe/stripe-java "19.45.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
-    [org.clojure/tools.logging "1.0.0"]
+    [org.clojure/tools.logging "1.1.0"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
@@ -89,7 +89,7 @@
 
   :plugins [
     [lein-ring "0.12.5"]
-    [lein-environ "1.1.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
+    [lein-environ "1.2.0"] ; Get environment settings from different sources https://github.com/weavejester/environ
   ]
 
   :profiles {
@@ -105,7 +105,7 @@
         ;; NB: clj-time is pulled in by oc.lib
         ;; NB: joda-time is pulled in by oc.lib via clj-time
         ;; NB: commons-codec pulled in by oc.lib
-        [midje "1.9.9" :exclusions [joda-time clj-time commons-codec]] 
+        [midje "1.9.9" :exclusions [joda-time clj-time commons-codec]]
         ;; Test Ring requests https://github.com/weavejester/ring-mock
         [ring-mock "0.1.5"]
       ]
@@ -122,7 +122,7 @@
         ;; NB: org.clojure/tools.reader pulled in manually
         [rewrite-clj "0.6.1" :exclusions [org.clojure/tools.reader]]
         ;; Not used directly, dependency of lein-kibit and rewrite-clj https://github.com/clojure/tools.reader
-        [org.clojure/tools.reader "1.3.2"]
+        [org.clojure/tools.reader "1.3.3"]
       ]
     }
 
@@ -147,7 +147,7 @@
       :plugins [
         ;; Check for code smells https://github.com/dakrone/lein-bikeshed
         ;; NB: org.clojure/tools.cli is pulled in by lein-kibit
-        [lein-bikeshed "0.5.2" :exclusions [org.clojure/tools.cli]] 
+        [lein-bikeshed "0.5.2" :exclusions [org.clojure/tools.cli]]
         ;; Runs bikeshed, kibit and eastwood https://github.com/itang/lein-checkall
         [lein-checkall "0.1.1"]
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint
@@ -161,7 +161,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "0.5.4" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "1.0.0" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 
@@ -223,12 +223,12 @@
     "bikeshed!" ["bikeshed" "-v" "-m" "120"] ; code check with max line length warning of 120 characters
     "ancient" ["ancient" ":all" ":allow-qualified"] ; check for out of date dependencies
   }
-  
+
   ;; ----- Code check configuration -----
 
   :eastwood {
     ;; Disable some linters that are enabled by default
-    ;; contant-test - just seems mostly ill-advised, logical constants are useful in something like a `->cond` 
+    ;; contant-test - just seems mostly ill-advised, logical constants are useful in something like a `->cond`
     ;; wrong-arity - unfortunate, but it's failing on 3/arity of sqs/send-message
     ;; implicit-dependencies - uhh, just seems dumb
     :exclude-linters [:constant-test :wrong-arity :implicit-dependencies]
