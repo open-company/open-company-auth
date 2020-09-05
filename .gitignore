@@ -14,6 +14,8 @@ pom.xml.asc
 *.class
 /.lein-*
 /.nrepl-port
+.calva/
+.idea/
 
 .ruby-gemset
 .ruby-version

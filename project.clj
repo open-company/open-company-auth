@@ -60,16 +60,21 @@
     [com.stripe/stripe-java "19.45.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
     [org.clojure/tools.logging "1.1.0"]
+    
+    
+    ;; General data-binding functionality for Jackson: works on core streaming API https://github.com/FasterXML/jackson-databind
+    ;; NB: this is needed
+    [com.fasterxml.jackson.core/jackson-databind "2.11.2"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.28" :exclusions [clj-http
-                                                    org.clojure/data.json
-                                                    org.clojure/tools.logging
-                                                    org.bouncycastle/bcpkix-jdk15on]]
+    [open-company/lib "0.17.29-alpha36" :exclusions [clj-http
+                                                     org.clojure/data.json
+                                                     org.clojure/tools.logging
+                                                     org.bouncycastle/bcpkix-jdk15on]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
