@@ -71,6 +71,9 @@
     "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
     "Sentry: " c/dsn "\n"
+    "  env: " c/sentry-env "\n"
+    (when-not (clojure.string/blank? c/sentry-release)
+      (str "  release: " c/sentry-release "\n"))
     "Payments?: " c/payments-enabled? "\n\n"
     (when c/intro? "Ready to serve...\n"))))
 
