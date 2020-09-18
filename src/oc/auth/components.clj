@@ -2,6 +2,7 @@
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
             [org.httpkit.server :as httpkit]
+            [oc.lib.sentry.core :refer (map->SentryCapturer)]
             [oc.lib.db.pool :as pool]
             [oc.lib.sqs :as sqs]
             [oc.auth.async.expo :as expo]
@@ -110,17 +111,24 @@
    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
 
 (defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler
-                           expo-sqs-queue expo-sqs-msg-handler]}]
+                           expo-sqs-queue expo-sqs-msg-handler sentry]}]
   (component/system-map
-   :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
+   :sentry-capturer (map->SentryCapturer sentry)
+   :db-pool (component/using
+             (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
+             [:sentry-capturer])
    :slack-router (component/using
                   (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
                   [:db-pool])
-   :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
+   :sqs (component/using
+         (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
+         [:sentry-capturer])
    :expo (component/using
           (map->ExpoConsumer {:expo-consumer-fn expo-sqs-msg-handler})
           [:db-pool])
-   :expo-sqs (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
+   :expo-sqs (component/using
+              (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
+              [:sentry-capturer])
    :async-consumers (component/using
                      (map->AsyncConsumers {})
                      [:db-pool])
