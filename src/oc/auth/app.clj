@@ -83,7 +83,9 @@
   (if c/dsn
     (timbre/merge-config!
       {:level (keyword c/log-level)
-       :appenders {:sentry (sentry/sentry-appender c/dsn)}})
+       :appenders {:sentry (sentry/sentry-appender {:dsn c/dsn
+                                                    :release c/sentry-release
+                                                    :environment c/sentry-env})}})
     (timbre/merge-config! {:level (keyword c/log-level)}))
 
   ;; Start the system
