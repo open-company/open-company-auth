@@ -83,15 +83,11 @@
   (if c/dsn
     (timbre/merge-config!
       {:level (keyword c/log-level)
-       :appenders {:sentry (sentry/sentry-appender {:dsn c/dsn
-                                                    :release c/sentry-release
-                                                    :environment c/sentry-env})}})
+       :appenders {:sentry (sentry/sentry-appender c/sentry-config)}})
     (timbre/merge-config! {:level (keyword c/log-level)}))
 
   ;; Start the system
-  (-> {:sentry {:dsn c/dsn
-                :release c/sentry-release
-                :environment c/sentry-env}
+  (-> {:sentry c/sentry-config
        :handler-fn app
        :port port
        :sqs-queue c/aws-sqs-slack-router-auth-queue

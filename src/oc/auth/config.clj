@@ -21,6 +21,9 @@
 (defonce dsn (or (env :open-company-sentry-auth) false))
 (defonce sentry-release (or (env :release) ""))
 (defonce sentry-env (or (env :environment) "local"))
+(defonce sentry-config {:dsn dsn
+                        :release sentry-release
+                        :environment sentry-env})
 
 ;; ----- Logging (see https://github.com/ptaoussanis/timbre) -----
 
