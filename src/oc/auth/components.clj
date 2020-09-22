@@ -23,7 +23,7 @@
       component
       (do
         (server)
-        (dissoc component :server)))))
+        (assoc component :server nil)))))
 
 (defrecord RethinkPool [size regenerate-interval pool]
   component/Lifecycle
@@ -37,7 +37,7 @@
     (if pool
       (do
         (pool/shutdown-pool! pool)
-        (dissoc component :pool))
+        (assoc component :pool nil))
       component)))
 
 (defrecord Handler [handler-fn]
@@ -46,7 +46,7 @@
     (timbre/info "[handler] starting")
     (assoc component :handler (handler-fn component)))
   (stop [component]
-    (dissoc component :handler)))
+    (assoc component :handler nil)))
 
 (defrecord SlackRouter [slack-router-fn]
   component/Lifecycle
@@ -63,7 +63,7 @@
         (timbre/info "[slack-router] stopping...")
         (slack-router/stop)
         (timbre/info "[slack-router] stopped")
-        (dissoc component :slack-router))
+        (assoc component :slack-router nil))
       component)))
 
 (defrecord ExpoConsumer [expo-consumer-fn]
@@ -81,7 +81,7 @@
         (timbre/info "[expo-consumer] stopping...")
         (expo/stop)
         (timbre/info "[expo-consumer] stopped")
-        (dissoc component :expo-consumer))
+        (assoc component :expo-consumer nil))
       component)))
 
 (defrecord AsyncConsumers []
@@ -103,7 +103,7 @@
         (slack-api-calls/stop)
         (payments/stop)
         (timbre/info "[async-consumers] stopped")
-        (dissoc component :async-consumers))
+        (assoc component :async-consumers nil))
     component)))
 
 (defn db-only-auth-system [_opts]
