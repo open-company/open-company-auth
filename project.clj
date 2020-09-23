@@ -71,7 +71,7 @@
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.29-alpha41" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on]]
+    [open-company/lib "0.17.29-alpha43" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
