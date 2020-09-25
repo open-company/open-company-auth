@@ -36,7 +36,7 @@
   #{:pending :unverified :active})
 
 (def mediums #{:email :slack :in-app})
-(def digest-mediums #{:email})
+(def digest-mediums #{:slack :email})
 (defn digest-times
   "Possible values for times are:
   - empty set

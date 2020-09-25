@@ -109,7 +109,7 @@
   [conn new-user teams slack-org]
   (timbre/info "Creating new user:" (:email new-user) (:first-name new-user) (:last-name new-user))
   (let [new-user-digest (if (contains? slack-org :bot-token)
-                          (merge new-user {:digest-medium :email
+                          (merge new-user {:digest-medium :slack
                                            :notification-medium :slack
                                            :reminder-medium :slack})
                           new-user)
@@ -194,7 +194,7 @@
           ;; Add or update the Slack users list of the user
           updated-slack-user (user-res/update-user! conn
                                                     (:user-id user)
-                                                    (merge {:digest-medium :email
+                                                    (merge {:digest-medium :slack
                                                             :notification-medium :slack
                                                             :reminder-medium :slack}
                                                       slack-user-u))
@@ -316,7 +316,7 @@
             ;; Activate the user (Slack is a trusted email verifier) and upsert the Slack users to the list for the user
             slack-user-u (update-in user [:slack-users] merge new-slack-user)
             slack-user-digest (if (or (:bot-token slack-org) (= redirect-arg :bot))
-                                (merge {:digest-medium :email
+                                (merge {:digest-medium :slack
                                         :notification-medium :slack
                                         :reminder-medium :slack}
                                  slack-user-u)
