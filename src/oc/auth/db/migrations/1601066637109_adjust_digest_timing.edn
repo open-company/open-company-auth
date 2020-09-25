@@ -1,0 +1,15 @@
+(ns oc.auth.db.migrations.adjust-digest-timing
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.resources.user :as user-res]
+            [oc.auth.config :as config]))
+
+(defn up [conn]
+  ;; Do great things
+  (println "Set digest timing to [:700] for all the existing users.")
+  (println (-> (r/table user-res/table-name)
+               (r/filter (r/fn [user]
+                           (r/not (r/has-fields user [:digest-delivery]))))
+               (r/update {:digest-delivery #{:700}})
+               (r/run conn)))
+  true) ; return true on success
