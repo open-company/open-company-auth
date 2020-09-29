@@ -145,10 +145,10 @@
 
   <algorithm used>$<salt used>$<password hash>
   "
-  [password password-hash]
-  (if (s/blank? password-hash)
+  [password current-password-hash]
+  (if (s/blank? current-password-hash)
     false
-    (hashers/check password password-hash {:limit trusted-algs})))
+    (hashers/check password current-password-hash {:limit trusted-algs})))
 
 (declare get-user-by-email)
 (defn authenticate? [conn email password]
