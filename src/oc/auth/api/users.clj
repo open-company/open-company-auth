@@ -90,11 +90,11 @@
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
           updated-qsg-checklist (update-user-qsg-checklist user user-props)
-          updated-user* (as-> user-props props
-                            (update-user-qsg-checklist user props)
-                            (dissoc props :current-password)
-                            (user-res/ignore-props props)
-                            (merge user props))]
+          updated-user (as-> user-props props
+                         (update-user-qsg-checklist user props)
+                         (dissoc props :current-password)
+                         (user-res/ignore-props props)
+                         (merge user props))]
       (if (and (lib-schema/valid? user-res/User updated-user)
                (or (nil? new-password) ; not attempting to change password
                    (and (s/blank? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
