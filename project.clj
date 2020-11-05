@@ -13,7 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.10.2-alpha1"]
+    [org.clojure/clojure "1.10.2-alpha4"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "1.0.194"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -48,12 +48,12 @@
     ;; NB: funcool/cuerdas pulled in by oc.lib
     [buddy/buddy-auth "2.2.0" :exclusions [funcool/cuerdas]]
     ;; Pretty-print clj and EDN https://github.com/kkinnear/zprint
-    [zprint "1.0.0"]
+    [zprint "1.0.1"]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/dakrone/clj-http
     ;; NB: org.apache.httpcomponents/httpclient pulled in by oc.lib
     ;; NB: commons-codec pulled in by oc.lib
     ;; NB: riddley pulled in by oc.lib via aleph → manifold
-    [clj-http "3.10.2" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
+    [clj-http "3.10.3" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "1.0.0"]
     ;; Java library for the Stripe API https://github.com/stripe/stripe-java
@@ -71,7 +71,7 @@
     ;; NB: org.clojure/data.json pulled in manually
     ;; NB: org.clojure/tools.logging pulled in manually
     ;; NB: org.bouncycastle/bcpkix-jdk15on pulled in via buddy-auth
-    [open-company/lib "0.17.29-alpha53" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on]]
+    [open-company/lib "0.17.29-alpha53" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
     ;; In addition to common functions, brings in the following common dependencies used by this project:
     ;; defun - Erlang-esque pattern matching for Clojure functions https://github.com/killme2008/defun
     ;; if-let - More than one binding for if/when macros https://github.com/LockedOn/if-let
@@ -163,7 +163,7 @@
         ;; Pretty-print clj and EDN https://github.com/kkinnear/lein-zprint
         ;; NB: rewrite-clj is pulled in manually
         ;; NB: rewrite-cljs not needed
-        [lein-zprint "1.0.0" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
+        [lein-zprint "1.0.1" :exclusions [org.clojure/clojure rewrite-clj rewrite-cljs]]
       ]
     }]
 
