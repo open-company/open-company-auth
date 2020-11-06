@@ -25,7 +25,7 @@
         _ (println "   self-link" self-link)
         self-links [self-link]
         _ (println "   self-links" self-links)
-        orgs-collection (map slack-org-for-collection slack-orgs)
+        orgs-collection (mapv slack-org-for-collection slack-orgs)
         _ (println "   orgs-collection" orgs-collection)]
     (json/generate-string
       {:team-id team-id
