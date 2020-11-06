@@ -19,12 +19,13 @@
 
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
-               :digest-medium :notification-medium :reminder-medium :timezone
-               :created-at :updated-at :slack-users :status :qsg-checklist
-               :expo-push-tokens :title :blurb :location :profiles :digest-delivery :digest-last-at])
+               :timezone :created-at :slack-users :status :title :blurb :location :profiles])
 (def representation-props (concat slack-props oc-props))
-(def team-user-representation-props (concat representation-props [:admin?]))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
+(def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :digest-last-at])
+(def team-user-props [:admin?])
+(def self-user-representation-props (concat representation-props self-user-props))
+(def team-user-representation-props (concat representation-props team-user-props))
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :digest-delivery :digest-last-at])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
@@ -121,6 +122,21 @@
       (resend-verification-email-link user-id)
       add-expo-push-token-link])))
 
+(defn- clean-user-tokens [user]
+  (as-> user u
+   (if (:slack-users u)
+     (update u :slack-users (fn [slack-users]
+                              (apply merge
+                               (map (fn [[slack-team-id slack-values]]
+                                      (hash-map slack-team-id (dissoc slack-values :token))) slack-users))))
+     u)
+   (if (:google-users u)
+     (update u :google-users (fn [google-users]
+                              (apply merge
+                               (map (fn [[google-team-id google-values]]
+                                      (hash-map google-team-id (dissoc google-values :token))) google-users))))
+     u)))
+
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]
   (let [jwt-props (zipmap jwt-props (map user jwt-props))
@@ -164,6 +180,7 @@
   {:pre [(map? user)]}
   (let [user-id (:user-id user)]
     (-> user
+      (clean-user-tokens)
       (select-keys team-user-representation-props)
       (user-collection-links team-id))))
 
@@ -172,7 +189,7 @@
   [user :- user-res/User]
   (json/generate-string
     (-> user
-      (select-keys representation-props)
+      (select-keys self-user-representation-props)
       (assoc :password "")
       (user-links))
     {:pretty config/pretty?}))
@@ -186,7 +203,7 @@
        :collection {:version hateoas/json-collection-version
                     :href url
                     :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
-                    :items (map #(select-keys % team-user-representation-props) users)}}
+                    :items (map #(-> % (clean-user-tokens) (select-keys team-user-representation-props)) users)}}
       {:pretty config/pretty?})))
 
 (defn render-active-users-list
