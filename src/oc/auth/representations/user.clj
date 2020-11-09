@@ -1,7 +1,7 @@
 (ns oc.auth.representations.user
   "Resource representations for OpenCompany users."
   (:require [clojure.string :as s]
-            [defun.core :refer (defun defun-)]
+            [defun.core :refer (defun)]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [cheshire.core :as json]
@@ -178,11 +178,10 @@
   "Create a map of the user for use in a collection in the REST API"
   [team-id :- lib-schema/UniqueID user]
   {:pre [(map? user)]}
-  (let [user-id (:user-id user)]
-    (-> user
-      (clean-user-tokens)
-      (select-keys team-user-representation-props)
-      (user-collection-links team-id))))
+  (-> user
+    (clean-user-tokens)
+    (select-keys team-user-representation-props)
+    (user-collection-links team-id)))
 
 (schema/defn ^:always-validate render-user :- schema/Str
   "Create a JSON representation of the user for the REST API"
