@@ -3,7 +3,7 @@
   (:require [clojure.string :as s]
             [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes ANY OPTIONS POST)]
+            [compojure.core :as compojure :refer (ANY OPTIONS POST)]
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
             [schema.core :as schema]
@@ -42,7 +42,7 @@
 
 (defn email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
-  [sys req auth-data]
+  [sys _req auth-data]
   (when-let* [email (:username auth-data)
               password (:password auth-data)]
     (pool/with-pool [conn (-> sys :db-pool :pool)] 
@@ -80,7 +80,7 @@
 (defn- update-user-qsg-checklist
   "Update the :qsg-checklist property by merging the new passed data with the old present data to avoid
   overriding all the properties on every patch."
-  [old-user-map patch-data]
+  [patch-data]
   (if (contains? patch-data :qsg-checklist)
     (update-in patch-data [:qsg-checklist] merge (:qsg-checklist patch-data))
     patch-data))
@@ -89,9 +89,8 @@
   (if-let [user (user-res/get-user conn user-id)]
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
-          updated-qsg-checklist (update-user-qsg-checklist user user-props)
           updated-user (as-> user-props props
-                         (update-user-qsg-checklist user props)
+                         (update-user-qsg-checklist props)
                          (dissoc props :current-password)
                          (user-res/ignore-props props)
                          (merge user props))]
@@ -99,7 +98,7 @@
                (or (nil? new-password) ; not attempting to change password
                    (and (s/blank? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
                    (and (seq current-password) (user-res/password-match? current-password (:password-hash user))))) ; attempting to change the password with an old password set, checking that the old password match
-        {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) user-props)}
+        {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) updated-user)}
         [false, {:user-update updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later
 
@@ -109,12 +108,12 @@
   [ctx]
   (try
     (if-let* [email (slurp (get-in ctx [:request :body]))
-              valid? (lib-schema/valid-email-address? email)]
+              _valid? (lib-schema/valid-email-address? email)]
       [false {:data email}]
       true)
     (catch Exception e
-      (do (timbre/warn "Request body not processable as an email address: " e)
-        true))))
+      (timbre/warn "Request body not processable as an email address: " e)
+      true)))
 
 ;; ----- Actions -----
 
@@ -318,7 +317,7 @@
   :processable? (by-method {
     :get true
     :options true
-    :post (fn [ctx] (can-resend-verificaiton-email? conn user-id))
+    :post (fn [_] (can-resend-verificaiton-email? conn user-id))
     :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))})
 
   ;; Existentialism
@@ -338,7 +337,7 @@
   ;; Responses
   :handle-ok (by-method {
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
-    :post (fn [ctx] (api-common/blank-response))
+    :post (fn [_] (api-common/blank-response))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-response (schema/check user-res/User (:user-update ctx)))))
@@ -477,7 +476,7 @@
   :malformed? (by-method {:options false
                           :post (fn [ctx]
                                   (if-let* [token (-> ctx :request :body slurp)
-                                            valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
+                                            _valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
                                     [false {:expo-push-token token}]
                                     true))})
 
@@ -491,7 +490,7 @@
                (update-user conn new-ctx (:user-id existing-user))
                (timbre/info "Expo push tokens have not changed for user  " (-> ctx :user :user-id) ", no action taken"))))
 
-  :handle-ok (by-method {:post (fn [ctx] (api-common/blank-response))})
+  :handle-ok (by-method {:post (fn [_] (api-common/blank-response))})
   )
 
 ;; ----- Routes -----
