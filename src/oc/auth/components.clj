@@ -108,7 +108,7 @@
 
 (defn db-only-auth-system [_opts]
   (component/system-map
-   :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
+    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
 
 (defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler
                            expo-sqs-queue expo-sqs-msg-handler sentry]}]
@@ -130,11 +130,11 @@
               (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
               [:sentry-capturer])
    :async-consumers (component/using
-                     (map->AsyncConsumers {})
-                     [:db-pool])
+                      (map->AsyncConsumers {})
+                      [:db-pool])
    :handler (component/using
-             (map->Handler {:handler-fn handler-fn})
-             [:db-pool])
+              (map->Handler {:handler-fn handler-fn})
+              [:db-pool])
    :server  (component/using
-             (map->HttpKit {:options {:port port}})
-             [:handler])))
+              (map->HttpKit {:options {:port port}})
+              [:handler])))

@@ -56,8 +56,6 @@
     [clj-http "3.10.3" :exclusions [org.apache.httpcomponents/httpclient commons-codec riddley]]
     ;; Not used directly, dependency of oc.lib and org.julienxx/clj-slack https://github.com/clojure/data.json
     [org.clojure/data.json "1.0.0"]
-    ;; Java library for the Stripe API https://github.com/stripe/stripe-java
-    [com.stripe/stripe-java "19.45.0"]
     ;; Not used directly, dependency of data.json and clj-slack https://github.com/clojure/tools.logging
     [org.clojure/tools.logging "1.1.0"]
     
@@ -142,7 +140,9 @@
         :aws-sqs-bot-queue "CHANGE-ME"
         :aws-sqs-email-queue "CHANGE-ME"
         :aws-sqs-slack-router-auth-queue "CHANGE-ME"
+        :aws-sqs-payments-queue "" ; Queue to send team size changes to (optional)
         :aws-sqs-expo-queue "CHANGE-ME"
+        :aws-lambda-expo-prefix "CHANGE-ME"
         :aws-sns-auth-topic-arn "" ; SNS topic to publish notifications (optional)
         :log-level "debug"
       }
