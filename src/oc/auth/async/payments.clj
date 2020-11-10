@@ -1,13 +1,16 @@
 (ns oc.auth.async.payments
   "Async publish of team change reports to payments service."
   (:require [clojure.core.async :as async :refer (<! >!!)]
+            [clojure.string :as string]
             [if-let.core :refer (when-let*)]
             [taoensso.timbre :as timbre]
             [schema.core :as schema]
+            [oc.lib.schema :as lib-schema]
             [amazonica.aws.sqs :as sqs]
             [oc.auth.config :as c]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]))
+
 
 ;; ----- core.async -----
 
@@ -18,8 +21,8 @@
 ;; ----- Data schema -----
 
 (def TeamReportTrigger
-  {:customer-id (:id schema/Str)
-   :seats       (:quantity schema/Int)})
+  {:customer-id lib-schema/NonBlankStr
+   :seats       schema/Int})
 
 ;; ----- Event handling -----
 
@@ -57,17 +60,19 @@
   (select-keys report [:customer-id :seats]))
 
 (schema/defn ^:always-validate send-team-report-trigger! [trigger :- TeamReportTrigger]
-  (>!! payments-chan trigger))
+  (when-not (string/blank? c/aws-sqs-payments-queue)
+    (>!! payments-chan trigger)))
 
 (defn report-team-seat-usage!
   [conn team-id]
   (when-let* [_enabled? c/payments-enabled?
-              customer-id (:stripe-customer-id (team-res/get-team conn team-id))] ;; Early on there's no customer yet
+              team-data (team-res/get-team conn team-id)
+              customer-id (:stripe-customer-id team-data)] ;; Early on there's no customer yet
     (let [active?     #(#{"active" "unverified"} (:status %))
           team-users  (filter active? (user-res/list-users conn team-id))
           seat-count  (count team-users)
           trigger     (->team-report-trigger {:customer-id customer-id
-                                            :seats       seat-count})]
+                                              :seats       seat-count})]
       (timbre/info (format "Reporting %d seats used to payment service for team %s (%s)"
                          seat-count
                          team-id
