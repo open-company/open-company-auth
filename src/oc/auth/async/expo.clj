@@ -18,7 +18,6 @@
             [oc.lib.lambda.common :as lambda]
             [oc.auth.resources.user :as user-res]
             [oc.lib.db.pool :as pool]
-            [oc.auth.resources.user :as user]
             [oc.lib.sentry.core :as sentry]))
 
 ;; ----- core.async -----
@@ -93,7 +92,7 @@
   ;; Sample receipts
   ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}}]
 
-  (let [{:keys [push-notifications tickets] :as msg}
+  (let [{:keys [push-notifications tickets]}
         {:push-notifications [{:pushToken "TOKEN_A"}
                               {:pushToken "TOKEN_B"}
                               {:pushToken "TOKEN_C"}]
@@ -117,14 +116,14 @@
   [msg]
   (try
     (json/parse-string msg true)
-    (catch Exception e
+    (catch Exception _
       (read-string msg))))
 
 (defn sqs-handler
   "Handle an incoming SQS message to the auth service."
   [msg done-channel]
   (let [msg-body (read-message-body (:body msg))
-        error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
+        _error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
     (timbre/infof "Received message from SQS: %s\n" msg-body)
     (>!! expo-chan msg-body))
   (sqs/ack done-channel msg))

@@ -22,7 +22,7 @@
 
 (def TeamReportTrigger
   {:customer-id lib-schema/NonBlankStr
-   :seats       schema/Int})
+   :team-id lib-schema/UniqueID})
 
 ;; ----- Event handling -----
 
@@ -56,8 +56,8 @@
 ;; ----- Payments triggering -----
 
 (defn ->team-report-trigger
-  [{:keys [customer-id seats] :as report}]
-  (select-keys report [:customer-id :seats]))
+  [report]
+  (select-keys report [:customer-id :team-id]))
 
 (schema/defn ^:always-validate send-team-report-trigger! [trigger :- TeamReportTrigger]
   (when-not (string/blank? c/aws-sqs-payments-queue)
@@ -68,13 +68,8 @@
   (when-let* [_enabled? c/payments-enabled?
               team-data (team-res/get-team conn team-id)
               customer-id (:stripe-customer-id team-data)] ;; Early on there's no customer yet
-    (let [active?     #(#{"active" "unverified"} (:status %))
-          team-users  (filter active? (user-res/list-users conn team-id))
-          seat-count  (count team-users)
-          trigger     (->team-report-trigger {:customer-id customer-id
-                                              :seats       seat-count})]
-      (timbre/info (format "Reporting %d seats used to payment service for team %s (%s)"
-                         seat-count
+    (let [trigger     (->team-report-trigger {:customer-id customer-id :team-id team-id})]
+      (timbre/info (format "Reporting seats used to payment service for team %s (%s)"
                          team-id
                          customer-id))
       (send-team-report-trigger! trigger))))

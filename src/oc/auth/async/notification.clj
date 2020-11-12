@@ -6,6 +6,7 @@
             [taoensso.timbre :as timbre]
             [cheshire.core :as json]
             [amazonica.aws.sns :as sns]
+            [clojure.string :as s]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [oc.lib.time :as oc-time]
@@ -69,7 +70,7 @@
 (defn ->trigger
   [user]
   (let [full-name (str (:first-name user) " " (:last-name user))
-        name (if (clojure.string/blank? full-name)
+        name (if (s/blank? full-name)
                ;; email users don't have a name yet
                "New User" ;; use temporary name for SNS message schema
                full-name)
