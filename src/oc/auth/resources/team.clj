@@ -22,6 +22,7 @@
   :slack-orgs [lib-schema/NonBlankStr]
   (schema/optional-key :logo-url) (schema/maybe schema/Str)
   (schema/optional-key :stripe-customer-id) (schema/maybe schema/Str)
+  (schema/optional-key :premium) (schema/maybe schema/Bool)
   (schema/optional-key :invite-token) (schema/maybe lib-schema/UUIDStr)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
