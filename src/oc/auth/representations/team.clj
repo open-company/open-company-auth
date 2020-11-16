@@ -36,6 +36,13 @@
   (hateoas/add-link hateoas/POST (str (url team-id) "/users/") {:content-type mt/invite-media-type
                                                                 :accept mt/user-media-type}))
 
+(defn- payments-link [team-id]
+  (hateoas/link-map
+   "payments"
+   hateoas/GET
+   (str config/payments-server-url "/teams/" team-id "/customer")
+   {:accept mt/payments-customer-media-type}))
+
 (defn add-slack-org-link [team-id]
   (slack/auth-link "authenticate" {:team-id team-id}))
 
@@ -82,6 +89,8 @@
       (delete-link team-id)
       (roster-link team-id)
       (channels-link team-id)
+      (when config/payments-enabled?
+        (payments-link team-id))
       (when (seq (:invite-token team))
         (invite-token-link (:invite-token team)))
       (if (seq (:invite-token team))

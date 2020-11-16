@@ -61,6 +61,7 @@
 (defonce ui-server-url (or (env :ui-server-url) (str "http://" host ":3559")))
 (defonce storage-server-url (or (env :storage-server-url) (str "http://" host ":3001")))
 (defonce dashboard-url (or (env :oc-dashboard-endpoint) (str "http://" host ":4001")))
+(defonce payments-server-url (or (env :payments-server-url) (str "http://" host ":3004")))
 
 ;; ----- AWS SQS -----
 

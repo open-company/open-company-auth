@@ -14,3 +14,6 @@
 (def slack-channel-collection-media-type "application/vnd.collection+vnd.open-company.slack-channels+json;version=1")
 
 (def expo-push-token-media-type "application/json")
+
+;; Payments media types
+(def payments-customer-media-type "application/vnd.open-company.customer.v1+json")
