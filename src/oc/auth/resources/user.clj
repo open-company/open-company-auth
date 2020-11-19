@@ -88,27 +88,28 @@
           (schema/optional-key :location) (schema/maybe schema/Str)
           (schema/optional-key :profiles) {schema/Keyword schema/Str}}
           ;; Third party user's data
-          lib-schema/slack-users
-          lib-schema/google-users))
+          lib-schema/SlackUsers
+          lib-schema/GoogleUsers))
 
 (def User "User resource as stored in the DB."
   (merge UserCommon {
     :status (schema/pred #(statuses (keyword %)))
-    (schema/optional-key :slack-bots) (schema/maybe jwt/SlackBots)
+    (schema/optional-key :slack-bots) (schema/maybe lib-schema/SlackBots)
     :created-at lib-schema/ISO8601
     :updated-at lib-schema/ISO8601}))
 
 (def UserRep "A representation of the user, suitable for creating a JWToken."
   (merge UserCommon {
     :admin (schema/conditional sequential? [lib-schema/UniqueID] :else schema/Bool)
+    :premium-teams [lib-schema/UniqueID]
     (schema/optional-key :status) (schema/pred #(statuses (keyword %)))
     (schema/optional-key :slack-id) lib-schema/NonBlankStr
     (schema/optional-key :slack-token) lib-schema/NonBlankStr
     (schema/optional-key :slack-display-name) lib-schema/NonBlankStr
-    (schema/optional-key :slack-bots) jwt/SlackBots
+    (schema/optional-key :slack-bots) lib-schema/SlackBots
     (schema/optional-key :google-id) (schema/maybe schema/Str)
     (schema/optional-key :google-domain) (schema/maybe schema/Str)
-    (schema/optional-key :google-token) (schema/maybe jwt/GoogleToken)
+    (schema/optional-key :google-token) (schema/maybe lib-schema/GoogleToken)
     (schema/optional-key :created-at) lib-schema/ISO8601
     (schema/optional-key :updated-at) lib-schema/ISO8601}))
 
@@ -116,7 +117,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create or update."
-  #{:user-id :password :password-hash :created-at :udpated-at :links :slack-display-name :digest-last-at})
+  #{:user-id :password :password-hash :created-at :udpated-at :links :slack-display-name :latest-digest-deliveries})
 
 (def ignored-properties
   "Properties of a resource that are ignored during an update."

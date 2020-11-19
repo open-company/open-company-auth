@@ -190,6 +190,46 @@
 
     (timbre/warn "Password reset request, no user for:" email)))
 
+(defn- check-super-user-token
+  "Super user tokens are created with very few data, but since they are signed we can trust them
+   This call is used to provide all the missing data the calling service needs.
+   ie: Digest service has very few info about the user usually:
+    {:name 'A B',
+    :user-id '1234-1234-1234'
+    :avatar-url 'https://example.com/avatar.jpg'}
+   it adds a some more to create a valid super-user token:
+    {:super-user true,
+     :auth-source :services,
+     :name \"Digest\",
+     :refresh-url this-endpoint}
+    creates a signed token and does a refresh request to get a complete token.
+  "
+  [conn claims]
+  (let [user-id (:user-id claims)
+        slack-team-id (:slack-team-id claims)
+        user-data (if user-id
+                    (user-res/get-user conn user-id)
+                    (user-res/get-user-by-slack-id conn slack-team-id (:slack-user-id claims)))
+        admin-teams (user-res/admin-of conn (:user-id user-data))]
+    (when (and user-data
+                admin-teams)
+      (let [auth-source (if (:slack-user-id claims) :slack :email)
+            user (assoc user-data :admin admin-teams)
+            jwt-user (user-rep/jwt-props-for user auth-source)
+            refreshed-token (jwtoken/generate conn jwt-user)
+            is-slack-user? (= auth-source :slack)
+            slack-user (when is-slack-user?
+                          ((keyword slack-team-id) (:slack-users jwt-user)))
+            slack-data-map (when is-slack-user?
+                              {:slack-id (:id slack-user)
+                              :slack-token (:token slack-user)})
+            token-user (-> jwt-user
+                            (assoc :auth-source (name auth-source))
+                            (merge slack-data-map))]
+        (when token-user
+          ;; generated token
+          {:jwtoken refreshed-token :user token-user})))))
+
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 ;; A resource for authenticating users by email/pass
@@ -219,6 +259,7 @@
                           (user-rep/auth-response conn
                             (-> user
                               (assoc :admin admin-teams)
+                              (assoc :premium-teams (team-res/premium-teams conn (:teams user)))
                               (assoc :slack-bots (jwt/bots-for conn user)))
                             :email)))))
 
@@ -325,10 +366,10 @@
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
                                         (user-res/get-user conn user-id))]
                        ;; super-user gets slack bots property as well
-                       (let [bots-user (if (-> ctx :jwtoken :claims :super-user)
-                                          (assoc user :slack-bots (jwt/bots-for conn user))
-                                          user)]
-                         {:existing-user bots-user})
+                       (let [user-with-slack-bots (if (-> ctx :jwtoken :claims :super-user)
+                                                    (assoc user :slack-bots (jwt/bots-for conn user))
+                                                    user)]
+                         {:existing-user user-with-slack-bots})
                        false))
 
   ;; Acctions
@@ -340,6 +381,7 @@
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
     :post (fn [ctx] (api-common/blank-response))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
+
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-response (schema/check user-res/User (:user-update ctx)))))
 
@@ -347,48 +389,18 @@
 (defresource token [conn]
 
   ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
-  :initialize-context (by-method {
-    :get (fn [ctx]
-           (let [token (api-common/get-token (get-in ctx [:request :headers]))
-                 decoded-token (jwt/decode token)]
-             ;; We signed the token
-             (when (jwt/check-token token config/passphrase)
-               (if (nil? (schema/check jwt/Claims (:claims decoded-token))) ; claims are valid
-                 {:jwtoken token :user (:claims decoded-token)}
-                 (let [claims (:claims decoded-token) ;; check if super user
-                       user-id (:user-id claims)
-                       slack-user-id (:slack-user-id claims)
-                       slack-team-id (:slack-team-id claims)]
-                   (when (:super-user claims)
-                     (let [auth-source (if slack-user-id
-                                         :slack
-                                         :email)
-                           user-data (if user-id
-                                       (user-res/get-user conn user-id)
-                                       (user-res/get-user-by-slack-id
-                                            conn
-                                            slack-team-id
-                                            slack-user-id))]
-                       (when user-data
-                         (when-let* [admin-teams (user-res/admin-of
-                                                  conn
-                                                  (:user-id user-data))
-                                     user (assoc user-data :admin admin-teams)
-                                     jwt-user (user-rep/jwt-props-for user auth-source)
-                                     utoken (jwtoken/generate conn jwt-user)]
-                           (let [is-slack-user? (= auth-source :slack)
-                                 slack-user (when is-slack-user?
-                                              ((keyword slack-team-id) (:slack-users jwt-user)))
-                                 slack-data-map (when is-slack-user?
-                                                  {:slack-id (:id slack-user)
-                                                   :slack-token (:token slack-user)})
-                                 token-user (-> jwt-user
-                                              (assoc :auth-source (name auth-source))
-                                              (merge slack-data-map))]
-                             (when token-user
-                               ;; generated token
-                               {:jwtoken utoken :user token-user})))))))))))})
-  
+  :initialize-context (by-method {:get (fn [ctx]
+                                         (let [token (api-common/get-token (get-in ctx [:request :headers]))
+                                               claims (:claims (jwt/decode token))]
+                                           ;; We signed the token?
+                                           (when (jwt/check-token token config/passphrase)
+                                             (if (nil? (schema/check lib-schema/Claims claims))
+                                               ;; this is a valid token, go on with refresh
+                                               {:jwtoken token :user claims}
+                                               ;; this is a super-user token, add the missing
+                                               ;; info to the provided token
+                                               (when (:super-user claims)
+                                                 (check-super-user-token conn claims))))))})
   :allowed-methods [:options :get]
 
   ;; Media type client accepts
@@ -398,34 +410,34 @@
   ;; Existentialism
   :exists? (fn [ctx] (if-let* [user-id (-> ctx :user :user-id)
                                user (user-res/get-user conn user-id)
-                               admin-teams (user-res/admin-of conn user-id)]
-                        {:existing-user (assoc user :admin admin-teams)}
-                        false))
-
+                               admin-teams (user-res/admin-of conn user-id)
+                               premium-teams (team-res/premium-teams conn (:teams user))]
+                              {:existing-user (-> user
+                                                  (assoc :admin admin-teams)
+                                                  (assoc :premium-teams premium-teams))}
+                              false))
+  :handle-exception (fn [ctx] (api-common/error-response api-common/error-msg 500))
   ;; Responses
   :handle-not-found (api-common/unauthorized-response)
   :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
-
                         ;; Email token - respond w/ JWToken and location
-                        "email" (let [user (:existing-user ctx)]
-                                  (user-rep/auth-response conn
-                                    (assoc user :slack-bots (jwt/bots-for conn user))
-                                    :email))
-
+                         "email" (let [user (:existing-user ctx)]
+                                   (user-rep/auth-response conn
+                                                           (assoc user :slack-bots (jwt/bots-for conn user))
+                                                           :email))
                         ;; Slack token - defer to Slack API handler
-                        "slack" (slack-api/refresh-token conn (:existing-user ctx)
-                                                              (-> ctx :user :slack-id)
-                                                              (-> ctx :user :slack-token))
-                        "google" (let [user (:existing-user ctx)]
-                                   (if (google/refresh-token conn user)
-                                     (user-rep/auth-response
-                                       conn
-                                       (assoc user :slack-bots
-                                              (jwt/bots-for conn user))
-                                       :google)
-                                     (api-common/unauthorized-response)))
+                         "slack" (slack-api/refresh-token conn (:existing-user ctx)
+                                                          (-> ctx :user :slack-id)
+                                                          (-> ctx :user :slack-token))
+                        ;; Google token - refresh if possible
+                         "google" (let [user (:existing-user ctx)]
+                                    (if (google/refresh-token conn user)
+                                      (user-rep/auth-response conn
+                                                              (assoc user :slack-bots (jwt/bots-for conn user))
+                                                              :google)
+                                      (api-common/unauthorized-response)))
                         ;; What token is this?
-                        (api-common/unauthorized-response))))
+                         (api-common/unauthorized-response))))
 
 ;; A resource for requesting a password reset
 (defresource password-reset [conn]

@@ -257,6 +257,15 @@
     (db-common/read-resources conn table-name index-key index-value)
     vec)))
 
+;; ----- Premium handling -----
+
+(schema/defn ^:always-validate premium-teams :- [lib-schema/UniqueID]
+  [conn team-ids :- [lib-schema/UniqueID]]
+  (as-> team-ids tids
+       (list-teams-by-ids conn tids [:premium])
+       (filter :premium tids)
+       (mapv :team-id tids)))
+
 ;; ----- Armageddon -----
 
 (defn delete-all-teams!

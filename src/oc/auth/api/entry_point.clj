@@ -6,6 +6,7 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.lib.schema :as lib-schema]
+            [oc.lib.jwt :as jwt-lib]
             [oc.auth.config :as config]
             [oc.auth.representations.user :as user-rep]
             [oc.auth.representations.team :as team-rep]
@@ -64,7 +65,7 @@
                       ;; Else do the usual
                       :else
                       (api-common/allow-anonymous ctx)))))
-  :handle-unauthorized (fn [_] (api-common/unauthorized-response))
+  :handle-unauthorized api-common/handle-unauthorized
   :handle-forbidden  (fn [ctx] (if (:jwtoken ctx) (api-common/forbidden-response) (api-common/unauthorized-response)))
 
   :allowed-methods [:options :get]

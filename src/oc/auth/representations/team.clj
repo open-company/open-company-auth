@@ -10,7 +10,7 @@
             [oc.auth.representations.google-auth :as google]
             [oc.auth.representations.email-auth :as email]))
 
-(def representation-props [:team-id :logo-url :name :users :created-at :updated-at :invite-token])
+(def representation-props [:team-id :logo-url :name :users :created-at :updated-at :invite-token :premium])
 
 (defun url
   ([team-id :guard string?] (str "/teams/" team-id))

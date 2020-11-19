@@ -26,8 +26,7 @@
   "
   {:notification-type schema/Keyword
    :resource-type schema/Keyword
-   :content {
-             (schema/optional-key :new) lib-schema/User}
+   :content {(schema/optional-key :new) lib-schema/User}
    :notification-at lib-schema/ISO8601})
 
 ;; ----- Event handling -----

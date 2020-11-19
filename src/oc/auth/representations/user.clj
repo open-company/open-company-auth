@@ -21,11 +21,11 @@
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :timezone :created-at :slack-users :status :title :blurb :location :profiles])
 (def representation-props (concat slack-props oc-props))
-(def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :digest-last-at])
+(def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :latest-digest-delivery])
 (def team-user-props [:admin?])
 (def self-user-representation-props (concat representation-props self-user-props))
 (def team-user-representation-props (concat representation-props team-user-props))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :digest-delivery :digest-last-at])
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :digest-delivery :latest-digest-delivery :premium-teams])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
@@ -165,6 +165,7 @@
     (-> google-users-props
       (assoc :name (jwt/name-for user))
       (assoc :auth-source source)
+      (assoc :premium-teams (:premium-teams user))
       (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
 
 (schema/defn ^:always-validate auth-response
