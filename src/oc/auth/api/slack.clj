@@ -202,12 +202,12 @@
                                                       slack-user-u))
           ;; Create a JWToken from the user for the response
           jwt-user (user-rep/jwt-props-for (-> updated-slack-user
-                                              (clean-user)
-                                              (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                              (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
-                                              (assoc :slack-id (:slack-id slack-response))
-                                              (assoc :slack-token (:slack-token slack-response))
-                                              (assoc :slack-bots (lib-jwt/bots-for conn user)))
+                                               (clean-user)
+                                               (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                               (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
+                                               (assoc :slack-id (:slack-id slack-response))
+                                               (assoc :slack-token (:slack-token slack-response))
+                                               (assoc :slack-bots (lib-jwt/bots-for conn user)))
                                            :slack)]
       ;; Gather all slack users display names
       (doseq [team teams]

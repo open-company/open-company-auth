@@ -75,20 +75,22 @@
                                     (update-in user [:google-users] merge new-google-user)))
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-google-user
-                                               (clean-user)
-                                               (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                               (assoc :premium-teams (user-res/premium-teams conn user))
+                                                 (clean-user)
+                                                 (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                                 (assoc :premium-teams (user-res/premium-teams conn user))
                                                ;; include slack bot info
-                                               (assoc :slack-bots
-                                                 (jwt/bots-for conn user))
-                                               (assoc :google-id (:id user-info))
-                                               (assoc :google-domain (:hd user-info))
-                                               (assoc :google-token token)) :google)]
+                                                 (assoc :slack-bots
+                                                        (jwt/bots-for conn user))
+                                                 (assoc :google-id (:id user-info))
+                                                 (assoc :google-domain (:hd user-info))
+                                                 (assoc :google-token token))
+                                             :google)]
         (timbre/debug jwt-user)
         (redirect-to-web-ui redirect-origin
                             (:success-uri config/google)
                             :google
-                            (jwtoken/generate conn jwt-user (:last-token-at user)))))))
+                            (jwtoken/generate conn jwt-user)
+                            (:last-token-at user))))))
 
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]
