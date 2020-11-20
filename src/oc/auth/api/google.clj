@@ -1,7 +1,7 @@
 (ns oc.auth.api.google
   "Liberator API for Google oauth2"
   (:require [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
+            [compojure.core :as compojure :refer (GET)]
             [ring.util.response :as response]
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
@@ -77,6 +77,7 @@
             jwt-user (user-rep/jwt-props-for (-> updated-google-user
                                                (clean-user)
                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                               (assoc :premium-teams (user-res/premium-teams conn user))
                                                ;; include slack bot info
                                                (assoc :slack-bots
                                                  (jwt/bots-for conn user))
@@ -87,8 +88,7 @@
         (redirect-to-web-ui redirect-origin
                             (:success-uri config/google)
                             :google
-                            (jwtoken/generate conn jwt-user)
-                            (:last-token-at user))))))
+                            (jwtoken/generate conn jwt-user (:last-token-at user)))))))
 
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]

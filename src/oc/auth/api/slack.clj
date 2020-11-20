@@ -159,14 +159,16 @@
     (let [user (user-res/get-user conn user-id)
           slack-user-data (get-in user [:slack-users (keyword state-slack-org-id)])
           ;; Create a JWToken from the user for the response
-          jwt-user (user-rep/jwt-props-for (-> user
-                                              (clean-user)
-                                              (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                              (assoc :slack-id (:id slack-user-data))
-                                              (assoc :slack-token (:token slack-user-data))) :slack)]
+          jwt-user (user-rep/jwt-props-for (as-> (clean-user user) juser
+                                             (assoc juser :admin (user-res/admin-of conn (:user-id user)))
+                                             (assoc juser :premium-teams (user-res/premium-teams conn (:user-id user)))
+                                             (assoc juser :slack-id (:id slack-user-data))
+                                             (assoc juser :slack-token (:token slack-user-data))
+                                             (assoc juser :slack-bots (lib-jwt/bots-for conn juser)))
+                                           :slack)]
       (redirect-to-web-ui redirect-origin redirect :team
-              (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
-              (:last-token-at user)))
+                          (jwtoken/generate conn jwt-user)
+                          (:last-token-at user)))
     ;; Need to add the new authed bot to the team and redirect to web UI.
     (let [user (user-res/get-user conn user-id)
 
@@ -202,9 +204,11 @@
           jwt-user (user-rep/jwt-props-for (-> updated-slack-user
                                               (clean-user)
                                               (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                              (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
                                               (assoc :slack-id (:slack-id slack-response))
-                                              (assoc :slack-token (:slack-token slack-response))) :slack)
-          bots-for-user (lib-jwt/bots-for conn jwt-user)]
+                                              (assoc :slack-token (:slack-token slack-response))
+                                              (assoc :slack-bots (lib-jwt/bots-for conn user)))
+                                           :slack)]
       ;; Gather all slack users display names
       (doseq [team teams]
         (slack-api-calls/gather-display-names team slack-org))
@@ -218,8 +222,8 @@
                  config/aws-sqs-bot-queue)
       ;; All done, send them back to the OC Web UI with a JWToken
       (redirect-to-web-ui redirect-origin redirect :team
-        (jwtoken/generate conn (assoc jwt-user :slack-bots bots-for-user))
-        (:last-token-at user)))))
+                          (jwtoken/generate conn jwt-user)
+                          (:last-token-at user)))))
 
 (defn- update-user-avatar-if-needed [old-user-avatar slack-user-avatar]
   (if (and (or (s/starts-with? old-user-avatar "/img/ML/")
@@ -327,12 +331,14 @@
                                                           slack-user-digest))
             ;; Create a JWToken from the user for the response
             jwt-user (user-rep/jwt-props-for (-> updated-slack-user
-                                                (clean-user)
-                                                (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                                (assoc :slack-id (:slack-id slack-user))
-                                                (assoc :slack-token (:slack-token slack-user))
-                                                (assoc :slack-display-name (:display-name user-profile)))
-                                              :slack)]
+                                                 (clean-user)
+                                                 (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                                 (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
+                                                 (assoc :slack-id (:slack-id slack-user))
+                                                 (assoc :slack-token (:slack-token slack-user))
+                                                 (assoc :slack-display-name (:display-name user-profile))
+                                                 (assoc :slack-bots (lib-jwt/bots-for conn user)))
+                                             :slack)]
         ;; Add the Slack org to the existing team if needed
         (when (and target-team (not bot-only?))
           (team-res/add-slack-org conn team-id (:slack-org-id slack-org)))
@@ -350,8 +356,8 @@
                        :bot-user-id (:bot-user-id slack-org)})
                      config/aws-sqs-bot-queue))
         (redirect-to-web-ui redirect-origin redirect redirect-arg
-          (jwtoken/generate conn (assoc jwt-user :slack-bots (lib-jwt/bots-for conn jwt-user)))
-          (:last-token-at user)))
+                            (jwtoken/generate conn jwt-user)
+                            (:last-token-at user)))
 
       ;; Error came back from Slack, send them back to the OC Web UI
       (redirect-to-web-ui redirect-origin redirect :failed)))
@@ -373,13 +379,14 @@
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."
   [conn {user-id :user-id :as user} slack-id slack-token]
   (timbre/info "Refresh token request for user" user-id "with slack id of" slack-id "and access token" slack-token)
-  (if-let [slack-user (slack/valid-access-token? slack-token)]
+  (if (slack/valid-access-token? slack-token)
     (do
       (timbre/info "Refreshing Slack user" slack-id)
       ;; Respond w/ JWToken and location
       (user-rep/auth-response conn (-> user
                                       (clean-user)
                                       (assoc :admin (:admin user))
+                                      (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
                                       (assoc :slack-id slack-id)
                                       (assoc :slack-token slack-token)
                                       (assoc :slack-bots (lib-jwt/bots-for conn user)))

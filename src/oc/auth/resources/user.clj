@@ -351,6 +351,12 @@
 
 (defn admin-of [conn user-id] (jwt/admin-of conn user-id)) ; alias
 
+(schema/defn ^:always-validate premium-teams :- [lib-schema/UniqueID]
+  [conn :- lib-schema/Conn user :- (schema/if string? lib-schema/UniqueID User)]
+  (if (lib-schema/valid? lib-schema/UniqueID user)
+    (team-res/premium-teams conn (:teams (get-user conn user)))
+    (team-res/premium-teams conn (:teams user))))
+
 ;; ----- Collection of users -----
 
 (defun list-users

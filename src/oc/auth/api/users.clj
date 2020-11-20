@@ -214,7 +214,9 @@
     (when (and user-data
                 admin-teams)
       (let [auth-source (if (:slack-user-id claims) :slack :email)
-            user (assoc user-data :admin admin-teams)
+            user (-> user-data
+                     (assoc :admin admin-teams)
+                     (assoc :premium-teams (user-res/premium-teams conn user-data)))
             jwt-user (user-rep/jwt-props-for user auth-source)
             refreshed-token (jwtoken/generate conn jwt-user)
             is-slack-user? (= auth-source :slack)
@@ -247,6 +249,9 @@
     :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
                        (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
 
+  ;; Exceptions handling
+  :handle-exception api-common/handle-exception
+
   ;; Responses
   :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or
                                                                             (-> ctx :request :identity) ; Basic HTTP Auth
@@ -259,7 +264,7 @@
                           (user-rep/auth-response conn
                             (-> user
                               (assoc :admin admin-teams)
-                              (assoc :premium-teams (team-res/premium-teams conn (:teams user)))
+                              (assoc :premium-teams (user-res/premium-teams conn user))
                               (assoc :slack-bots (jwt/bots-for conn user)))
                             :email)))))
 
@@ -316,7 +321,9 @@
                                 (api-common/blank-response)
                                 ;; respond w/ JWToken and location
                                 (user-rep/auth-response conn
-                                  (assoc user :slack-bots (jwt/bots-for conn user))
+                                  (-> user
+                                      (assoc :slack-bots (jwt/bots-for conn user))
+                                      (assoc :premium-teams (user-res/premium-teams conn user)))
                                   :email)))))
 
 
@@ -411,33 +418,34 @@
   :exists? (fn [ctx] (if-let* [user-id (-> ctx :user :user-id)
                                user (user-res/get-user conn user-id)
                                admin-teams (user-res/admin-of conn user-id)
-                               premium-teams (team-res/premium-teams conn (:teams user))]
-                              {:existing-user (-> user
-                                                  (assoc :admin admin-teams)
-                                                  (assoc :premium-teams premium-teams))}
-                              false))
-  :handle-exception (fn [ctx] (api-common/error-response api-common/error-msg 500))
+                               premium-teams (user-res/premium-teams conn user)
+                               complete-user (-> user
+                                                 (assoc :admin admin-teams)
+                                                 (assoc :premium-teams premium-teams))]
+                       {:existing-user complete-user}
+                       false))
+  ;; Exceptions handling
+  :handle-exception api-common/handle-exception
   ;; Responses
   :handle-not-found (api-common/unauthorized-response)
-  :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
-                        ;; Email token - respond w/ JWToken and location
-                         "email" (let [user (:existing-user ctx)]
-                                   (user-rep/auth-response conn
+  :handle-ok (fn [ctx] (let [user (:existing-user ctx)]
+                         (case (-> ctx :user :auth-source)
+                           ;; Email token - respond w/ JWToken and location
+                           "email" (user-rep/auth-response conn
                                                            (assoc user :slack-bots (jwt/bots-for conn user))
-                                                           :email))
-                        ;; Slack token - defer to Slack API handler
-                         "slack" (slack-api/refresh-token conn (:existing-user ctx)
-                                                          (-> ctx :user :slack-id)
-                                                          (-> ctx :user :slack-token))
-                        ;; Google token - refresh if possible
-                         "google" (let [user (:existing-user ctx)]
-                                    (if (google/refresh-token conn user)
+                                                           :email)
+                           ;; Slack token - defer to Slack API handler
+                           "slack" (slack-api/refresh-token conn user
+                                                            (-> ctx :user :slack-id)
+                                                            (-> ctx :user :slack-token))
+                           ;; Google token - refresh if possible
+                           "google" (if (google/refresh-token conn user)
                                       (user-rep/auth-response conn
                                                               (assoc user :slack-bots (jwt/bots-for conn user))
                                                               :google)
-                                      (api-common/unauthorized-response)))
-                        ;; What token is this?
-                         (api-common/unauthorized-response))))
+                                      (api-common/unauthorized-response))
+                           ;; What token is this?
+                           (api-common/unauthorized-response)))))
 
 ;; A resource for requesting a password reset
 (defresource password-reset [conn]

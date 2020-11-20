@@ -76,6 +76,9 @@
   :available-media-types ["application/json"]
   :handle-not-acceptable (fn [_] (api-common/only-accept 406 "application/json"))
 
+  ;; Exceptions handling
+  :handle-exception api-common/handle-exception
+
   ;; Responses
   :handle-ok (fn [ctx] (render-entry-point conn ctx)))
 

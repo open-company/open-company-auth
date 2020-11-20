@@ -139,34 +139,33 @@
 
 (schema/defn ^:always-validate jwt-props-for
   [user :- user-res/UserRep source :- schema/Keyword]
-  (let [jwt-props (zipmap jwt-props (map user jwt-props))
-        slack? (:slack-id user)
+  (let [slack? (:slack-id user)
         slack-bots? (:slack-bots user)
         slack-users? (:slack-users user)
-        slack-props (if slack?
-                      (-> jwt-props
-                        (assoc :slack-id (:slack-id user))
-                        (assoc :slack-token (:slack-token user))
-                        ; "-" for backward compatability w/ old JWTokens
-                        (assoc :slack-display-name (or (:slack-display-name user) "-")))
-                      jwt-props)
-        bot-props (if slack-bots?
-                    (assoc slack-props :slack-bots (:slack-bots user))
-                    slack-props)
-        slack-users-props (if slack-users?
-                            (assoc bot-props :slack-users (:slack-users user))
-                            bot-props)
-        google-users-props (if (:google-id user)
-                             (-> slack-users-props
-                               (assoc :google-id (:google-id user))
-                               (assoc :google-domain (:google-domain user))
-                               (assoc :google-token (:google-token user)))
-                            slack-users-props)]
-    (-> google-users-props
-      (assoc :name (jwt/name-for user))
-      (assoc :auth-source source)
-      (assoc :premium-teams (:premium-teams user))
-      (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
+        google? (:google-id user)]
+    (as-> (zipmap jwt-props (map user jwt-props)) jwt-user
+      (if slack?
+        (-> jwt-user
+            (assoc :slack-id (:slack-id user))
+            (assoc :slack-token (:slack-token user))
+            ; "-" for backward compatability w/ old JWTokens
+            (assoc :slack-display-name (or (:slack-display-name user) "-")))
+        jwt-user)
+      (if slack-bots?
+        (assoc jwt-user :slack-bots (:slack-bots user))
+        jwt-user)
+      (if slack-users?
+        (assoc jwt-user :slack-users (:slack-users user))
+        jwt-user)
+      (if google?
+        (-> jwt-user
+            (assoc :google-id (:google-id user))
+            (assoc :google-domain (:google-domain user))
+            (assoc :google-token (:google-token user)))
+        jwt-user)
+      (assoc jwt-user :name (jwt/name-for user))
+      (assoc jwt-user :auth-source source)
+      (assoc jwt-user :refresh-url (str config/auth-server-url "/users/refresh")))))
 
 (schema/defn ^:always-validate auth-response
   "Return a JWToken for the user, or and a Location header."
