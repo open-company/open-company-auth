@@ -66,11 +66,11 @@
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
     ;; ************************************************************************
-    ;; ****************** NB: don't go under 0.17.29-alpha59 ******************
+    ;; ****************** NB: don't go under 0.17.29-alpha60 ******************
     ;; ***************** (JWT schema changes, more info here: *****************
     ;; ******* https://github.com/open-company/open-company-lib/pull/82) ******
     ;; ************************************************************************
-    [open-company/lib "0.17.29-alpha59" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
+    [open-company/lib "0.17.29-alpha60" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
     ;; ************************************************************************
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
