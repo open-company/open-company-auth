@@ -1,28 +1,29 @@
 (ns oc.auth.app
   "Namespace for the web application which serves the REST API."
   (:gen-class)
-  (:require
-   [oc.lib.sentry.core :as sentry]
-   [taoensso.timbre :as timbre]
-   [ring.logger.timbre :refer (wrap-with-logger)]
-   [liberator.dev :refer (wrap-trace)]
-   [ring.middleware.params :refer (wrap-params)]
-   [ring.middleware.reload :refer (wrap-reload)]
-   [ring.middleware.cors :refer (wrap-cors)]
-   [buddy.auth.middleware :refer (wrap-authentication)]
-   [buddy.auth.backends :as backends]
-   [compojure.core :as compojure :refer (GET)]
-   [com.stuartsierra.component :as component]
-   [oc.lib.api.common :as api-common]
-   [oc.auth.components :as components]
-   [oc.auth.config :as c]
-   [oc.auth.api.entry-point :as entry-point-api]
-   [oc.auth.api.slack :as slack-api]
-   [oc.auth.api.google :as google-api]
-   [oc.auth.api.users :as users-api]
-   [oc.auth.api.teams :as teams-api]
-   [oc.auth.async.slack-router :as slack-router]
-   [oc.auth.async.expo :as expo]))
+  (:require [oc.lib.sentry.core :as sentry]
+            [taoensso.timbre :as timbre]
+            [clojure.string :as clj-str]
+            [clojure.java.io :as j-io]
+            [ring.logger.timbre :refer (wrap-with-logger)]
+            [liberator.dev :refer (wrap-trace)]
+            [ring.middleware.params :refer (wrap-params)]
+            [ring.middleware.reload :refer (wrap-reload)]
+            [ring.middleware.cors :refer (wrap-cors)]
+            [buddy.auth.middleware :refer (wrap-authentication)]
+            [buddy.auth.backends :as backends]
+            [compojure.core :as compojure :refer (GET)]
+            [com.stuartsierra.component :as component]
+            [oc.lib.api.common :as api-common]
+            [oc.auth.components :as components]
+            [oc.auth.config :as c]
+            [oc.auth.api.entry-point :as entry-point-api]
+            [oc.auth.api.slack :as slack-api]
+            [oc.auth.api.google :as google-api]
+            [oc.auth.api.users :as users-api]
+            [oc.auth.api.teams :as teams-api]
+            [oc.auth.async.slack-router :as slack-router]
+            [oc.auth.async.expo :as expo]))
 
 ;; ----- Request Routing -----
 
@@ -58,7 +59,7 @@
     "Hot-reload: " c/hot-reload "\n"
     "Sentry: " c/dsn "\n"
     "  env: " c/sentry-env "\n"
-    (when-not (clojure.string/blank? c/sentry-release)
+    (when-not (clj-str/blank? c/sentry-release)
       (str "  release: " c/sentry-release "\n"))
     "Payments?: " c/payments-enabled? "\n\n"
     (when c/intro? "Ready to serve...\n"))))
@@ -104,7 +105,7 @@
 
   ;; Echo config information
   (println (str "\n"
-    (when c/intro? (str (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"))
+    (when c/intro? (str (slurp (j-io/resource "ascii_art.txt")) "\n"))
     "OpenCompany Auth Service\n"))
   (echo-config port))
 

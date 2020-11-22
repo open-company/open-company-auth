@@ -2,8 +2,9 @@
   "Liberator API for Slack callback to auth service."
   (:require [defun.core :refer (defun-)]
             [if-let.core :refer (if-let* when-let*)]
+            [clojure.set :as clj-set]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
+            [compojure.core :as compojure :refer (GET OPTIONS)]
             [ring.util.response :as response]
             [clojure.string :as s]
             [oc.lib.db.pool :as pool]
@@ -150,7 +151,7 @@
 (defn- slack-callback-step2
   "Second step of the slack OAuth. The user has granted permission to the user and team data.
    now we need check if he granted bot permission and redirect to the web UI with the right response."
-  [conn {:keys [team-id user-id redirect-origin redirect state-slack-org-id error] :as slack-response}]
+  [conn {:keys [user-id redirect-origin redirect state-slack-org-id error] :as slack-response}]
   (timbre/info "slack callback step 2" slack-response)
   (if (or error                             ; user denied bot auth
           (false? (first slack-response))   ; something went wrong with bot auth
@@ -183,10 +184,10 @@
           ;; Add additional teams to the existing user if their Slack org gives them access to more teams
           existing-team-ids (set (:teams user)) ; OC teams the user has acces to now
           relevant-team-ids (set (map :team-id teams)) ; OC teams the Slack org has access to
-          additional-team-ids (clojure.set/difference relevant-team-ids existing-team-ids)
-          updated-user (if (empty? additional-team-ids)
-                            user ; no additional teams to add
-                            (add-teams conn user additional-team-ids)) ; add additional teams to the user
+          additional-team-ids (clj-set/difference relevant-team-ids existing-team-ids)
+          _updated-user (if (empty? additional-team-ids)
+                          user ; no additional teams to add
+                          (add-teams conn user additional-team-ids)) ; add additional teams to the user
 
           ; new Slack team
           new-slack-user {(keyword (:slack-org-id slack-response)) {:id (:slack-id slack-response)
@@ -367,9 +368,9 @@
   [conn params]
   (timbre/info "Slack callback")
   (let [slack-response (slack/oauth-callback params) ; process the response from Slack
-        team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
-        user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
-        redirect (:redirect slack-response) ; where we redirect the browser back to
+        _team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
+        _user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
+        _redirect (:redirect slack-response) ; where we redirect the browser back to
         state-slack-org-id (:state-slack-org-id slack-response)]
     (if-not (nil? state-slack-org-id)
       (slack-callback-step2 conn slack-response)

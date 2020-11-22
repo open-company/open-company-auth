@@ -1,12 +1,11 @@
 (ns oc.auth.api.entry-point
   "Liberator API for HATEOAS entry point to auth service."
-  (:require [compojure.core :as compojure :refer (defroutes GET OPTIONS)]
+  (:require [compojure.core :as compojure :refer (GET OPTIONS)]
             [liberator.core :refer (defresource)]
             [cheshire.core :as json]
             [oc.lib.db.pool :as pool]
             [oc.lib.api.common :as api-common]
             [oc.lib.schema :as lib-schema]
-            [oc.lib.jwt :as jwt-lib]
             [oc.auth.config :as config]
             [oc.auth.representations.user :as user-rep]
             [oc.auth.representations.team :as team-rep]
@@ -18,7 +17,7 @@
 
 ;; ----- Representations -----
 
-(defn- render-entry-point [conn {:keys [user invite-token invite-token-team] :as _ctx}]
+(defn- render-entry-point [conn {:keys [user invite-token-team] :as _ctx}]
   (cond
     invite-token-team
     (json/generate-string
