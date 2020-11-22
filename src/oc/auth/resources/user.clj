@@ -1,15 +1,15 @@
 (ns oc.auth.resources.user
   "User stored in RethinkDB."
   (:require [clojure.string :as s]
+            [clojure.set :as clj-set]
             [clojure.walk :refer (keywordize-keys)]
-            [defun.core :refer (defun defun-)]
-            [if-let.core :refer (if-let*)]
+            [defun.core :refer (defun)]
+            [if-let.core :refer (when-let*)]
             [schema.core :as schema]
             [buddy.hashers :as hashers]
             [oc.lib.db.common :as db-common]
             [oc.lib.jwt :as jwt]
             [oc.lib.schema :as lib-schema]
-            [clojure.set :refer (subset?)]
             [oc.auth.resources.team :as team-res]
             [oc.auth.config :as config]))
 
@@ -43,7 +43,17 @@
   - all combinations of the allowed times"
   [times]
   (let [times-kw (set (map keyword times))]
-    (subset? times-kw config/digest-times)))
+    (clj-set/subset? times-kw config/premium-digest-times)))
+
+(def DigestTimes
+  (schema/maybe (schema/pred digest-times)))
+
+(def TeamDigestDelivery
+  {:team-id lib-schema/UniqueID
+   :digest-times DigestTimes})
+
+(def DigestDelivery
+  [TeamDigestDelivery])
 
 (def QSGChecklist
   {(schema/optional-key :should-show-qsg?) (schema/maybe schema/Bool)
@@ -76,7 +86,7 @@
           :reminder-medium (schema/pred #(mediums (keyword %)))
           ;; Digest
           :digest-medium (schema/pred #(digest-mediums (keyword %)))
-          (schema/optional-key :digest-delivery) (schema/maybe (schema/pred digest-times))
+          (schema/optional-key :digest-delivery) DigestDelivery
           (schema/optional-key :latest-digest-deliveries) [{:org-id lib-schema/UniqueID :timestamp lib-schema/ISO8601}]
 
           (schema/optional-key :last-token-at) lib-schema/ISO8601
@@ -184,6 +194,10 @@
 (defn random-user-image []
   (first (shuffle (vec user-images))))
 
+(defn- digest-delivery-for-team [team-id]
+  {:team-id team-id
+   :digest-times [config/default-digest-time]})
+
 (schema/defn ^:always-validate ->user :- User
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
   ([user-props password :- lib-schema/NonBlankStr]
@@ -206,7 +220,12 @@
         (update :digest-medium #(or % :email)) ; lowest common denominator
         (update :notification-medium #(or % :email)) ; lowest common denominator
         (update :reminder-medium #(or % :email)) ; lowest common denominator
-        (update :digest-delivery #(or % config/digest-times))
+        (update :digest-delivery #(cond %
+                                        %
+                                        (seq (:teams user-props))
+                                        (mapv digest-delivery-for-team (:teams user-props))
+                                        :else
+                                        []))
         (assoc :status :pending)
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
@@ -239,8 +258,13 @@
                                           (and (= (count email-teams) 1)
                                                (= (first email-teams) invite-token-team-id)))))
                             (assoc user-with-teams :status :unverified) ; let user in even if not verified
-                            user-with-teams)]
-    (db-common/create-resource conn table-name user-with-status (db-common/current-timestamp)))))
+                            user-with-teams)
+        old-digest-delivery (:digest-delivery user)
+        missing-digest-delivery-teams (clj-set/difference (set teams) (set (:teams user)))
+        missing-digest-delivery (map digest-delivery-for-team (vec missing-digest-delivery-teams))
+        new-digest-delivery (concat old-digest-delivery missing-digest-delivery)
+        user-with-digest-delivery (assoc user-with-status :digest-delivery new-digest-delivery)]
+    (db-common/create-resource conn table-name user-with-digest-delivery (db-common/current-timestamp)))))
 
 (schema/defn ^:always-validate get-user :- (schema/maybe User)
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."
@@ -281,7 +305,7 @@
   "
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID user]
   {:pre [(map? user)]}
-  (if-let [original-user (get-user conn user-id)]
+  (when-let [original-user (get-user conn user-id)]
     (let [updated-password (:password user)
           hashed-password (when-not (s/blank? updated-password) (password-hash updated-password))
           updated-user (merge original-user (ignore-props user))
@@ -304,7 +328,7 @@
     (doseq [team-id (jwt/admin-of conn user-id)] (team-res/remove-admin conn team-id user-id))
     ;; Remove user
     (db-common/delete-resource conn table-name user-id)
-    (catch java.lang.RuntimeException e))) ; it's OK if there is no user to delete
+    (catch java.lang.RuntimeException _))) ; it's OK if there is no user to delete
 
 (schema/defn ^:always-validate add-token :- (schema/maybe User)
   "
@@ -314,7 +338,7 @@
   ([conn user-id :- lib-schema/UniqueID] (add-token conn user-id (str (java.util.UUID/randomUUID))))
 
   ([conn :- lib-schema/Conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
-  (if-let [user (get-user conn user-id)]
+  (when-let [user (get-user conn user-id)]
     (db-common/update-resource conn table-name primary-key user (assoc user :one-time-token token)))))
 
 (schema/defn ^:always-validate remove-token :- (schema/maybe User)
@@ -323,7 +347,7 @@
   Returns the updated user on success, nil on non-existence, and a RethinkDB error map on other errors.
   "
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
-  (if-let [user (get-user conn user-id)]
+  (when (get-user conn user-id)
     (db-common/remove-property conn table-name user-id "one-time-token")))
 
 ;; ----- User's set operations -----
@@ -335,9 +359,16 @@
   "
   [conn user-id :- lib-schema/UniqueID team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (if-let* [user (get-user conn user-id)
+  (when-let* [user (get-user conn user-id)
             team (team-res/get-team conn team-id)]
-    (db-common/add-to-set conn table-name user-id "teams" team-id)))
+    (let [filtered-digest-delivery (filter #(not= (:team-id %) team-id) (:digest-delivery user))
+          old-digest-times (some #(when (= (:team-id %) team-id) %) (:digest-delivery user))
+          team-digest-delivery (or old-digest-times
+                                   (digest-delivery-for-team team-id))
+          digest-delivery (vec (conj filtered-digest-delivery team-digest-delivery))]
+      ;; Add a digest-delivery map for the new team
+      (db-common/update-resource conn table-name primary-key user (assoc user :digest-delivery digest-delivery))
+      (db-common/add-to-set conn table-name user-id "teams" team-id))))
 
 (schema/defn ^:always-validate remove-team :- (schema/maybe User)
   "
@@ -346,16 +377,17 @@
   "
   [conn user-id :- lib-schema/UniqueID team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (if-let [user (get-user conn user-id)]
-    (db-common/remove-from-set conn table-name user-id "teams" team-id)))
+  (when-let [user (get-user conn user-id)]
+    (let [filtered-digest-delivery (filterv #(not= (:team-id %) team-id) (:digest-delivery user))]
+      ;; Remove digest delivery preference for the removed team
+      (db-common/update-resource conn table-name primary-key user (assoc user :digest-delivery filtered-digest-delivery))
+      (db-common/remove-from-set conn table-name user-id "teams" team-id))))
 
 (defn admin-of [conn user-id] (jwt/admin-of conn user-id)) ; alias
 
 (schema/defn ^:always-validate premium-teams :- [lib-schema/UniqueID]
   [conn :- lib-schema/Conn user :- (schema/if string? lib-schema/UniqueID User)]
-  (if (lib-schema/valid? lib-schema/UniqueID user)
-    (team-res/premium-teams conn (:teams (get-user conn user)))
-    (team-res/premium-teams conn (:teams user))))
+  (jwt/premium-teams conn (if (string? user) user (:user-id user))))
 
 ;; ----- Collection of users -----
 
