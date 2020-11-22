@@ -84,7 +84,9 @@
         (update :name #(or % ""))
         (assoc :admins [initial-admin])
         (assoc :email-domains [])
-        (update :slack-orgs #(or % []))
+        (update :slack-orgs #(if (seq %)
+                               (concat % [slack-org])
+                               [slack-org]))
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
 
@@ -121,7 +123,7 @@
   [conn team-id :- lib-schema/UniqueID team]
   {:pre [(db-common/conn? conn)
          (map? team)]}
-  (if-let [original-team (get-team conn team-id)]
+  (when-let [original-team (get-team conn team-id)]
     (let [updated-team (merge original-team (clean team))]
       (schema/validate Team updated-team)
       (db-common/update-resource conn table-name primary-key original-team updated-team))))
@@ -132,7 +134,7 @@
   {:pre [(db-common/conn? conn)]}
   (try
     (db-common/delete-resource conn table-name team-id)
-    (catch java.lang.RuntimeException e))) ; it's OK if there is no team to delete
+    (catch java.lang.RuntimeException _))) ; it's OK if there is no team to delete
 
 ;; ----- Team's set operations -----
 
@@ -153,7 +155,7 @@
   "
   [conn team-id :- lib-schema/UniqueID user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "admins" user-id)))
 
 (defn allowed-email-domain? [email-domain]
@@ -167,7 +169,7 @@
   [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)
          (allowed-email-domain? email-domain)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/add-to-set conn table-name team-id "email-domains" email-domain)))
 
 (schema/defn ^:always-validate remove-email-domain :- (schema/maybe Team)
@@ -177,7 +179,7 @@
   "
   [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "email-domains" email-domain)))
 
 (schema/defn ^:always-validate add-slack-org :- (schema/maybe Team)
@@ -187,7 +189,7 @@
   "
   [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/add-to-set conn table-name team-id "slack-orgs" slack-org)))
 
 (schema/defn ^:always-validate remove-slack-org :- (schema/maybe Team)
@@ -197,7 +199,7 @@
   "
   [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "slack-orgs" slack-org)))
 
 ;; ----- Collection of teams -----
@@ -256,15 +258,6 @@
   (->> (into [primary-key :name] additional-keys)
     (db-common/read-resources conn table-name index-key index-value)
     vec)))
-
-;; ----- Premium handling -----
-
-(schema/defn ^:always-validate premium-teams :- [lib-schema/UniqueID]
-  [conn :- lib-schema/Conn team-ids :- [lib-schema/UniqueID]]
-  (as-> team-ids tids
-       (list-teams-by-ids conn tids [:premium])
-       (filter :premium tids)
-       (mapv :team-id tids)))
 
 ;; ----- Armageddon -----
 
