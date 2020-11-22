@@ -1,6 +1,8 @@
 (ns oc.auth.config
   "Namespace for the configuration parameters."
-  (:require [environ.core :refer (env)]))
+  (:require [environ.core :refer (env)]
+            [clojure.string :as clj-str]
+            [clojure.java.io :as j-io]))
 
 (defn- bool
   "Handle the fact that we may have true/false strings, when we want booleans."
@@ -92,7 +94,7 @@
 (defonce slack-bot-share-scope "channels:read")
 (defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
 (defonce slack-bot-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (clojure.string/join "," ["bot," ;; "commands" need perm in prod app
+(defonce slack-bot-scope (clj-str/join "," ["bot," ;; "commands" need perm in prod app
                                                    slack-bot-share-scope
                                                    slack-bot-notifications-scope
                                                    slack-bot-unfurl-scope]))
@@ -120,7 +122,7 @@
 ;; ----- Email -----
 
 (defonce email-domain-blacklist (rest (clojure.string/split
-                                  (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
+                                  (slurp (j-io/resource "email-domain-blacklist.txt")) #"\n")))
 
 ;; ----- OpenCompany -----
 
@@ -129,4 +131,6 @@
 
 ;; ----- Digest -----
 
-(defonce digest-times (set (map keyword (clojure.string/split (or (env :digest-times) "700,1200,1700") #","))))
+(defonce digest-times (set (map keyword (clojure.string/split (or (env :digest-times) "700") #","))))
+(defonce premium-digest-times (set (map keyword (clojure.string/split (or (env :premium-digest-times) "700,1200,1700") #","))))
+(defonce default-digest-time (keyword (or (env :default-digest-time) "700")))

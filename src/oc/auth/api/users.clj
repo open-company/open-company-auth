@@ -3,7 +3,7 @@
   (:require [clojure.string :as s]
             [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes ANY OPTIONS POST)]
+            [compojure.core :as compojure :refer (ANY OPTIONS POST)]
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
             [schema.core :as schema]
@@ -42,7 +42,7 @@
 
 (defn email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
-  [sys req auth-data]
+  [sys _req auth-data]
   (when-let* [email (:username auth-data)
               password (:password auth-data)]
     (pool/with-pool [conn (-> sys :db-pool :pool)] 
@@ -80,19 +80,43 @@
 (defn- update-user-qsg-checklist
   "Update the :qsg-checklist property by merging the new passed data with the old present data to avoid
   overriding all the properties on every patch."
-  [old-user-map patch-data]
+  [_ patch-data]
   (if (contains? patch-data :qsg-checklist)
     (update-in patch-data [:qsg-checklist] merge (:qsg-checklist patch-data))
     patch-data))
+
+(defn- filter-team-digest-times [old-digest-delivery digest-time-map premium-teams-set]
+  (let [premium-team? (premium-teams-set (:team-id digest-time-map))
+        team-allowed-times-set (set (if premium-team?
+                                      config/premium-digest-times
+                                      config/digest-times))
+        filtered-times (->> (:digest-times digest-time-map)
+                            (filter (comp team-allowed-times-set keyword))
+                            (remove nil?)
+                            vec)]
+    (if (:changed digest-time-map)
+      (-> digest-time-map
+          (assoc :digest-times filtered-times)
+          (dissoc :changed))
+      (some #(when (= (:team-id %) (:team-id digest-time-map)) %)
+            old-digest-delivery))))
+
+(defn- filter-digest-delivery
+  "Digest delivery times is a premium feature, the user can set some values
+   only if the said team is on premium."
+  [conn original-user updating-user]
+  (let [premium-teams-set (set (user-res/premium-teams conn (:user-id original-user)))]
+    (mapv #(filter-team-digest-times (:digest-delivery original-user) % premium-teams-set)
+          (:digest-delivery updating-user))))
 
 (defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
-          updated-qsg-checklist (update-user-qsg-checklist user user-props)
           updated-user (as-> user-props props
                          (update-user-qsg-checklist user props)
                          (dissoc props :current-password)
+                         (assoc props :digest-delivery (filter-digest-delivery conn user user-props))
                          (user-res/ignore-props props)
                          (merge user props))]
       (if (and (lib-schema/valid? user-res/User updated-user)
@@ -113,8 +137,8 @@
       [false {:data email}]
       true)
     (catch Exception e
-      (do (timbre/warn "Request body not processable as an email address: " e)
-        true))))
+      (timbre/warn "Request body not processable as an email address: " e)
+      true)))
 
 ;; ----- Actions -----
 
@@ -366,8 +390,8 @@
   :processable? (by-method {
     :get true
     :options true
-    :post (fn [ctx] (can-resend-verificaiton-email? conn user-id))
-    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))})
+    :post (fn [_] (can-resend-verificaiton-email? conn user-id))
+    :patch (fn [_] (valid-user-update? conn (:data ctx) user-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
@@ -386,7 +410,7 @@
   ;; Responses
   :handle-ok (by-method {
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
-    :post (fn [ctx] (api-common/blank-response))
+    :post (fn [_] (api-common/blank-response))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
 
   :handle-unprocessable-entity (fn [ctx]
@@ -511,7 +535,7 @@
                (update-user conn new-ctx (:user-id existing-user))
                (timbre/info "Expo push tokens have not changed for user  " (-> ctx :user :user-id) ", no action taken"))))
 
-  :handle-ok (by-method {:post (fn [ctx] (api-common/blank-response))})
+  :handle-ok (by-method {:post (fn [_] (api-common/blank-response))})
   )
 
 ;; ----- Routes -----
