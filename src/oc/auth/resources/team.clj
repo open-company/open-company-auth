@@ -56,7 +56,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create and are ignored during an update."
-  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links})
+  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links :premium})
 
 ;; ----- Utility functions -----
 
@@ -72,9 +72,7 @@
   Take a minimal map describing a team, the user-id of the initial admin, and an optional Slack org id
   and 'fill the blanks' with any missing properties.
   "
-  ([team-props initial-admin] (->team team-props initial-admin nil))
-
-  ([team-props initial-admin :- lib-schema/UniqueID slack-org :- (schema/maybe lib-schema/NonBlankStr)] 
+  [team-props initial-admin :- lib-schema/UniqueID]
   {:pre [(map? team-props)]}
   (let [ts (db-common/current-timestamp)]
     (-> team-props
@@ -82,13 +80,12 @@
         clean
         (assoc :team-id (db-common/unique-id))
         (update :name #(or % ""))
+        (assoc :premium false)
         (assoc :admins [initial-admin])
         (assoc :email-domains [])
-        (update :slack-orgs #(if (seq %)
-                               (concat % [slack-org])
-                               [slack-org]))
+        (update :slack-orgs #(or % []))
         (assoc :created-at ts)
-        (assoc :updated-at ts)))))
+        (assoc :updated-at ts))))
 
 (schema/defn ^:always-validate create-team!
   "Create a team in the system. Throws a runtime exception if the team doesn't conform to the Team schema."
