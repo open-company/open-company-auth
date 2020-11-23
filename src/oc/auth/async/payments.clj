@@ -2,14 +2,14 @@
   "Async publish of team change reports to payments service."
   (:require [clojure.core.async :as async :refer (<! >!!)]
             [clojure.string :as string]
+            [cheshire.core :as json]
             [if-let.core :refer (when-let*)]
             [taoensso.timbre :as timbre]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [amazonica.aws.sqs :as sqs]
             [oc.auth.config :as c]
-            [oc.auth.resources.team :as team-res]
-            [oc.auth.resources.user :as user-res]))
+            [oc.auth.resources.team :as team-res]))
 
 
 ;; ----- core.async -----
@@ -34,7 +34,8 @@
     {:access-key c/aws-access-key-id
      :secret-key c/aws-secret-access-key}
       :queue-url c/aws-sqs-payments-queue
-      :message-body trigger))
+      :message-body (json/generate-string trigger {:pretty true}))
+  (timbre/info "Request sent!"))
 
 ;; ----- Event loop -----
 
