@@ -80,7 +80,7 @@
 (defn- update-user-qsg-checklist
   "Update the :qsg-checklist property by merging the new passed data with the old present data to avoid
   overriding all the properties on every patch."
-  [_ patch-data]
+  [patch-data]
   (if (contains? patch-data :qsg-checklist)
     (update-in patch-data [:qsg-checklist] merge (:qsg-checklist patch-data))
     patch-data))
@@ -114,7 +114,7 @@
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
           updated-user (as-> user-props props
-                         (update-user-qsg-checklist user props)
+                         (update-user-qsg-checklist props)
                          (dissoc props :current-password)
                          (assoc props :digest-delivery (filter-digest-delivery conn user user-props))
                          (user-res/ignore-props props)
