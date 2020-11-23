@@ -10,6 +10,7 @@
             [oc.lib.db.common :as db-common]
             [oc.lib.jwt :as jwt]
             [oc.lib.schema :as lib-schema]
+            [oc.auth.async.payments :as payments]
             [oc.auth.resources.team :as team-res]
             [oc.auth.config :as config]))
 
@@ -245,7 +246,7 @@
                                   (vec (set (conj existing-teams invite-token-team-id)))
                                   existing-teams)
         new-team (when (empty? with-invite-token-teams)
-                    (team-res/create-team! conn (team-res/->team {} (:user-id user))))
+                   (team-res/create-team! conn (team-res/->team {} (:user-id user))))
         teams (if new-team [(:team-id new-team)] with-invite-token-teams)
         user-with-teams (assoc user :teams teams)
         user-with-status (if (or ;; user is creating a new team, no need to pre-verify
@@ -263,8 +264,10 @@
         missing-digest-delivery-teams (clj-set/difference (set teams) (set (:teams user)))
         missing-digest-delivery (map digest-delivery-for-team (vec missing-digest-delivery-teams))
         new-digest-delivery (concat old-digest-delivery missing-digest-delivery)
-        user-with-digest-delivery (assoc user-with-status :digest-delivery new-digest-delivery)]
-    (db-common/create-resource conn table-name user-with-digest-delivery (db-common/current-timestamp)))))
+        user-with-digest-delivery (assoc user-with-status :digest-delivery new-digest-delivery)
+        created-user (db-common/create-resource conn table-name user-with-digest-delivery (db-common/current-timestamp))]
+    (payments/report-all-seat-usage! conn (:teams user))
+    created-user)))
 
 (schema/defn ^:always-validate get-user :- (schema/maybe User)
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."
@@ -325,9 +328,13 @@
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (try
     ;; Remove admin roles
-    (doseq [team-id (jwt/admin-of conn user-id)] (team-res/remove-admin conn team-id user-id))
-    ;; Remove user
-    (db-common/delete-resource conn table-name user-id)
+    (doseq [team-id (jwt/admin-of conn user-id)]
+      (team-res/remove-admin conn team-id user-id))
+    (let [original-user (get-user conn user-id)
+          ;; Remove user
+          removed-user (db-common/delete-resource conn table-name user-id)]
+      (payments/report-all-seat-usage! conn (:teams original-user))
+      removed-user)
     (catch java.lang.RuntimeException _))) ; it's OK if there is no user to delete
 
 (schema/defn ^:always-validate add-token :- (schema/maybe User)
@@ -368,6 +375,7 @@
           digest-delivery (vec (conj filtered-digest-delivery team-digest-delivery))]
       ;; Add a digest-delivery map for the new team
       (db-common/update-resource conn table-name primary-key user (assoc user :digest-delivery digest-delivery))
+      (payments/report-team-seat-usage! conn team-id)
       (db-common/add-to-set conn table-name user-id "teams" team-id))))
 
 (schema/defn ^:always-validate remove-team :- (schema/maybe User)
@@ -381,13 +389,14 @@
     (let [filtered-digest-delivery (filterv #(not= (:team-id %) team-id) (:digest-delivery user))]
       ;; Remove digest delivery preference for the removed team
       (db-common/update-resource conn table-name primary-key user (assoc user :digest-delivery filtered-digest-delivery))
+      (payments/report-team-seat-usage! conn team-id)
       (db-common/remove-from-set conn table-name user-id "teams" team-id))))
 
 (defn admin-of [conn user-id] (jwt/admin-of conn user-id)) ; alias
 
 (schema/defn ^:always-validate premium-teams :- [lib-schema/UniqueID]
-  [conn :- lib-schema/Conn user :- (schema/if string? lib-schema/UniqueID User)]
-  (jwt/premium-teams conn (if (string? user) user (:user-id user))))
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
+  (jwt/premium-teams conn user-id))
 
 ;; ----- Collection of users -----
 

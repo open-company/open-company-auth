@@ -240,7 +240,7 @@
       (let [auth-source (if (:slack-user-id claims) :slack :email)
             user (-> user-data
                      (assoc :admin admin-teams)
-                     (assoc :premium-teams (user-res/premium-teams conn user-data)))
+                     (assoc :premium-teams (user-res/premium-teams conn (:user-id user-data))))
             jwt-user (user-rep/jwt-props-for user auth-source)
             refreshed-token (jwtoken/generate conn jwt-user)
             is-slack-user? (= auth-source :slack)
@@ -277,9 +277,8 @@
   :handle-exception api-common/handle-exception
 
   ;; Responses
-  :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or
-                                                                            (-> ctx :request :identity) ; Basic HTTP Auth
-                                                                            (:email ctx))) ; one time use token auth
+  :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or (-> ctx :request :identity) ; Basic HTTP Auth
+                                                                             (:email ctx))) ; one time use token auth
                                    admin-teams (user-res/admin-of conn (:user-id user))]
                         (if (= (keyword (:status user)) :pending)
                           ;; they need to verify their email, so no love
@@ -288,7 +287,7 @@
                           (user-rep/auth-response conn
                             (-> user
                               (assoc :admin admin-teams)
-                              (assoc :premium-teams (user-res/premium-teams conn user))
+                              (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
                               (assoc :slack-bots (jwt/bots-for conn user)))
                             :email)))))
 
@@ -347,12 +346,12 @@
                                 (user-rep/auth-response conn
                                   (-> user
                                       (assoc :slack-bots (jwt/bots-for conn user))
-                                      (assoc :premium-teams (user-res/premium-teams conn user)))
+                                      (assoc :premium-teams (user-res/premium-teams conn (:user-id user))))
                                   :email)))))
 
 
 ;; A resource for operations on a particular user
-(defresource user [conn user-id]
+(defresource user-item [conn user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :get :post :patch]
@@ -442,7 +441,7 @@
   :exists? (fn [ctx] (if-let* [user-id (-> ctx :user :user-id)
                                user (user-res/get-user conn user-id)
                                admin-teams (user-res/admin-of conn user-id)
-                               premium-teams (user-res/premium-teams conn user)
+                               premium-teams (user-res/premium-teams conn user-id)
                                complete-user (-> user
                                                  (assoc :admin admin-teams)
                                                  (assoc :premium-teams premium-teams))]
@@ -558,10 +557,10 @@
       ;; Expo push notification token operations
       (ANY "/users/expo-push-token" [] (pool/with-pool [conn db-pool] (expo-push-token conn)))
       ;; user operations
-      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
       ;; Resend verification email api
-      (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+      (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
       )))

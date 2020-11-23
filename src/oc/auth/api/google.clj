@@ -77,7 +77,7 @@
             jwt-user (user-rep/jwt-props-for (-> updated-google-user
                                                  (clean-user)
                                                  (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                                 (assoc :premium-teams (user-res/premium-teams conn user))
+                                                 (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
                                                ;; include slack bot info
                                                  (assoc :slack-bots
                                                         (jwt/bots-for conn user))
