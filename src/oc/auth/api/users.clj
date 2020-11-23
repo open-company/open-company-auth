@@ -390,7 +390,7 @@
     :get true
     :options true
     :post (fn [_] (can-resend-verificaiton-email? conn user-id))
-    :patch (fn [_] (valid-user-update? conn (:data ctx) user-id))})
+    :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
