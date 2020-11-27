@@ -20,14 +20,15 @@
 
 ;; ----- Data schema -----
 
-(def UserTrigger
+(def Trigger
   "
   add - the content for a newly created user.
   "
   {:notification-type schema/Keyword
    :resource-type schema/Keyword
-   :content {(schema/optional-key :new) lib-schema/User}
-   :notification-at lib-schema/ISO8601})
+   :notification-at lib-schema/ISO8601
+   :content {(schema/optional-key :new) schema/Any}
+   schema/Keyword schema/Any})
 
 ;; ----- Event handling -----
 
@@ -36,7 +37,7 @@
   (timbre/debug "Message request of:" (:notification-type trigger)
                 "to topic:" config/aws-sns-auth-topic-arn)
   (timbre/trace "Message request:" trigger)
-  (schema/validate UserTrigger trigger)
+  (schema/validate Trigger trigger)
   (timbre/info "Sending request to topic:" config/aws-sns-auth-topic-arn)
   (sns/publish
     {:access-key config/aws-access-key-id
@@ -66,7 +67,7 @@
 
 ;; ----- Notification triggering -----
 
-(defn ->trigger
+(schema/defn ^:always-validate ->trigger :- Trigger
   [user]
   (let [full-name (str (:first-name user) " " (:last-name user))
         name (if (s/blank? full-name)
@@ -79,7 +80,7 @@
      :content {:new fixed-user}
      :notification-at (oc-time/current-timestamp)}))
 
-(schema/defn ^:always-validate send-trigger! [trigger :- UserTrigger]
+(schema/defn ^:always-validate send-trigger! [trigger :- Trigger]
   (when-not (clojure.string/blank? config/aws-sns-auth-topic-arn)
     (>!! notification-chan trigger)))
 

@@ -13,6 +13,7 @@
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.async.payments :as payments]
+            [oc.auth.async.notify :as notify]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
@@ -105,7 +106,7 @@
     (timbre/info "Creating user:" email "for team:" team-id)
     (if-let [new-user (user-res/create-user! conn
                         (user-res/->user (-> invite
-                          (dissoc :admin :org-name :logo-url :logo-width :logo-height :note :slack-id :slack-org-id)
+                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :note :slack-id :slack-org-id)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
@@ -123,7 +124,7 @@
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
-                                          (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
+                                          (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name)))
               new-user (user-res/create-user! conn oc-user)]
       (handle-invite conn sender team new-user true admin? (-> invite
                                                              (assoc :bot-token bot-token)
@@ -134,15 +135,17 @@
   ([conn sender team user member? :guard not admin? invite]
   (let [team-id (:team-id team)
         user-id (:user-id user)
-        status (keyword (:status user))]
+        org {:slug (:org-slug invite)
+             :uuid (:org-uuid invite)
+             :name (:org-name invite)
+             :logo-url (:org-logo-url invite)
+             :team-id team-id}]
     (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
-      ;; TODO this is the case of an existing user being added to an additional team.
-      ;; We don't yet handle this case very well. They won't have access until they
-      ;; logout/login or their JWT expires, and they won't really know they got added
-      ;; to a new team unless they happen to notice the org dropdown in the UI.
-      ;; Need to send them a welcome to the team email.
-      (handle-invite conn sender team updated-user true admin? invite) ; recurse  
+      (do
+        ;; Send a notification to the user to notify the team add and to force refresh his JWT.
+        (notify/send-team-add! (notify/->team-add-trigger user sender org))
+        (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
   ;; Non-active team member, needs a Slack invite/re-invite
@@ -331,9 +334,9 @@
   ;; Authorization
   :allowed? (by-method {
     :options true 
-    :post (fn [ctx] (and (or (allow-team-admins conn (:user ctx) team-id)
-                             (not (-> ctx :data :admin)))
-                         (allow-team-members conn (:user ctx) team-id)))})
+    :post (fn [ctx] (if (-> ctx :data :admin)
+                      (allow-team-admins conn (:user ctx) team-id)
+                      (allow-team-members conn (:user ctx) team-id)))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -341,7 +344,10 @@
                               user (when email (user-res/get-user-by-email conn email))
                               member? (when (and team user) (if ((set (:teams user)) (:team-id team)) true false))
                               admin? (when (and team user) (if ((set (:admins team)) (:user-id user)) true false))]
-                          {:existing-team team :existing-user user :member? member? :admin? admin?})
+                          {:existing-team team
+                           :existing-user user
+                           :member? member?
+                           :admin? admin?})
                         false)) ; No team by that ID
 
   ;; Validations

@@ -11,7 +11,6 @@
             [oc.auth.config :as c]
             [oc.auth.resources.team :as team-res]))
 
-
 ;; ----- core.async -----
 
 (defonce payments-chan (async/chan 10000)) ; buffered channel

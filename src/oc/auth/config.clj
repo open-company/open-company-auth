@@ -75,6 +75,7 @@
 (defonce aws-sqs-slack-router-auth-queue (env :aws-sqs-slack-router-auth-queue))
 (defonce aws-sqs-expo-queue (env :aws-sqs-expo-queue))
 (defonce aws-sqs-payments-queue (env :aws-sqs-payments-queue))
+(defonce aws-sqs-notify-queue (env :aws-sqs-notify-queue))
 
 (defonce aws-sns-auth-topic-arn (env :aws-sns-auth-topic-arn))
 

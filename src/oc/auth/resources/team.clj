@@ -31,7 +31,10 @@
   :email lib-schema/EmailAddress
   :admin schema/Bool
   (schema/optional-key :org-name) (schema/maybe schema/Str)
-  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :org-uuid) (schema/maybe schema/Str)
+  (schema/optional-key :org-slug) (schema/maybe schema/Str)
+  (schema/optional-key :team-id) (schema/maybe schema/Str)
+  (schema/optional-key :org-logo-url) (schema/maybe schema/Str)
   (schema/optional-key :logo-width) (schema/maybe schema/Int)
   (schema/optional-key :logo-height) (schema/maybe schema/Int)
   (schema/optional-key :first-name) (schema/maybe schema/Str)
