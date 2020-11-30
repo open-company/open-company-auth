@@ -31,18 +31,20 @@
          :name lib-schema/NonBlankStr
          (schema/optional-key :logo-url) (schema/maybe schema/Str)
          :team-id lib-schema/UniqueID}
-   :sender lib-schema/Author
-   :user lib-schema/Author})
+   :user lib-schema/Author
+   :invitee lib-schema/Author
+   :admin? schema/Bool})
 
 ;; ----- Notification triggering -----
 
 (schema/defn ^:always-validate ->team-add-trigger :- TeamAddTrigger
-  [invitee sender org]
+  [invitee author org admin?]
   {:notification-type :team-add
    :resource-type :team
-   :user (lib-schema/author-for-user invitee)
-   :sender (lib-schema/author-for-user sender)
+   :invitee (lib-schema/author-for-user invitee)
+   :user (lib-schema/author-for-user author)
    :org org
+   :admin? admin?
    :notification-at (oc-time/current-timestamp)})
 
 (schema/defn ^:always-validate send-team-add! [trigger :- TeamAddTrigger]

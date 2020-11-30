@@ -2,6 +2,7 @@
   "Liberator API for team resources."
   (:require [if-let.core :refer (if-let* when-let*)]
             [defun.core :refer (defun-)]
+            [clojure.set :as clj-set]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (ANY OPTIONS POST DELETE)]
             [liberator.core :refer (defresource by-method)]
@@ -144,7 +145,7 @@
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (do
         ;; Send a notification to the user to notify the team add and to force refresh his JWT.
-        (notify/send-team-add! (notify/->team-add-trigger user sender org))
+        (notify/send-team-add! (notify/->team-add-trigger user sender org (:admin invite)))
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
@@ -565,12 +566,12 @@
           oc-users-with-slack (map #(assoc % :slack-bot-ids slack-bot-ids) oc-users-with-admin)
           slack-emails (set (map :email slack-users)) ; email of Slack users
           oc-emails (set (map :email oc-users-with-admin)) ; email of OC users
-          uninvited-slack-emails (clojure.set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
+          uninvited-slack-emails (clj-set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
           ;; Slack users not in OC (from their email)
           uninvited-slack-users (map (fn [email] (some #(when (= (:email %) email) %) slack-users)) uninvited-slack-emails)
           uninvited-slack-users-with-status (map #(assoc % :status :uninvited) uninvited-slack-users)
           ;; Find all users that are coming from Slack and add the missing data (like slack-org-id slack-id slack-display-name)
-          oc-emails-from-slack (clojure.set/intersection slack-emails oc-emails)
+          oc-emails-from-slack (clj-set/intersection slack-emails oc-emails)
           ;; Slack users in OC (add slack needed data)
           pending-users-from-slack (map (fn [email] (some #(when (and (= (:email %) email) (= (:status %) "pending")) %) oc-users-with-slack)) oc-emails-from-slack)
           pending-users-with-slack-data (map (fn [user] (merge (first (filterv #(= (:email %) (:email user)) slack-users)) user)) pending-users-from-slack)
