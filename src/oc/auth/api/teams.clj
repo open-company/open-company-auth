@@ -107,7 +107,7 @@
     (timbre/info "Creating user:" email "for team:" team-id)
     (if-let [new-user (user-res/create-user! conn
                         (user-res/->user (-> invite
-                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :note :slack-id :slack-org-id)
+                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :team-id :note :slack-id :slack-org-id)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
