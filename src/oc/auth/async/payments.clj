@@ -67,12 +67,12 @@
   [conn team-id]
   (when-let* [_enabled? c/payments-enabled?
               team-data (team-res/get-team conn team-id)
-              customer-id (:stripe-customer-id team-data)] ;; Early on there's no customer yet
-    (let [trigger     (->team-report-trigger {:customer-id customer-id :team-id team-id})]
-      (timbre/info (format "Reporting seats used to payment service for team %s (%s)"
-                         team-id
-                         customer-id))
-      (send-team-report-trigger! trigger))))
+              customer-id (:stripe-customer-id team-data)  ;; Early on there's no customer yet which avoid triggering a team size change in payments
+              trigger (->team-report-trigger {:customer-id customer-id :team-id team-id})]
+    (timbre/info (format "Reporting seats used to payment service for team %s (%s)"
+                        team-id
+                        customer-id))
+    (send-team-report-trigger! trigger)))
 
 (defn report-all-seat-usage!
   [conn team-ids]
