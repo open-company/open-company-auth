@@ -145,7 +145,8 @@
             (handle-expo-message db-pool msg)
             (timbre/trace "Processing complete.")
             (catch Exception e
-              (timbre/error e))))))))
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Component start/stop -----
 

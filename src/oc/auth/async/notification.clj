@@ -9,6 +9,7 @@
             [clojure.string :as s]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
+            [oc.lib.sentry.core :as sentry]
             [oc.lib.time :as oc-time]
             [oc.auth.config :as config]))
 
@@ -63,7 +64,8 @@
           (try
             (handle-notification-message message)
           (catch Exception e
-            (timbre/error e)))))))))
+            (timbre/warn e)
+            (sentry/capture e)))))))))
 
 ;; ----- Notification triggering -----
 

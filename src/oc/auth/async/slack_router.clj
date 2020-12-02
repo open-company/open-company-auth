@@ -3,19 +3,19 @@
   Consume slack messages from SQS. This SQS queue is subscribed to the Slack
   message SNS topic.
   "
-  (:require
-   [clojure.core.async :as async :refer (<!! >!!)]
-   [cheshire.core :as json]
-   [oc.lib.sqs :as sqs-lib]
-   [oc.auth.lib.sqs :as sqs]
-   [oc.lib.db.pool :as pool]
-   [oc.lib.slack :as slack-lib]
-   [oc.lib.storage :as storage-lib]
-   [oc.auth.config :as config]
-   [oc.auth.resources.team :as team-res]
-   [oc.auth.resources.user :as user-res]
-   [oc.auth.resources.slack-org :as slack-res]
-   [taoensso.timbre :as timbre]))
+  (:require [clojure.core.async :as async :refer (<!! >!!)]
+            [cheshire.core :as json]
+            [oc.lib.sqs :as sqs-lib]
+            [oc.auth.lib.sqs :as sqs]
+            [oc.lib.db.pool :as pool]
+            [oc.lib.slack :as slack-lib]
+            [oc.lib.storage :as storage-lib]
+            [oc.lib.sentry.core :as sentry]
+            [oc.auth.config :as config]
+            [oc.auth.resources.team :as team-res]
+            [oc.auth.resources.user :as user-res]
+            [oc.auth.resources.slack-org :as slack-res]
+            [taoensso.timbre :as timbre]))
 
 ;; ----- core.async -----
 
@@ -193,7 +193,8 @@
                 (slack-event db-pool msg-parsed)))
             (timbre/trace "Processing complete.")
             (catch Exception e
-              (timbre/error e))))))))
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Component start/stop -----
 

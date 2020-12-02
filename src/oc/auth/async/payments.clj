@@ -6,6 +6,7 @@
             [if-let.core :refer (when-let*)]
             [taoensso.timbre :as timbre]
             [schema.core :as schema]
+            [oc.lib.sentry.core :as sentry]
             [oc.lib.schema :as lib-schema]
             [amazonica.aws.sqs :as sqs]
             [oc.auth.config :as c]
@@ -52,7 +53,8 @@
             (try
               (handle-payments-message message)
               (catch Exception e
-                (timbre/error e)))))))))
+                (timbre/warn e)
+                (sentry/capture e)))))))))
 
 ;; ----- Payments triggering -----
 
