@@ -48,6 +48,7 @@
    :notification-at (oc-time/current-timestamp)})
 
 (schema/defn ^:always-validate send-team-add! [trigger :- TeamAddTrigger]
+  (timbre/info "Sending team-add trigger to queue:" c/aws-sqs-notify-queue)
   (when-not (clojure.string/blank? c/aws-sqs-notify-queue)
     (>!! notification-chan trigger)))
 
@@ -76,10 +77,11 @@
         (timbre/debug "Processing message on notify channel...")
         (if (:stop message)
           (do (reset! notification-go false) (timbre/info "Notify loop stopped."))
-          (try
-            (handle-notification-message message)
-            (catch Exception e
-              (timbre/error e))))))))
+          (async/thread
+            (try
+              (handle-notification-message message)
+              (catch Exception e
+                (timbre/error e)))))))))
 
 ;; ----- Component start/stop -----
 
