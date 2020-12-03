@@ -78,12 +78,11 @@
         (timbre/debug "Processing message on notify channel...")
         (if (:stop message)
           (do (reset! notification-go false) (timbre/info "Notify loop stopped."))
-          (async/thread
-            (try
-              (handle-notification-message message)
-              (catch Exception e
-                (timbre/warn e)
-                (sentry/capture e)))))))))
+          (try
+            (handle-notification-message message)
+            (catch Exception e
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Component start/stop -----
 

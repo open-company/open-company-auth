@@ -49,12 +49,11 @@
         (timbre/debug "Processing message on payments channel...")
         (if (:stop message)
           (do (reset! payments-go false) (timbre/info "Payments loop stopped."))
-          (async/thread
-            (try
-              (handle-payments-message message)
-              (catch Exception e
-                (timbre/warn e)
-                (sentry/capture e)))))))))
+          (try
+            (handle-payments-message message)
+            (catch Exception e
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Payments triggering -----
 
