@@ -146,8 +146,9 @@
         :aws-sqs-bot-queue "CHANGE-ME"
         :aws-sqs-email-queue "CHANGE-ME"
         :aws-sqs-slack-router-auth-queue "CHANGE-ME"
-        :aws-sqs-payments-queue "" ; Queue to send team size changes to (optional)
+        :aws-sqs-payments-queue "CHANGE-ME" ; Queue to send team size changes to (optional)
         :aws-sqs-expo-queue "CHANGE-ME"
+        :aws-sqs-notify-queue "CHANGE-ME"
         :aws-lambda-expo-prefix "CHANGE-ME"
         :aws-sns-auth-topic-arn "" ; SNS topic to publish notifications (optional)
         :log-level "debug"

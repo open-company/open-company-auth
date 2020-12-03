@@ -51,6 +51,7 @@
     "AWS SQS slack queue: " c/aws-sqs-slack-router-auth-queue "\n"
     "AWS SQS expo queue: " c/aws-sqs-expo-queue "\n"
     "AWS SQS payments queue: " c/aws-sqs-payments-queue "\n"
+    "AWS SQS notify queue: " c/aws-sqs-notify-queue "\n"
     "AWS SNS notification topic ARN: " c/aws-sns-auth-topic-arn "\n"
     "Slack customer support webhook: " c/slack-customer-support-webhook "\n"
     (when c/payments-enabled?
