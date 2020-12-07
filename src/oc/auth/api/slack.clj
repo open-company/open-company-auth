@@ -14,6 +14,7 @@
             [oc.auth.lib.jwtoken :as jwtoken]
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
+            [oc.lib.sentry.core :as sentry]
             [oc.auth.config :as config]
             [oc.auth.async.notification :as notification]
             [oc.auth.async.slack-api-calls :as slack-api-calls]
@@ -366,15 +367,21 @@
 (defn- slack-callback
   "Handle a callback from Slack, then redirect the user's browser back to the web UI."
   [conn params]
-  (timbre/info "Slack callback")
-  (let [slack-response (slack/oauth-callback params) ; process the response from Slack
-        _team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
-        _user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
-        _redirect (:redirect slack-response) ; where we redirect the browser back to
-        state-slack-org-id (:state-slack-org-id slack-response)]
-    (if-not (nil? state-slack-org-id)
-      (slack-callback-step2 conn slack-response)
-      (slack-callback-step1 conn slack-response))))
+  (try
+    (timbre/info "Slack callback")
+    (let [slack-response (slack/oauth-callback params) ; process the response from Slack, get redirect and redirect-origin for error redirects
+          _team-id (:team-id slack-response) ; a team-id is present if the bot or Slack org is being added to existing team
+          _user-id (:user-id slack-response) ; a user-id is present if a Slack org is being added to an existing team
+          _redirect (:redirect slack-response) ; where we redirect the browser back to
+          state-slack-org-id (:state-slack-org-id slack-response)]
+
+      (if-not (nil? state-slack-org-id)
+        (slack-callback-step2 conn slack-response)
+        (slack-callback-step1 conn slack-response)))
+      (catch Exception e
+        (timbre/info e)
+        (sentry/capture e)
+        (redirect-to-web-ui config/ui-server-url nil :failed))))
 
 (defn refresh-token
   "Handle request to refresh an expired Slack JWToken by checking if the access token is still valid with Slack."

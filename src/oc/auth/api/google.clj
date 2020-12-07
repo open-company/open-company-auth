@@ -5,6 +5,7 @@
             [ring.util.response :as response]
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
+            [oc.lib.sentry.core :as sentry]
             [oc.auth.lib.jwtoken :as jwtoken]
             [oc.lib.oauth :as oauth]
             [oc.auth.lib.google :as google]
@@ -16,15 +17,15 @@
 (defn- redirect-to-web-ui
   "Send them back to a UI page with an access description ('google' or 'failed') and a JWToken."
   ([redirect-origin redirect access]
-    (redirect-to-web-ui redirect-origin redirect access nil :not-a-new-user)) ; nil = no jwtoken
+   (redirect-to-web-ui redirect-origin redirect access nil :not-a-new-user)) ; nil = no jwtoken
 
   ([redirect-origin redirect access jwtoken last-token-at]
-  (let [page (or redirect "/login")
-        jwt-param (if jwtoken (str "&jwt=" jwtoken "&") "&")
-        param-concat (if (.contains page "?") "&" "?")
-        url (str (or redirect-origin config/ui-server-url) page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
-    (timbre/info "Redirecting request to:" url)
-    (response/redirect (str url jwt-param)))))
+   (let [page (or redirect "/login")
+         jwt-param (if jwtoken (str "&jwt=" jwtoken "&") "&")
+         param-concat (if (.contains page "?") "&" "?")
+         url (str (or redirect-origin config/ui-server-url) page param-concat "access=" (name access) "&new=" (if last-token-at false true))]
+     (timbre/info "Redirecting request to:" url)
+     (response/redirect (str url jwt-param)))))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
@@ -54,43 +55,48 @@
 
 (defn- google-callback
   [conn params]
-  (timbre/info "Google Callback")
-  (timbre/info params)
-  (let [{:keys [redirect-origin]} (parse-state-from-params params)
-        token (google/access-token params)]
-    (when token
-      (let [user-info (google/user-info token)
-            email (:email user-info)
-            existing-user (user-res/get-user-by-email conn email)
-            new-user (when-not existing-user
-                       (user-res/->user (clean-google-user user-info token)))
-            user (or existing-user (create-user-for conn new-user))
-            new-google-user {:id (:id user-info)
-                             :token token}
-            updated-google-user (do
-                                  (when (:verified_email user-info)
-                                    (user-res/activate! conn (:user-id user)))
-                                  (user-res/update-user! conn
-                                    (:user-id user)
-                                    (update-in user [:google-users] merge new-google-user)))
-            ;; Create a JWToken from the user for the response
-            jwt-user (user-rep/jwt-props-for (-> updated-google-user
-                                                 (clean-user)
-                                                 (assoc :admin (user-res/admin-of conn (:user-id user)))
-                                                 (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
-                                               ;; include slack bot info
-                                                 (assoc :slack-bots
-                                                        (jwt/bots-for conn user))
-                                                 (assoc :google-id (:id user-info))
-                                                 (assoc :google-domain (:hd user-info))
-                                                 (assoc :google-token token))
-                                             :google)]
-        (timbre/debug jwt-user)
-        (redirect-to-web-ui redirect-origin
-                            (:success-uri config/google)
-                            :google
-                            (jwtoken/generate conn jwt-user)
-                            (:last-token-at user))))))
+  (try
+    (timbre/info "Google Callback")
+    (timbre/info params)
+    (let [{:keys [redirect-origin]} (parse-state-from-params params)
+          token (google/access-token params)]
+      (when token
+        (let [user-info (google/user-info token)
+              email (:email user-info)
+              existing-user (user-res/get-user-by-email conn email)
+              new-user (when-not existing-user
+                         (user-res/->user (clean-google-user user-info token)))
+              user (or existing-user (create-user-for conn new-user))
+              new-google-user {:id (:id user-info)
+                               :token token}
+              updated-google-user (do
+                                    (when (:verified_email user-info)
+                                      (user-res/activate! conn (:user-id user)))
+                                    (user-res/update-user! conn
+                                                           (:user-id user)
+                                                           (update-in user [:google-users] merge new-google-user)))
+              ;; Create a JWToken from the user for the response
+              jwt-user (user-rep/jwt-props-for (-> updated-google-user
+                                                   (clean-user)
+                                                   (assoc :admin (user-res/admin-of conn (:user-id user)))
+                                                   (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
+                                                ;; include slack bot info
+                                                   (assoc :slack-bots
+                                                          (jwt/bots-for conn user))
+                                                   (assoc :google-id (:id user-info))
+                                                   (assoc :google-domain (:hd user-info))
+                                                   (assoc :google-token token))
+                                               :google)]
+          (timbre/debug jwt-user)
+          (redirect-to-web-ui redirect-origin
+                              (:success-uri config/google)
+                              :google
+                              (jwtoken/generate conn jwt-user)
+                              (:last-token-at user)))))
+    (catch Exception e
+      (timbre/warn e)
+      (sentry/capture e)
+      (redirect-to-web-ui config/ui-server-url (:success-uri config/google) :failed))))
 
 (defn routes [sys]
   (let [db-pool (-> sys :db-pool :pool)]

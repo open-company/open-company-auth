@@ -70,7 +70,7 @@
     ;; ***************** (JWT schema changes, more info here: *****************
     ;; ******* https://github.com/open-company/open-company-lib/pull/82) ******
     ;; ************************************************************************
-    [open-company/lib "0.17.29-alpha63" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
+    [open-company/lib "0.17.29-alpha64" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
     ;; ************************************************************************
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
@@ -215,7 +215,8 @@
     :welcome (println (str "\n" (slurp (clojure.java.io/resource "ascii_art.txt")) "\n"
                       "OpenCompany Auth REPL\n"
                       "\nReady to do your bidding... I suggest (go) or (go <port>) or (go-db) as your first command.\n"))
-      :init-ns dev
+    :init-ns dev
+                 :timeout 1200000
   }
 
   :aliases{

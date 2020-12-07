@@ -26,7 +26,7 @@
   (let [user-name (or (:real_name_normalized user-data)
                       (:real_name user-data)
                       (:name user-data))
-        split-name (when user-name (s/split user-name #"\s"))
+        split-name (when user-name (s/split user-name #"\s" 2))
         name-size (count split-name)
         splittable-name? (= name-size 2)]
     {:user-id (db-common/unique-id)
