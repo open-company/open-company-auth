@@ -21,34 +21,45 @@
 
 ;; ----- Data schema -----
 
-(def TeamAddTrigger
+(def TeamTrigger
   "Trigger to notify a user of a new team membership."
   {:notification-type schema/Keyword
    :resource-type schema/Keyword
    :notification-at lib-schema/ISO8601
    schema/Keyword schema/Any
-   :org {:uuid lib-schema/UniqueID
-         :slug lib-schema/NonBlankStr
-         :name lib-schema/NonBlankStr
-         (schema/optional-key :logo-url) (schema/maybe schema/Str)
-         :team-id lib-schema/UniqueID}
+   (schema/optional-key :org) {:uuid lib-schema/UniqueID
+                               :slug lib-schema/NonBlankStr
+                               :name lib-schema/NonBlankStr
+                               (schema/optional-key :logo-url) (schema/maybe schema/Str)
+                               :team-id lib-schema/UniqueID}
    :user lib-schema/Author
-   :invitee lib-schema/Author
-   :admin? schema/Bool})
+   :team-id lib-schema/UniqueID
+   (schema/optional-key :invitee) lib-schema/Author
+   (schema/optional-key :admin?) schema/Bool})
 
 ;; ----- Notification triggering -----
 
-(schema/defn ^:always-validate ->team-add-trigger :- TeamAddTrigger
+(schema/defn ^:always-validate ->team-add-trigger :- TeamTrigger
   [invitee author org admin?]
   {:notification-type :team-add
    :resource-type :team
    :invitee (lib-schema/author-for-user invitee)
    :user (lib-schema/author-for-user author)
    :org org
+   :team-id (:team-id org)
    :admin? admin?
    :notification-at (oc-time/current-timestamp)})
 
-(schema/defn ^:always-validate send-team-add! [trigger :- TeamAddTrigger]
+(schema/defn ^:always-validate ->team-remove-trigger :- TeamTrigger
+  [user author team-id]
+  {:notification-type :team-add
+   :resource-type :team
+   :invitee (lib-schema/author-for-user user)
+   :user (lib-schema/author-for-user author)
+   :team-id team-id
+   :notification-at (oc-time/current-timestamp)})
+
+(schema/defn ^:always-validate send-team! [trigger :- TeamTrigger]
   (timbre/info "Sending team-add trigger to queue:" c/aws-sqs-notify-queue)
   (when-not (clojure.string/blank? c/aws-sqs-notify-queue)
     (>!! notification-chan trigger)))
@@ -58,7 +69,7 @@
 (defn- handle-notification-message
   [trigger]
   (timbre/info "Request to send" trigger "to" c/aws-sqs-notify-queue)
-  (schema/validate TeamAddTrigger trigger)
+  (schema/validate TeamTrigger trigger)
   (sqs/send-message
    {:access-key c/aws-access-key-id
     :secret-key c/aws-secret-access-key}

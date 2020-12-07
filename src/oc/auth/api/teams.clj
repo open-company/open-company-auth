@@ -145,7 +145,7 @@
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
       (do
         ;; Send a notification to the user to notify the team add and to force refresh his JWT.
-        (notify/send-team-add! (notify/->team-add-trigger user sender org (:admin invite)))
+        (notify/send-team! (notify/->team-add-trigger user sender org (:admin invite)))
         (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
@@ -210,9 +210,10 @@
     (do (timbre/info "Deleted team:" team-id) true)
     (do (timbre/error "Failed deleting team:" team-id) false)))
 
-(defn- remove-team-member [conn team-id member-id admin?]
+(defn- remove-team-member [conn team-id {member-id :user-id :as member} sender admin?]
   (timbre/info "Removing user" member-id "from team" team-id)
   (let [updated-user (user-res/remove-team conn member-id team-id)]
+    (notify/send-team! (notify/->team-remove-trigger member sender team-id))
     (when admin?
       (timbre/info "User is an admin, removing from admins of team" team-id)
       (team-res/remove-admin conn team-id member-id))
@@ -439,7 +440,7 @@
                         false)) ; no team, no user, or user not a member of the team
 
   ;; Actions
-  :delete! (fn [ctx] (remove-team-member conn team-id member-id (:admin? ctx)))
+  :delete! (fn [ctx] (remove-team-member conn team-id (:existing-user ctx) (:user ctx) (:admin? ctx)))
 
   ;; Responses
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
