@@ -22,6 +22,7 @@
   :slack-orgs [lib-schema/NonBlankStr]
   (schema/optional-key :logo-url) (schema/maybe schema/Str)
   (schema/optional-key :stripe-customer-id) (schema/maybe schema/Str)
+  (schema/optional-key :premium) (schema/maybe schema/Bool)
   (schema/optional-key :invite-token) (schema/maybe lib-schema/UUIDStr)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
@@ -55,7 +56,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create and are ignored during an update."
-  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links})
+  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links :premium})
 
 ;; ----- Utility functions -----
 
@@ -196,7 +197,7 @@
   "
   [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "slack-orgs" slack-org)))
 
 ;; ----- Collection of teams -----
