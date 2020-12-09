@@ -123,8 +123,7 @@
                (or (nil? new-password) ; not attempting to change password
                    (and (s/blank? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
                    (and (seq current-password) (user-res/password-match? current-password (:password-hash user))))) ; attempting to change the password with an old password set, checking that the old password match
-        {:existing-user user
-         :user-update (if new-password (assoc updated-user :password new-password) updated-user)}
+        {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) updated-user)}
         [false, {:user-update updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later
 
@@ -134,7 +133,7 @@
   [ctx]
   (try
     (if-let* [email (slurp (get-in ctx [:request :body]))
-              valid? (lib-schema/valid-email-address? email)]
+              _valid? (lib-schema/valid-email-address? email)]
       [false {:data email}]
       true)
     (catch Exception e
@@ -521,7 +520,7 @@
   :malformed? (by-method {:options false
                           :post (fn [ctx]
                                   (if-let* [token (-> ctx :request :body slurp)
-                                            valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
+                                            _valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
                                     [false {:expo-push-token token}]
                                     true))})
 
