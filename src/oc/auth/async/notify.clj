@@ -23,18 +23,19 @@
 
 (def TeamTrigger
   "Trigger to notify a user of a new team membership."
-  {:notification-type schema/Keyword
+  {:notification-type (schema/enum :team-add :team-remove)
    :resource-type schema/Keyword
    :notification-at lib-schema/ISO8601
    schema/Keyword schema/Any
-   (schema/optional-key :org) {:uuid lib-schema/UniqueID
-                               :slug lib-schema/NonBlankStr
-                               :name lib-schema/NonBlankStr
-                               (schema/optional-key :logo-url) (schema/maybe schema/Str)
-                               :team-id lib-schema/UniqueID}
+   (schema/optional-key :org) (schema/maybe {:uuid lib-schema/UniqueID
+                                             :slug lib-schema/NonBlankStr
+                                             :name lib-schema/NonBlankStr
+                                             (schema/optional-key :logo-url) (schema/maybe schema/Str)
+                                             :team-id lib-schema/UniqueID})
    :user lib-schema/Author
    :team-id lib-schema/UniqueID
    (schema/optional-key :invitee) lib-schema/Author
+   (schema/optional-key :removed-user) lib-schema/Author
    (schema/optional-key :admin?) schema/Bool})
 
 ;; ----- Notification triggering -----
@@ -47,16 +48,18 @@
    :user (lib-schema/author-for-user author)
    :org org
    :team-id (:team-id org)
-   :admin? admin?
+   :admin? (boolean admin?)
    :notification-at (oc-time/current-timestamp)})
 
 (schema/defn ^:always-validate ->team-remove-trigger :- TeamTrigger
-  [user author team-id]
-  {:notification-type :team-add
+  [removed-user author org team-id admin?]
+  {:notification-type :team-remove
    :resource-type :team
-   :invitee (lib-schema/author-for-user user)
+   :removed-user (lib-schema/author-for-user removed-user)
+   :org org
    :user (lib-schema/author-for-user author)
    :team-id team-id
+   :admin? (boolean admin?)
    :notification-at (oc-time/current-timestamp)})
 
 (schema/defn ^:always-validate send-team! [trigger :- TeamTrigger]

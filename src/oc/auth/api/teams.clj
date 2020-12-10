@@ -99,7 +99,7 @@
   ([_conn _sender team user :guard #(= :active (keyword (:status %))) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   user)
-  
+
   ;; No user yet, email invite
   ([conn sender team nil member? admin? invite :guard :email]
   (let [team-id (:team-id team)
@@ -210,16 +210,23 @@
     (do (timbre/info "Deleted team:" team-id) true)
     (do (timbre/error "Failed deleting team:" team-id) false)))
 
-(defn- remove-team-member [conn team-id {member-id :user-id :as member} sender admin?]
+(defn- remove-team-member [conn team-id {member-id :user-id :as member} sender payload-data admin?]
   (timbre/info "Removing user" member-id "from team" team-id)
-  (let [updated-user (user-res/remove-team conn member-id team-id)]
-    (notify/send-team! (notify/->team-remove-trigger member sender team-id))
+  (let [updated-user (user-res/remove-team conn member-id team-id)
+        org-data {:name (:org-name payload-data)
+                  :uuid (:org-uuid payload-data)
+                  :slug (:org-slug payload-data)
+                  :team-id team-id}]
+    ;; Send a notification to the user if he still has teams left
+    (when (seq (:teams updated-user))
+      (notify/send-team! (notify/->team-remove-trigger member sender org-data team-id admin?)))
+
     (when admin?
       (timbre/info "User is an admin, removing from admins of team" team-id)
       (team-res/remove-admin conn team-id member-id))
-    (when (empty? (:teams updated-user))
-      (timbre/info "User has no other team left, deleting user" member-id)
-      (user-res/delete-user! conn member-id))
+    ;; (when (empty? (:teams updated-user))
+    ;;   (timbre/info "User has no other team left, deleting user" member-id)
+    ;;   (user-res/delete-user! conn member-id))
     (when config/payments-enabled? 
       (payments/report-team-seat-usage! conn team-id))
     (timbre/info "User" member-id "removed from team" team-id)
@@ -256,7 +263,7 @@
   ;; Media type client accepts
   :available-media-types [mt/team-collection-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/team-collection-media-type)
-  
+
   ;; Responses
   :handle-ok (fn [ctx] (let [user (:user ctx)]
                         (team-rep/render-team-list (teams-for-user conn (:user-id user)) user))))
@@ -277,7 +284,7 @@
     :get true
     :patch (fn [ctx] (api-common/known-content-type? ctx mt/team-media-type))
     :delete true})
-  
+
   ;; Authorization
   :allowed? (by-method {
     :options true
@@ -388,8 +395,8 @@
   :handle-not-acceptable (api-common/only-accept 406 mt/admin-media-type)
 
   ;; Media type client sends
-  :malformed? false ; no check, this media type is blank
-  
+  :known-content-type? true
+
   ;; Auhorization
   :allowed? (by-method {
     :options true
@@ -424,8 +431,10 @@
   :available-media-types [mt/user-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
 
-  ;; Media type client sends
-  :malformed? false ; no check, this media type is blank
+  ;; Malformed body request?
+  :malformed? (by-method {:options false
+                          :put false
+                          :delete (fn [ctx] (api-common/malformed-json? ctx))})
 
   ;; Auhorization
   :allowed? (by-method {
@@ -440,7 +449,7 @@
                         false)) ; no team, no user, or user not a member of the team
 
   ;; Actions
-  :delete! (fn [ctx] (remove-team-member conn team-id (:existing-user ctx) (:user ctx) (:admin? ctx)))
+  :delete! (fn [ctx] (remove-team-member conn team-id (:existing-user ctx) (:user ctx) (:data ctx) (:admin? ctx)))
 
   ;; Responses
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
@@ -491,7 +500,7 @@
                         {:updated-team (team-res/add-email-domain conn team-id (:email-domain (:data ctx)))})))
   :delete! (fn [ctx] (when (:existing-domain ctx)
                       {:updated-team (team-res/remove-email-domain conn team-id domain)}))
-  
+
   ;; Responses
   :respond-with-entity? false
   :handle-unprocessable-entity (fn [ctx] (api-common/text-response "Email domain not allowed." 409))
