@@ -397,6 +397,9 @@
   ;; Media type client sends
   :known-content-type? true
 
+  ;; Malformed body request?
+  :malformed? false
+
   ;; Auhorization
   :allowed? (by-method {
     :options true
