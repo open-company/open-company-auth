@@ -3,6 +3,7 @@
   (:require [clojure.string :as s]
             [clojure.set :as clj-set]
             [clojure.walk :refer (keywordize-keys)]
+            [rethinkdb.query :as r]
             [defun.core :refer (defun)]
             [if-let.core :refer (when-let*)]
             [schema.core :as schema]
@@ -69,6 +70,11 @@
    (schema/optional-key :guide-dismissed?) (schema/maybe schema/Bool)
    (schema/optional-key :tooltip-shown?) (schema/maybe schema/Bool)})
 
+(def UserTag schema/Keyword)
+
+(def UserTags
+  {(schema/optional-key :tags) (schema/maybe [UserTag])})
+
 (def ^:private UserCommon
   (merge {:user-id lib-schema/UniqueID
           :teams [lib-schema/UniqueID]
@@ -100,7 +106,8 @@
           (schema/optional-key :profiles) {schema/Keyword schema/Str}}
           ;; Third party user's data
           lib-schema/SlackUsers
-          lib-schema/GoogleUsers))
+          lib-schema/GoogleUsers
+          UserTags))
 
 (def User "User resource as stored in the DB."
   (merge UserCommon {
@@ -273,7 +280,10 @@
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."
   [conn user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (db-common/read-resource conn table-name user-id))
+  (let [user (db-common/read-resource conn table-name user-id)]
+    (if (:tags user)
+      (update user :tags #(mapv keyword %))
+      user)))
 
 (schema/defn ^:always-validate get-user-by-email :- (schema/maybe User)
   "Given the email address of the user, retrieve them from the database, or return nil if user doesn't exist."
@@ -397,6 +407,38 @@
 (schema/defn ^:always-validate premium-teams :- [lib-schema/UniqueID]
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (jwt/premium-teams conn user-id))
+
+;; ----- User Tag manager ----
+
+(schema/defn tag! :- (schema/maybe User)
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID tag :- UserTag]
+  (when (get-user conn user-id)
+    (db-common/add-to-set conn table-name user-id "tags" tag)))
+
+(schema/defn untag! :- (schema/maybe User)
+  [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID tag :- UserTag]
+  (when (get-user conn user-id)
+    (db-common/remove-from-set conn table-name user-id "tags" tag)))
+
+(schema/defn tag-all!
+  [conn :- lib-schema/Conn tag :- UserTag]
+  (-> (r/table table-name)
+      (r/filter (r/fn [u]
+                  (r/has-fields u [:last-token-at])))
+      (r/update (r/fn [u]
+                  {:tags (-> (r/get-field u :tags)
+                             (r/default [])
+                             (r/set-insert tag))}))))
+
+(schema/defn untag-all!
+  [conn :- lib-schema/Conn tag :- UserTag]
+  (-> (r/table table-name)
+      (r/filter (r/fn [u]
+                  (r/has-fields u [:last-token-at])))
+      (r/update (r/fn [u]
+                  {:tags (-> (r/get-field u :tags)
+                             (r/default [])
+                             (r/set-difference tag))}))))
 
 ;; ----- Collection of users -----
 

@@ -21,7 +21,7 @@
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
                :timezone :created-at :slack-users :status :title :blurb :location :profiles])
 (def representation-props (concat slack-props oc-props))
-(def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :latest-digest-delivery])
+(def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :latest-digest-delivery :tags])
 (def team-user-props [:admin?])
 (def self-user-representation-props (concat representation-props self-user-props))
 (def team-user-representation-props (concat representation-props team-user-props))
@@ -30,6 +30,12 @@
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
   ([user :guard map?] (url (:user-id user))))
+
+(defun tag-url
+  ([user-id :guard string? tag]
+   (str (url user-id) "/tags/" tag))
+  ([user :guard map? tag]
+   (tag-url (:user-id user) tag)))
 
 (defn- admin-url [team-id user-id]
   (s/join "/" ["/teams" team-id "admins" user-id]))
@@ -49,6 +55,14 @@
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id) {:ref mt/user-media-type}))
 
 (defn- remove-link [team-id user-id] (hateoas/remove-link (team-member-url team-id user-id) {} {:ref mt/user-media-type}))
+
+(defn- tag-link [user-id]
+  (hateoas/link-map "partial-tag" hateoas/POST (tag-url user-id "$0") {} {:accept mt/user-media-type
+                                                                            :replace {:tag "$0"}}))
+
+(defn- untag-link [user-id]
+  (hateoas/link-map "partial-untag" hateoas/DELETE (tag-url user-id "$0") {} {:accept mt/user-media-type
+                                                                              :replace {:tag "$0"}}))
 
 (defn- resend-verification-email-link [user-id]
   (hateoas/link-map "resend-verification" hateoas/POST (str (url user-id) "/verify") {}))
@@ -113,14 +127,15 @@
   "HATEOAS links for a user resource"
   [user]
   (let [user-id (:user-id user)]
-    (assoc user :links [
-      (self-link user-id)
-      (partial-update-link user-id)
-      refresh-link
-      (delete-link user-id)
-      teams-link
-      (resend-verification-email-link user-id)
-      add-expo-push-token-link])))
+    (assoc user :links [(self-link user-id)
+                        (partial-update-link user-id)
+                        refresh-link
+                        (delete-link user-id)
+                        teams-link
+                        (resend-verification-email-link user-id)
+                        add-expo-push-token-link
+                        (tag-link user-id)
+                        (untag-link user-id)])))
 
 (defn- clean-user-tokens [user]
   (as-> user u

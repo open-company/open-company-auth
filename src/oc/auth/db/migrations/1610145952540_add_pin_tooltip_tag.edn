@@ -1,0 +1,10 @@
+(ns oc.auth.db.migrations.add-pin-tooltip-tag
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.config :as config]
+            [oc.auth.resources.user :as user-res]))
+
+(defn up [conn]
+  ;; Do great things
+  (user-res/tag-all! conn :pin-tooltip)
+  true) ; return true on success

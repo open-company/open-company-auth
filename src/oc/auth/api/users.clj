@@ -141,6 +141,12 @@
       (timbre/warn "Request body not processable as an email address: " e)
       true)))
 
+(defn malformed-user-tag? [ctx tag-slug]
+  (if-let* [tag-slug-kw (keyword tag-slug)
+            _valid? (lib-schema/valid? user-res/UserTag tag-slug-kw)]
+    [false {:tag-slug-keyword tag-slug-kw}]
+    true))
+
 ;; ----- Actions -----
 
 (defn- can-resend-verificaiton-email? [conn user-id]
@@ -535,8 +541,46 @@
                (update-user conn new-ctx (:user-id existing-user))
                (timbre/info "Expo push tokens have not changed for user  " (-> ctx :user :user-id) ", no action taken"))))
 
-  :handle-ok (by-method {:post (fn [_] (api-common/blank-response))})
-  )
+  :handle-ok (by-method {:post (fn [_] (api-common/blank-response))}))
+
+;; ---- User Tags ----
+
+(defresource user-tag [conn user-id tag-slug]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post :delete]
+
+  :available-media-types [mt/user-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
+
+  :known-content-type? true
+
+  :allowed? (by-method {:options true
+                        :post (fn [ctx]
+                                (allow-user-and-team-admins conn ctx (-> ctx :user :user-id)))})
+
+  :exists? (fn [ctx]
+             (if-let [user (user-res/get-user conn (-> ctx :user :user-id))]
+               {:existing-user user}
+               false))
+
+  :malformed? (by-method {:options false
+                          :delete (fn [ctx] (malformed-user-tag? ctx tag-slug))
+                          :post (fn [ctx] (malformed-user-tag? ctx tag-slug))})
+
+  :post! (fn [{:keys [existing-user tag-slug-keyword] :as ctx}]
+           (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
+           {:updated-user (user-res/tag! conn (:user-id existing-user) tag-slug-keyword)})
+
+  :deletet! (fn [{:keys [existing-user tag-slug-keyword] :as ctx}]
+              (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
+              {:updated-user (user-res/untag! conn (:user-id existing-user) tag-slug-keyword)})
+
+  :handle-ok (fn [_] (api-common/blank-response))
+  :handle-created (fn [_] (api-common/blank-response))
+
+  :handle-unprocessable-entity (fn [ctx]
+                                 (api-common/unprocessable-entity-response (schema/check user-res/User (:updated-user ctx)))))
 
 ;; ----- Routes -----
 
@@ -564,4 +608,7 @@
       (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
       (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
       (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
-      )))
+
+      ;; Resend verification email api
+      (ANY "/users/:user-id/tags/:tag-slug" [user-id tag-slug] (pool/with-pool [conn db-pool] (user-tag conn user-id tag-slug)))
+      (ANY "/users/:user-id/tags/:tag-slug/" [user-id tag-slug] (pool/with-pool [conn db-pool] (user-tag conn user-id tag-slug))))))
