@@ -420,25 +420,36 @@
   (when (get-user conn user-id)
     (db-common/remove-from-set conn table-name user-id "tags" tag)))
 
-(schema/defn tag-all!
-  [conn :- lib-schema/Conn tag :- UserTag]
-  (-> (r/table table-name)
-      (r/filter (r/fn [u]
-                  (r/has-fields u [:last-token-at])))
-      (r/update (r/fn [u]
-                  {:tags (-> (r/get-field u :tags)
-                             (r/default [])
-                             (r/set-insert tag))}))))
+(schema/defn tag-all-users!
+  ([conn :- lib-schema/Conn tag :- UserTag] (tag-all-users! conn tag nil))
+  ([conn :- lib-schema/Conn tag :- UserTag filter-fn]
+   (as-> (r/table table-name) query
+       (if (fn? filter-fn)
+         (filter-fn query)
+         query)
+       (r/update query (r/fn [u]
+                        {:tags (-> (r/get-field u :tags)
+                                    (r/default [])
+                                    (r/set-insert tag))})))))
 
-(schema/defn untag-all!
+(schema/defn tag-all-active-users!
   [conn :- lib-schema/Conn tag :- UserTag]
-  (-> (r/table table-name)
-      (r/filter (r/fn [u]
-                  (r/has-fields u [:last-token-at])))
-      (r/update (r/fn [u]
-                  {:tags (-> (r/get-field u :tags)
-                             (r/default [])
-                             (r/set-difference tag))}))))
+  (tag-all-users! conn tag
+                  #(r/filter % (r/fn [u]
+                                 (r/and (r/has-fields u [:last-token-at])
+                                        (r/contains ["active" "unverified"] (r/get-field u [:status])))))))
+
+(schema/defn untag-all-users!
+  ([conn :- lib-schema/Conn tag :- UserTag] (untag-all-users! conn tag nil))
+  ([conn :- lib-schema/Conn tag :- UserTag filter-fn]
+   (as-> (r/table table-name) query
+         (if (fn? filter-fn)
+           (filter-fn query)
+           query)
+         (r/update query (r/fn [u]
+                           {:tags (-> (r/get-field u :tags)
+                                     (r/default [])
+                                     (r/set-difference tag))})))))
 
 ;; ----- Collection of users -----
 

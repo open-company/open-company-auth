@@ -6,5 +6,5 @@
 
 (defn up [conn]
   ;; Do great things
-  (user-res/tag-all! conn :pin-tooltip)
+  (user-res/tag-all-active-users! conn :pin-tooltip)
   true) ; return true on success
