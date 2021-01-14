@@ -572,9 +572,9 @@
            (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
            {:updated-user (user-res/tag! conn (:user-id existing-user) tag-slug-keyword)})
 
-  :deletet! (fn [{:keys [existing-user tag-slug-keyword] :as ctx}]
-              (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
-              {:updated-user (user-res/untag! conn (:user-id existing-user) tag-slug-keyword)})
+  :delete! (fn [{:keys [existing-user tag-slug-keyword] :as ctx}]
+             (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
+             {:updated-user (user-res/untag! conn (:user-id existing-user) tag-slug-keyword)})
 
   :handle-ok (fn [_] (api-common/blank-response))
   :handle-created (fn [_] (api-common/blank-response))
