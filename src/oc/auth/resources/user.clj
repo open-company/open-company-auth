@@ -143,6 +143,19 @@
 
 ;; ----- Utility functions -----
 
+
+(defun parse-tags
+  "Given a user map or a list of them, make sure all the items in the :tags field are keywords."
+  ([user :guard :user-id]
+   (if (:tags user)
+     (update user :tags #(mapv keyword %))
+     user))
+  ([users :guard sequential?]
+   (map parse-tags users))
+  ([not-a-user]
+   not-a-user))
+
+
 (defn clean-props
   "Remove any reserved properties from the user."
   [user]
@@ -210,6 +223,7 @@
   "Take a minimal map describing a user and 'fill the blanks' with any missing properties."
   ([user-props password :- lib-schema/NonBlankStr]
     (-> (->user user-props)
+      (parse-tags)
       (assoc :password-hash (password-hash password)) ; add hashed password
       (assoc :one-time-token (str (java.util.UUID/randomUUID))))) ; add one-time-token for email verification
 
@@ -219,6 +233,7 @@
     (-> user-props
         keywordize-keys
         clean-props
+        (parse-tags)
         (assoc :user-id (db-common/unique-id))
         (update :teams #(or % []))
         (update :email #(or % ""))
@@ -272,7 +287,9 @@
         missing-digest-delivery (map digest-delivery-for-team (vec missing-digest-delivery-teams))
         new-digest-delivery (concat old-digest-delivery missing-digest-delivery)
         user-with-digest-delivery (assoc user-with-status :digest-delivery new-digest-delivery)
-        created-user (db-common/create-resource conn table-name user-with-digest-delivery (db-common/current-timestamp))]
+        created-user (->> (db-common/current-timestamp)
+                          (db-common/create-resource conn table-name user-with-digest-delivery)
+                          (parse-tags))]
     (payments/report-all-seat-usage! conn (:teams user))
     created-user)))
 
@@ -280,29 +297,32 @@
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."
   [conn user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (let [user (db-common/read-resource conn table-name user-id)]
-    (if (:tags user)
-      (update user :tags #(mapv keyword %))
-      user)))
+  (parse-tags (db-common/read-resource conn table-name user-id)))
 
 (schema/defn ^:always-validate get-user-by-email :- (schema/maybe User)
   "Given the email address of the user, retrieve them from the database, or return nil if user doesn't exist."
   [conn email :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (let [loweremail (clojure.string/lower-case email)]
-    (first (db-common/read-resources conn table-name "loweremails" loweremail))))
+  (->> (clojure.string/lower-case email)
+       (db-common/read-resources conn table-name "loweremails")
+       (first)
+       (parse-tags)))
 
 (schema/defn ^:always-validate get-user-by-token :- (schema/maybe User)
   "Given the one-time-use token of the user, retrieve them from the database, or return nil if user doesn't exist."
   [conn token :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (first (db-common/read-resources conn table-name "one-time-token" token)))
+  (-> (db-common/read-resources conn table-name "one-time-token" token)
+      (first)
+      (parse-tags)))
 
 (schema/defn ^:always-validate get-user-by-slack-id :- (schema/maybe User)
   "Given the slack id of the user, retrieve them from the database, or return nil if user doesn't exist."
   [conn slack-team-id :- lib-schema/NonBlankStr slack-id :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (first (db-common/read-resources conn table-name "user-slack-team-id" [[slack-team-id, slack-id]])))
+  (-> (db-common/read-resources conn table-name "user-slack-team-id" [[slack-team-id, slack-id]])
+      (first)
+      (parse-tags)))
 
 (schema/defn ^:always-validate update-user! :- User
   "
@@ -324,13 +344,13 @@
           updated-user (merge original-user (ignore-props user))
           final-user (if hashed-password (assoc updated-user :password-hash hashed-password) updated-user)]
       (schema/validate User final-user)
-      (db-common/update-resource conn table-name primary-key original-user final-user))))
+      (parse-tags (db-common/update-resource conn table-name primary-key original-user final-user)))))
 
 (schema/defn ^:always-validate activate!
   "Update the user's status to 'active'. Returns the updated user."
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (if-let [original-user (get-user conn user-id)]
-    (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active))
+    (parse-tags (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active)))
     false))
 
 (schema/defn ^:always-validate  delete-user!
@@ -342,7 +362,7 @@
       (team-res/remove-admin conn team-id user-id))
     (let [original-user (get-user conn user-id)
           ;; Remove user
-          removed-user (db-common/delete-resource conn table-name user-id)]
+          removed-user (parse-tags (db-common/delete-resource conn table-name user-id))]
       (payments/report-all-seat-usage! conn (:teams original-user))
       removed-user)
     (catch java.lang.RuntimeException _))) ; it's OK if there is no user to delete
@@ -356,7 +376,9 @@
 
   ([conn :- lib-schema/Conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   (when-let [user (get-user conn user-id)]
-    (db-common/update-resource conn table-name primary-key user (assoc user :one-time-token token)))))
+    (->> (assoc user :one-time-token token)
+         (db-common/update-resource conn table-name primary-key)
+         (parse-tags)))))
 
 (schema/defn ^:always-validate remove-token :- (schema/maybe User)
   "
@@ -365,7 +387,7 @@
   "
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (when (get-user conn user-id)
-    (db-common/remove-property conn table-name user-id "one-time-token")))
+    (parse-tags (db-common/remove-property conn table-name user-id "one-time-token"))))
 
 ;; ----- User's set operations -----
 
@@ -386,7 +408,7 @@
       ;; Add a digest-delivery map for the new team
       (db-common/update-resource conn table-name primary-key user (assoc user :digest-delivery digest-delivery))
       (payments/report-team-seat-usage! conn team-id)
-      (db-common/add-to-set conn table-name user-id "teams" team-id))))
+      (parse-tags (db-common/add-to-set conn table-name user-id "teams" team-id)))))
 
 (schema/defn ^:always-validate remove-team :- (schema/maybe User)
   "
@@ -400,7 +422,7 @@
       ;; Remove digest delivery preference for the removed team
       (db-common/update-resource conn table-name primary-key user (assoc user :digest-delivery filtered-digest-delivery))
       (payments/report-team-seat-usage! conn team-id)
-      (db-common/remove-from-set conn table-name user-id "teams" team-id))))
+      (parse-tags (db-common/remove-from-set conn table-name user-id "teams" team-id)))))
 
 (defn admin-of [conn user-id] (jwt/admin-of conn user-id)) ; alias
 
@@ -413,12 +435,12 @@
 (schema/defn tag! :- (schema/maybe User)
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID tag :- UserTag]
   (when (get-user conn user-id)
-    (db-common/add-to-set conn table-name user-id "tags" tag)))
+    (parse-tags (db-common/add-to-set conn table-name user-id "tags" tag))))
 
 (schema/defn untag! :- (schema/maybe User)
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID tag :- UserTag]
   (when (get-user conn user-id)
-    (db-common/remove-from-set conn table-name user-id "tags" tag)))
+    (parse-tags (db-common/remove-from-set conn table-name user-id "tags" tag))))
 
 (schema/defn tag-all-users!
   ([conn :- lib-schema/Conn tag :- UserTag] (tag-all-users! conn tag nil))
@@ -430,7 +452,8 @@
        (r/update query (r/fn [u]
                         {:tags (-> (r/get-field u :tags)
                                     (r/default [])
-                                    (r/set-insert tag))})))))
+                                    (r/set-insert tag))}))
+       (r/run query conn))))
 
 (schema/defn tag-all-active-users!
   [conn :- lib-schema/Conn tag :- UserTag]
@@ -449,7 +472,8 @@
          (r/update query (r/fn [u]
                            {:tags (-> (r/get-field u :tags)
                                      (r/default [])
-                                     (r/set-difference tag))})))))
+                                     (r/set-difference tag))}))
+         (r/run query conn))))
 
 ;; ----- Collection of users -----
 
@@ -462,16 +486,18 @@
 
   ([conn :guard db-common/conn?
     additional-keys :guard additional-keys?]
-  (db-common/read-resources conn table-name
-    (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams])))
+   (parse-tags
+    (db-common/read-resources conn table-name
+                              (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams]))))
 
   ([conn team-id] (list-users conn team-id []))
 
   ([conn :guard db-common/conn?
     team-id :guard #(schema/validate lib-schema/UniqueID %)
     additional-keys :guard additional-keys?]
-  (db-common/read-resources-in-order conn table-name :teams team-id
-    (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams]))))
+   (parse-tags
+    (db-common/read-resources-in-order conn table-name :teams team-id
+                                       (concat additional-keys [:user-id :email :status :first-name :last-name :avatar-url :teams])))))
 
 ;; ----- Armageddon -----
 

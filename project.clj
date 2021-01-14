@@ -61,7 +61,6 @@
     
     
     ;; General data-binding functionality for Jackson: works on core streaming API https://github.com/FasterXML/jackson-databind
-    ;; NB: this is needed
     [com.fasterxml.jackson.core/jackson-databind "2.11.2"]
 
     ;; Library for OC projects https://github.com/open-company/open-company-lib
