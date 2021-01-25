@@ -472,7 +472,7 @@
          (r/update query (r/fn [u]
                            {:tags (-> (r/get-field u :tags)
                                      (r/default [])
-                                     (r/set-difference tag))}))
+                                     (r/set-difference [tag]))}))
          (r/run query conn))))
 
 ;; ----- Collection of users -----
