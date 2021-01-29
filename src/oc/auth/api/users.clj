@@ -296,7 +296,7 @@
 
   ;; Override the initialize-context key to read the invite-token if necessary
   :initialize-context (fn [ctx]
-                        (let [bearer (-> ctx :request :headers api-common/get-token)
+                        (let [bearer (api-common/get-token (:request ctx))
                               is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
                               jwtoken (when-not is-team-token? (api-common/read-token (:request ctx) config/passphrase))]
                           (if is-team-token?
@@ -414,7 +414,7 @@
 
   ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
   :initialize-context (by-method {:get (fn [ctx]
-                                         (let [token (api-common/get-token (get-in ctx [:request :headers]))
+                                         (let [token (api-common/get-token (:request ctx))
                                                claims (:claims (jwt/decode token))]
                                            ;; We signed the token?
                                            (when (jwt/check-token token config/passphrase)
