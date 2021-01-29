@@ -9,6 +9,7 @@
             [liberator.dev :refer (wrap-trace)]
             [ring.middleware.params :refer (wrap-params)]
             [ring.middleware.reload :refer (wrap-reload)]
+            [ring.middleware.cookies :refer (wrap-cookies)]
             [ring.middleware.cors :refer (wrap-cors)]
             [buddy.auth.middleware :refer (wrap-authentication)]
             [buddy.auth.backends :as backends]
@@ -74,6 +75,7 @@
     c/prod?           wrap-with-logger
     true              wrap-params
     c/liberator-trace (wrap-trace :header :ui)
+    true              wrap-cookies
     true              (wrap-cors #".*")
     true              (wrap-authentication (backends/basic {:realm "oc-auth"
                                                             :authfn (partial users-api/email-basic-auth sys)}))

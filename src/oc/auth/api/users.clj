@@ -54,14 +54,6 @@
           (timbre/info "Failed to auth:" email) 
           false)))))
 
-(defn- allow-superuser-token [ctx]
-  (if-let* [token (api-common/get-token (get-in ctx [:request :headers]))
-            decoded-token (jwt/decode token)
-            _true? (and (jwt/check-token token config/passphrase) ;; We signed the token
-                        (:super-user (:claims decoded-token)))] ;; And granted super-user perm
-    {:jwtoken decoded-token :user (:claims decoded-token)}
-    false))
-
 (defn- allow-user-and-team-admins [conn ctx accessed-user-id]
   (let [accessing-user-id (:user-id (:user ctx))]
     (or (contains? (:claims (:jwtoken ctx)) :super-user)
@@ -306,7 +298,7 @@
   :initialize-context (fn [ctx]
                         (let [bearer (-> ctx :request :headers api-common/get-token)
                               is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
-                              jwtoken (when-not is-team-token? (api-common/read-token (get-in ctx [:request :headers]) config/passphrase))]
+                              jwtoken (when-not is-team-token? (api-common/read-token (:request ctx) config/passphrase))]
                           (if is-team-token?
                             {:jwtoken false
                              :invite-token bearer}
@@ -380,11 +372,6 @@
                           :post true
                           :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
-  :initialize-context (fn [ctx]
-                        (or (allow-superuser-token ctx)
-                            (api-common/read-token
-                             (get-in ctx [:request :headers])
-                             config/passphrase)))
   ;; Authorization
   :allowed? (by-method {
     :options true

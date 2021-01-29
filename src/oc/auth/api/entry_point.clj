@@ -44,7 +44,7 @@
   :initialize-context (fn [ctx]
                         (let [bearer (-> ctx :request :headers api-common/get-token)
                               is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
-                              jwtoken (when-not is-team-token? (api-common/read-token (get-in ctx [:request :headers]) config/passphrase))]
+                              jwtoken (when-not is-team-token? (api-common/read-token (:request ctx) config/passphrase))]
                           (if is-team-token?
                             {:jwtoken false
                              :invite-token bearer}
