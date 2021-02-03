@@ -56,6 +56,7 @@
     "Slack customer support webhook: " c/slack-customer-support-webhook "\n"
     (when c/payments-enabled?
       (str "Payments server url: " c/payments-server-url "\n"))
+    "Log level: " c/log-level "\n"
     "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
     "Sentry: " c/dsn "\n"
