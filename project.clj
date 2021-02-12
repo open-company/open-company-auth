@@ -69,7 +69,7 @@
     ;; ***************** (JWT schema changes, more info here: *****************
     ;; ******* https://github.com/open-company/open-company-lib/pull/82) ******
     ;; ************************************************************************
-    [open-company/lib "0.17.31-alpha3" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
+    [open-company/lib "0.17.31-alpha6" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind]]
     ;; ************************************************************************
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
