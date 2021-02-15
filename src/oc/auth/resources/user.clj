@@ -377,7 +377,7 @@
   ([conn :- lib-schema/Conn user-id :- lib-schema/UniqueID token :- lib-schema/UUIDStr]
   (when-let [user (get-user conn user-id)]
     (->> (assoc user :one-time-token token)
-         (db-common/update-resource conn table-name primary-key)
+         (db-common/update-resource conn table-name primary-key user)
          (parse-tags)))))
 
 (schema/defn ^:always-validate remove-token :- (schema/maybe User)
