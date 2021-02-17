@@ -124,7 +124,8 @@
   [msg done-channel]
   (let [msg-body (read-message-body (:body msg))
         _error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
-    (timbre/infof "Received message from SQS: %s\n" msg-body)
+    (timbre/info "Received message from SQS")
+    (timbre/debugf "Received message from SQS: %s\n" msg-body)
     (>!! expo-chan msg-body))
   (sqs/ack done-channel msg))
 

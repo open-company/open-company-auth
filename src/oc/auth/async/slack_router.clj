@@ -170,8 +170,9 @@
   "Handle an incoming SQS message to the auth service."
   [msg done-channel]
   (let [msg-body (read-message-body (:body msg))
-        error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
-    (timbre/infof "Received message from SQS: %s\n" msg-body)
+        _error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
+    (timbre/info "Received message from SQS")
+    (timbre/debugf "Received message from SQS: %s\n" msg-body)
     (>!! slack-router-chan msg-body))
   (sqs-lib/ack done-channel msg))
 
