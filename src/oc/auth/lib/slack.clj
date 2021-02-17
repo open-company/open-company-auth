@@ -159,17 +159,6 @@
     (get params "error") [false "denied"]
     :else                [false "no-code"]))
 
-(defn channel-list
-  "Given a Slack bot token, list the public channels for the Slack org."
-  [bot-token]
-  (let [conn (merge slack-connection {:token bot-token})
-        channels (slack/slack-request conn "channels.list")]
-    (if (:ok channels)
-      (remove :is_archived (:channels channels)) ; unarchived channels
-      (do (timbre/warn "Channel list could not be retrieved."
-                       {:response channels :bot-token bot-token})
-          false))))
-
 (defn user-list
   "Given a Slack bot token, list the user roster for the Slack org, excluding restricted, deleted and bots users."
   [bot-token]
@@ -242,4 +231,4 @@
   ([slack-orgs channels]
   (let [slack-org (first slack-orgs)
         bot-token (:bot-token slack-org)]
-    (channels-for (rest slack-orgs) (conj channels (assoc slack-org :channels (channel-list bot-token)))))))
+    (channels-for (rest slack-orgs) (conj channels (assoc slack-org :channels (slack-lib/get-channels bot-token)))))))
