@@ -42,7 +42,7 @@
 (defresource entry-point [conn]
   ;; Extend the usual anonymous resource to allow auth via team invite-token
   :initialize-context (fn [ctx]
-                        (let [bearer (-> ctx :request :headers api-common/get-token)
+                        (let [bearer (-> ctx :request api-common/get-token)
                               is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
                               jwtoken (when-not is-team-token? (api-common/read-token (:request ctx) config/passphrase))]
                           (if is-team-token?
