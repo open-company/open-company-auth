@@ -322,7 +322,7 @@
                                             [:bot-user-id :bot-token]))]
                           (team-rep/render-team (assoc team-users :slack-orgs slack-orgs))))
   :handle-unprocessable-entity (fn [ctx]
-    (api-common/unprocessable-entity-response (schema/check team-res/Team (:team-update ctx)))))
+    (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
 
 ;; A resource for user invitations to a particular team
@@ -506,7 +506,8 @@
 
   ;; Responses
   :respond-with-entity? false
-  :handle-unprocessable-entity (fn [ctx] (api-common/text-response "Email domain not allowed." 409))
+  :handle-unprocessable-entity (fn [ctx]
+    (api-common/unprocessable-entity-handler (merge ctx {:reason "Email domain not allowed." :status 409})))
   :handle-created (fn [ctx] (if (or (:updated-team ctx) (:pre-flight ctx) (:existing-domain ctx))
                               (api-common/blank-response)
                               (api-common/missing-response)))

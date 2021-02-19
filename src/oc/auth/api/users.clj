@@ -407,7 +407,7 @@
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
 
   :handle-unprocessable-entity (fn [ctx]
-    (api-common/unprocessable-entity-response (schema/check user-res/User (:user-update ctx)))))
+    (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check user-res/User (:user-update ctx))}))))
 
 ;; A resource for refreshing JWTokens
 (defresource token [conn]
@@ -567,7 +567,7 @@
   :handle-created (fn [_] (api-common/blank-response))
 
   :handle-unprocessable-entity (fn [ctx]
-                                 (api-common/unprocessable-entity-response (schema/check user-res/User (:updated-user ctx)))))
+    (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check user-res/User (:updated-user ctx))}))))
 
 ;; ----- Routes -----
 
