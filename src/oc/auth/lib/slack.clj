@@ -219,7 +219,7 @@
   "Given a sequence of Slack orgs, retrieve the channel list of those that have a bot."
 
   ;; Initial case
-  ([slack-orgs] (channels-for slack-orgs []))
+  ([slack-orgs] (channels-for (sort-by :name slack-orgs) []))
 
   ;; All done case
   ([slack-orgs :guard empty? channels] (vec channels))
@@ -230,5 +230,12 @@
   ;; Retrieve channel for this Slack org
   ([slack-orgs channels]
   (let [slack-org (first slack-orgs)
-        bot-token (:bot-token slack-org)]
-    (channels-for (rest slack-orgs) (conj channels (assoc slack-org :channels (slack-lib/get-channels bot-token)))))))
+        bot-token (:bot-token slack-org)
+        org-channels (try
+                       (slack-lib/get-channels bot-token)
+                       (catch Exception e
+                         (timbre/error e)
+                         []))
+        sorted-channels (sort-by :name org-channels)
+        updated-org (assoc slack-org :channels sorted-channels)]
+    (channels-for (rest slack-orgs) (conj channels updated-org)))))
