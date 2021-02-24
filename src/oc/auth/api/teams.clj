@@ -1,7 +1,7 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
   (:require [if-let.core :refer (if-let* when-let*)]
-            [defun.core :refer (defun-)]
+            [defun.core :refer (defun)]
             [clojure.set :as clj-set]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (ANY OPTIONS POST DELETE)]
@@ -72,7 +72,7 @@
 
 ;; ----- Actions -----
 
-(defun- handle-invite
+(defun handle-invite
   "Handle an invitation/re-invite request.
 
   This may involve one or more of the following:
@@ -85,6 +85,20 @@
 
   ;; No team to invite to!
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
+
+  ;; Invite user, used by oc.support.util.email-invite-from-csv
+  ([conn sender :guard :user-id team-id :guard string? invite-data :guard #(and (#{:viewer :admin :contributor} (:access %)) (lib-schema/valid-email-address? (:email %)))]
+   (let [existing-team (team-res/get-team conn team-id)
+         existing-user (user-res/get-user-by-email conn (:email invite-data))
+         ->admin? (= (:access invite-data) :admin)
+         member? (when (and existing-user existing-team)
+                   (boolean ((set (:teams existing-user)) (:team-id existing-team))))
+         admin? (when (and existing-user existing-team)
+                  (boolean ((set (:admins existing-team)) (:user-id existing-user))))]
+     (handle-invite conn sender existing-team existing-user member? admin? {:email (:email invite-data)
+                                                                            :admin ->admin?
+                                                                            :first-name (:first-name invite-data)
+                                                                            :last-name (:last-name invite-data)})))
 
   ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
   ([conn sender team user true _admin? :guard not invite :guard :admin]

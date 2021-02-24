@@ -31,11 +31,6 @@
     [ring-logger-timbre "0.7.6" :exclusions [com.taoensso/encore com.taoensso/timbre]]
     ;; Web routing https://github.com/weavejester/compojure
     [compojure "1.6.2"]
-    ;; Clojure Slack REST API https://github.com/julienXX/clj-slack
-    ;; NB: clj-http pulled in manually
-    ;; NB: org.clojure/data.json pulled in manually
-    ;; NB: org.clojure/tools.logging pulled in manually
-    [org.julienxx/clj-slack "0.6.3" :exclusions [clj-http org.clojure/data.json org.clojure/tools.logging]]
     ;; For google oauth2
     ;; NB: commons-codec pulled in by oc.lib
     [stuarth/clj-oauth2 "0.3.2" :exclusions [commons-codec]]
@@ -90,6 +85,7 @@
     ;; clj-jwt - A Clojure library for JSON Web Token(JWT) https://github.com/liquidz/clj-jwt
     ;; clj-time - Date and time lib https://github.com/clj-time/clj-time
     ;; Environ - Get environment settings from different sources https://github.com/weavejester/environ
+    ;; clj-slack - Clojure Slack REST API https://github.com/julienXX/clj-slack
   ]
 
   :plugins [
