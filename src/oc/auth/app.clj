@@ -54,6 +54,7 @@
     "AWS SQS payments queue: " c/aws-sqs-payments-queue "\n"
     "AWS SQS notify queue: " c/aws-sqs-notify-queue "\n"
     "AWS SNS notification topic ARN: " c/aws-sns-auth-topic-arn "\n"
+    "AWS LAMBDA expo prefix: " c/aws-lambda-expo-prefix "\n"
     "Slack customer support webhook: " c/slack-customer-support-webhook "\n"
     (when c/payments-enabled?
       (str "Payments server url: " c/payments-server-url "\n"))
