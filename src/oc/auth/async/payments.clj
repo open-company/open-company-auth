@@ -26,7 +26,7 @@
 
 ;; ----- Event handling -----
 
-(defn- handle-payments-message
+(defn handle-payments-message
   [trigger]
   (timbre/info "Request to send" trigger "to" c/aws-sqs-payments-queue)
   (schema/validate TeamReportTrigger trigger)
