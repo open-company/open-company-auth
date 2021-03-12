@@ -18,19 +18,22 @@
 (defonce intro? (not prod?))
 (defonce short-server-name (or (env :short-server-name) "localhost"))
 
+;; ----- Logging (see https://github.com/ptaoussanis/timbre) -----
+
+(defonce log-level (or (env :log-level) :info))
+
 ;; ----- Sentry -----
 
 (defonce dsn (or (env :open-company-sentry-auth) false))
 (defonce sentry-release (or (env :release) ""))
+(defonce sentry-deploy (or (env :deploy) ""))
+(defonce sentry-debug  (boolean (or (bool (env :sentry-debug)) (#{:debug :trace} log-level))))
 (defonce sentry-env (or (env :environment) "local"))
 (defonce sentry-config {:dsn dsn
-                        :debug (not prod?)
+                        :debug sentry-debug
                         :release sentry-release
+                        :deploy sentry-deploy
                         :environment sentry-env})
-
-;; ----- Logging (see https://github.com/ptaoussanis/timbre) -----
-
-(defonce log-level (or (env :log-level) :info))
 
 ;; ----- RethinkDB -----
 

@@ -61,10 +61,7 @@
     "Log level: " c/log-level "\n"
     "Trace: " c/liberator-trace "\n"
     "Hot-reload: " c/hot-reload "\n"
-    "Sentry: " c/dsn "\n"
-    "  env: " c/sentry-env "\n"
-    (when-not (clj-str/blank? c/sentry-release)
-      (str "  release: " c/sentry-release "\n"))
+    "Sentry: " c/sentry-config "\n"
     "Payments?: " c/payments-enabled? "\n\n"
     (when c/intro? "Ready to serve...\n"))))
 
