@@ -13,16 +13,16 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.10.2-alpha4"]
+    [org.clojure/clojure "1.11.0-alpha1"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
-    [org.clojure/tools.cli "1.0.194"]
+    [org.clojure/tools.cli "1.0.206"]
     ;; Web application library https://github.com/ring-clojure/ring
-    [ring/ring-devel "2.0.0-alpha1"]
+    [ring/ring-devel "1.9.1"]
     ;; Web application library https://github.com/ring-clojure/ring
     ;; NB: clj-time pulled in by oc.lib
     ;; NB: joda-time pulled in by oc.lib via clj-time
     ;; NB: commons-codec pulled in by oc.lib
-    [ring/ring-core "2.0.0-alpha1" :exclusions [clj-time joda-time commons-codec]]
+    [ring/ring-core "1.9.1" :exclusions [clj-time joda-time]]
     ;; CORS library https://github.com/jumblerg/ring.middleware.cors
     [jumblerg/ring.middleware.cors "1.0.1"]
     ;; Ring logging https://github.com/nberger/ring-logger-timbre
@@ -64,7 +64,7 @@
     ;; ***************** (JWT schema changes, more info here: *****************
     ;; ******* https://github.com/open-company/open-company-lib/pull/82) ******
     ;; ************************************************************************
-    [open-company/lib "0.17.35-alpha3" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind org.clojure/tools.reader]]
+    [open-company/lib "0.18.0-alpha" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind org.clojure/tools.reader]]
     ;; ************************************************************************
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
@@ -157,7 +157,7 @@
         ;; pretty-print the lein project map https://github.com/technomancy/leiningen/tree/master/lein-pprint
         [lein-pprint "1.3.2"]
         ;; Check for outdated dependencies https://github.com/xsc/lein-ancient
-        [lein-ancient "0.6.15"]
+        [lein-ancient "1.0.0-RC3"]
         ;; Catch spelling mistakes in docs and docstrings https://github.com/cldwalker/lein-spell
         [lein-spell "0.1.0"]
         ;; Dead code finder https://github.com/venantius/yagni
