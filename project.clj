@@ -13,7 +13,7 @@
 
   :dependencies [
     ;; Lisp on the JVM http://clojure.org/documentation
-    [org.clojure/clojure "1.11.0-alpha1"]
+    [org.clojure/clojure "1.10.3"]
     ;; Command-line parsing https://github.com/clojure/tools.cli
     [org.clojure/tools.cli "1.0.206"]
     ;; Web application library https://github.com/ring-clojure/ring
@@ -64,7 +64,7 @@
     ;; ***************** (JWT schema changes, more info here: *****************
     ;; ******* https://github.com/open-company/open-company-lib/pull/82) ******
     ;; ************************************************************************
-    [open-company/lib "0.18.0-alpha" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind org.clojure/tools.reader]]
+    [open-company/lib "0.18.0-alpha1" :exclusions [clj-http org.bouncycastle/bcpkix-jdk15on com.fasterxml.jackson.core/jackson-databind org.clojure/tools.reader]]
     ;; ************************************************************************
     ;; NB: clj-http pulled in manually
     ;; NB: org.clojure/data.json pulled in manually
