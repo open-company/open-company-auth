@@ -243,7 +243,7 @@
         (update :digest-medium #(or % :email)) ; lowest common denominator
         (update :notification-medium #(or % :email)) ; lowest common denominator
         (update :reminder-medium #(or % :email)) ; lowest common denominator
-        (update :digest-delivery #(cond %
+        (update :digest-delivery #(cond (seq %)
                                         %
                                         (seq (:teams user-props))
                                         (mapv digest-delivery-for-team (:teams user-props))
