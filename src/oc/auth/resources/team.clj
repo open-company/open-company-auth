@@ -3,6 +3,7 @@
   (:require [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (when-let*)]
             [schema.core :as schema]
+            [oc.lib.html :as lib-html]
             [oc.lib.db.common :as db-common]
             [oc.lib.schema :as lib-schema]
             [oc.auth.config :as c]))
@@ -71,6 +72,16 @@
   [team]
   (apply dissoc team reserved-properties))
 
+(defn clean-prop [team-data clean-key]
+  (if (get team-data clean-key)
+    (update team-data clean-key #(or (lib-html/strip-xss-tags %) ""))
+    team-data))
+
+(defn clean-input [team]
+  (-> team
+      clean
+      (clean-prop :name)))
+
 ;; ----- Team CRUD -----
 
 (schema/defn ^:always-validate ->team :- Team
@@ -83,9 +94,8 @@
   (let [ts (db-common/current-timestamp)]
     (-> team-props
         keywordize-keys
-        clean
+        clean-input
         (assoc :team-id (db-common/unique-id))
-        (update :name #(or % ""))
         (assoc :premium false)
         (assoc :admins [initial-admin])
         (assoc :email-domains [])
@@ -127,7 +137,7 @@
   {:pre [(db-common/conn? conn)
          (map? team)]}
   (when-let [original-team (get-team conn team-id)]
-    (let [updated-team (merge original-team (clean team))]
+    (let [updated-team (merge original-team (clean-input team))]
       (schema/validate Team updated-team)
       (db-common/update-resource conn table-name primary-key original-team updated-team))))
 

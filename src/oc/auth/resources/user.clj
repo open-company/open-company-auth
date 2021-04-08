@@ -11,6 +11,7 @@
             [oc.lib.db.common :as db-common]
             [oc.lib.jwt :as jwt]
             [oc.lib.schema :as lib-schema]
+            [oc.lib.html :as lib-html]
             [oc.auth.async.payments :as payments]
             [oc.auth.resources.team :as team-res]
             [oc.auth.config :as config]))
@@ -155,6 +156,15 @@
   ([not-a-user]
    not-a-user))
 
+(defn clean-prop [team-data clean-key]
+  (if (get team-data clean-key)
+    (update team-data clean-key #(or (lib-html/strip-xss-tags %) ""))
+    team-data))
+
+(defn clean-input [user]
+  (-> user
+      (clean-prop :first-name)
+      (clean-prop :last-name)))
 
 (defn clean-props
   "Remove any reserved properties from the user."
@@ -233,6 +243,7 @@
     (-> user-props
         keywordize-keys
         clean-props
+        (clean-input)
         (parse-tags)
         (assoc :user-id (db-common/unique-id))
         (update :teams #(or % []))
@@ -341,7 +352,10 @@
   (when-let [original-user (get-user conn user-id)]
     (let [updated-password (:password user)
           hashed-password (when-not (s/blank? updated-password) (password-hash updated-password))
-          updated-user (merge original-user (ignore-props user))
+          cleaned-user-data (-> user
+                                ignore-props
+                                clean-input)
+          updated-user (merge original-user cleaned-user-data)
           final-user (if hashed-password (assoc updated-user :password-hash hashed-password) updated-user)]
       (schema/validate User final-user)
       (parse-tags (db-common/update-resource conn table-name primary-key original-user final-user)))))
