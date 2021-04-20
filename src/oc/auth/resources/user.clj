@@ -155,7 +155,6 @@
   ([not-a-user]
    not-a-user))
 
-
 (defn clean-props
   "Remove any reserved properties from the user."
   [user]
@@ -253,45 +252,66 @@
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
 
+(defn nux-tag-for-user
+  ([user-map]
+   (nux-tag-for-user user-map nil))
+  ([user-map invitation]
+   (cond (and (map? invitation)
+              (seq (:user-type invitation)))
+         [(keyword (str "nux-" (:user-type invitation)))]
+         (seq (:teams user-map))
+         [:nux-author]
+         :else
+         :nux-first-user)))
+
+(declare tags!)
 (schema/defn ^:always-validate create-user!
   "Create a user in the system. Throws a runtime exception if user doesn't conform to the User schema."
   ([conn user :- User]
-  {:pre [(db-common/conn? conn)]}
-  (create-user! conn user nil))
+   {:pre [(db-common/conn? conn)]}
+   (create-user! conn user nil (nux-tag-for-user user)))
   ([conn user :- User invite-token-team-id :- (schema/maybe lib-schema/UniqueID)]
-  {:pre [(db-common/conn? conn)]}
-  (let [email (:email user)
-        email-domain (last (s/split email #"\@"))
-        email-teams (mapv :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
-        existing-teams (vec (set (concat email-teams (:teams user))))
-        with-invite-token-teams (if invite-token-team-id
-                                  (vec (set (conj existing-teams invite-token-team-id)))
-                                  existing-teams)
-        new-team (when (empty? with-invite-token-teams)
-                   (team-res/create-team! conn (team-res/->team {} (:user-id user))))
-        teams (if new-team [(:team-id new-team)] with-invite-token-teams)
-        user-with-teams (assoc user :teams teams)
-        user-with-status (if (or ;; user is creating a new team, no need to pre-verify
-                                 new-team
-                                 ;; User is signing in via invite token
-                                 (and invite-token-team-id
-                                          ;; or has no related teams for email domain
-                                      (or (empty? email-teams)
-                                          ;; or the only email domain team is the same of the invite token
-                                          (and (= (count email-teams) 1)
-                                               (= (first email-teams) invite-token-team-id)))))
+   {:pre [(db-common/conn? conn)]}
+   (let [tmp-user (update user :teams #(->> (concat % [invite-token-team-id])
+                                            (remove nil?)
+                                            vec))
+         nux-tag (nux-tag-for-user tmp-user)]
+     (create-user! conn user invite-token-team-id nux-tag)))
+  ([conn user :- User invite-token-team-id :- (schema/maybe lib-schema/UniqueID) tags]
+   {:pre [(db-common/conn? conn)]}
+   (let [email (:email user)
+         email-domain (last (s/split email #"\@"))
+         email-teams (mapv :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
+         existing-teams (vec (set (concat email-teams (:teams user))))
+         with-invite-token-teams (if invite-token-team-id
+                                   (vec (set (conj existing-teams invite-token-team-id)))
+                                   existing-teams)
+         new-team (when (empty? with-invite-token-teams)
+                    (team-res/create-team! conn (team-res/->team {} (:user-id user))))
+         teams (if new-team [(:team-id new-team)] with-invite-token-teams)
+         user-with-teams (assoc user :teams teams)
+         user-with-status (if (or ;; user is creating a new team, no need to pre-verify
+                                  new-team
+                                  ;; User is signing in via invite token
+                                  (and invite-token-team-id
+                                       ;; or has no related teams for email domain
+                                       (or (empty? email-teams)
+                                           ;; or the only email domain team is the same of the invite token
+                                           (and (= (count email-teams) 1)
+                                                (= (first email-teams) invite-token-team-id)))))
                             (assoc user-with-teams :status :unverified) ; let user in even if not verified
                             user-with-teams)
-        old-digest-delivery (:digest-delivery user)
-        missing-digest-delivery-teams (clj-set/difference (set teams) (set (:teams user)))
-        missing-digest-delivery (map digest-delivery-for-team (vec missing-digest-delivery-teams))
-        new-digest-delivery (concat old-digest-delivery missing-digest-delivery)
-        user-with-digest-delivery (assoc user-with-status :digest-delivery new-digest-delivery)
-        created-user (->> (db-common/current-timestamp)
-                          (db-common/create-resource conn table-name user-with-digest-delivery)
-                          (parse-tags))]
-    (payments/report-all-seat-usage! conn (:teams user))
-    created-user)))
+         old-digest-delivery (:digest-delivery user)
+         missing-digest-delivery-teams (clj-set/difference (set teams) (set (:teams user)))
+         missing-digest-delivery (map digest-delivery-for-team (vec missing-digest-delivery-teams))
+         new-digest-delivery (concat old-digest-delivery missing-digest-delivery)
+         user-with-digest-delivery (assoc user-with-status :digest-delivery new-digest-delivery)
+         created-user (->> (db-common/current-timestamp)
+                           (db-common/create-resource conn table-name user-with-digest-delivery)
+                           (tags! conn tags)
+                           (parse-tags))]
+     (payments/report-all-seat-usage! conn (:teams user))
+     created-user)))
 
 (schema/defn ^:always-validate get-user :- (schema/maybe User)
   "Given the user-id of the user, retrieve them from the database, or return nil if they don't exist."
@@ -437,10 +457,28 @@
   (when (get-user conn user-id)
     (parse-tags (db-common/add-to-set conn table-name user-id "tags" tag))))
 
+(schema/defn tags! :- (schema/maybe User)
+  [conn :- lib-schema/Conn tags :- [UserTag] user :- User]
+  (if-not (seq tags)
+    user
+    (do
+      (doseq [tag tags]
+        (tag! conn (:user-id user) tag))
+      (parse-tags (get-user conn (:user-id user))))))
+
 (schema/defn untag! :- (schema/maybe User)
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID tag :- UserTag]
   (when (get-user conn user-id)
     (parse-tags (db-common/remove-from-set conn table-name user-id "tags" tag))))
+
+(schema/defn untags! :- (schema/maybe User)
+  [conn :- lib-schema/Conn tags :- [UserTag] user :- User]
+  (if-not (seq tags)
+    user
+    (do
+      (doseq [tag tags]
+        (untag! conn (:user-id user) tag))
+      (parse-tags (get-user conn (:user-id user))))))
 
 (schema/defn tag-all-users!
   ([conn :- lib-schema/Conn tag :- UserTag] (tag-all-users! conn tag nil))

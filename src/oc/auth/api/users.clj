@@ -333,7 +333,7 @@
   :post-to-existing? false
   :put-to-existing? true ; needed for a 409 conflict
   :conflict? :existing-user
-  :post! (fn [ctx] (create-user conn (:data ctx) (:existing-team ctx))) 
+  :post! (fn [ctx] (create-user conn (:data ctx) (:existing-team ctx)))
 
   ;; Responses
   :handle-conflict (ring-response {:status 409})

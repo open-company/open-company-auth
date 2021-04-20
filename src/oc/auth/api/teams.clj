@@ -106,7 +106,7 @@
         user-id (:user-id user)]
     (timbre/info "Making user:" user-id "an admin of team:" team-id)
     (if-let [updated-team (team-res/add-admin conn team-id user-id)]
-      (handle-invite conn sender team user true true invite) ; recurse
+      (handle-invite conn sender updated-team user true true invite) ; recurse
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; An already active team member... who is inviting this person, yoh?
@@ -117,13 +117,14 @@
   ;; No user yet, email invite
   ([conn sender team nil member? admin? invite :guard :email]
   (let [team-id (:team-id team)
-        email (:email invite)]
-    (timbre/info "Creating user:" email "for team:" team-id)
-    (if-let [new-user (user-res/create-user! conn
-                        (user-res/->user (-> invite
-                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :team-id :note :slack-id :slack-org-id)
+        email (:email invite)
+        new-user-data (-> invite
+                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :team-id :note :slack-id :slack-org-id :user-type)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
-                          (assoc :teams [team-id]))))]
+                          (assoc :teams [team-id]))
+        new-user-map (user-res/->user new-user-data)]
+    (timbre/info "Creating user:" email "for team:" team-id)
+    (if-let [new-user (user-res/create-user! conn new-user-map nil (user-res/nux-tag-for-user new-user-map invite))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
 
@@ -139,8 +140,8 @@
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
-                                          (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name)))
-              new-user (user-res/create-user! conn oc-user)]
+                                          (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name :user-type)))
+              new-user (user-res/create-user! conn oc-user nil (user-res/nux-tag-for-user oc-user invite))]
       (handle-invite conn sender team new-user true admin? (-> invite
                                                              (assoc :bot-token bot-token)
                                                              (assoc :bot-user-id bot-user-id))) ; recurse
