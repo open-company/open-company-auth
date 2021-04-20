@@ -156,9 +156,9 @@
   ([not-a-user]
    not-a-user))
 
-(defn clean-prop [team-data clean-key]
-  (if (get team-data clean-key)
-    (update team-data clean-key #(or (lib-html/strip-xss-tags %) ""))
+(defn clean-prop [user-data clean-key]
+  (if (get user-data clean-key)
+    (update user-data clean-key #(or (lib-html/strip-xss-tags %) ""))
     team-data))
 
 (defn clean-input [user]
