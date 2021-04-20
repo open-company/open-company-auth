@@ -34,7 +34,7 @@
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
   [user]
-  (dissoc user :created-at :updated-at :status))
+  (dissoc user :created-at :updated-at :activated-at :status))
 
 (defn- email-for
   "Get the email for the Slack user with users.info if we don't already have it."

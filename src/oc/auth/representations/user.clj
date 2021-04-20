@@ -22,7 +22,7 @@
                :timezone :created-at :slack-users :status :title :blurb :location :profiles])
 (def representation-props (concat slack-props oc-props))
 (def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :latest-digest-deliveries :tags])
-(def team-user-props [:admin?])
+(def team-user-props [:admin? :activated-at])
 (def self-user-representation-props (concat representation-props self-user-props))
 (def team-user-representation-props (concat representation-props team-user-props))
 (def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :premium-teams])
@@ -153,7 +153,7 @@
      u)))
 
 (schema/defn ^:always-validate jwt-props-for
-  [user :- user-res/UserRep source :- schema/Keyword]
+  [user :- user-res/OpenUserRep source :- schema/Keyword]
   (let [slack? (:slack-id user)
         slack-bots? (:slack-bots user)
         slack-users? (:slack-users user)
@@ -184,7 +184,7 @@
 
 (schema/defn ^:always-validate auth-response
   "Return a JWToken for the user, or and a Location header."
-  [conn user :- user-res/UserRep source :- schema/Keyword]
+  [conn user :- user-res/OpenUserRep source :- schema/Keyword]
   (let [jwt-user (jwt-props-for user source)
         location (url (:user-id user))]
     (api-common/location-response location (jwtoken/generate conn jwt-user) jwt/media-type)))
