@@ -159,7 +159,7 @@
 (defn clean-prop [user-data clean-key]
   (if (get user-data clean-key)
     (update user-data clean-key #(or (lib-html/strip-xss-tags %) ""))
-    team-data))
+    user-data))
 
 (defn clean-input [user]
   (-> user
