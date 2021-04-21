@@ -94,6 +94,7 @@
   (let [ts (db-common/current-timestamp)]
     (-> team-props
         keywordize-keys
+        (update :name #(or % ""))
         clean-input
         (assoc :team-id (db-common/unique-id))
         (assoc :premium false)
