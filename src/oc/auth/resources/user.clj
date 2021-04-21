@@ -115,7 +115,8 @@
     :status (schema/pred #(statuses (keyword %)))
     (schema/optional-key :slack-bots) (schema/maybe lib-schema/SlackBots)
     :created-at lib-schema/ISO8601
-    :updated-at lib-schema/ISO8601}))
+    :updated-at lib-schema/ISO8601
+    (schema/optional-key :activated-at) (schema/maybe lib-schema/ISO8601)}))
 
 (def UserRep "A representation of the user, suitable for creating a JWToken."
   (merge UserCommon {
@@ -132,11 +133,15 @@
     (schema/optional-key :created-at) lib-schema/ISO8601
     (schema/optional-key :updated-at) lib-schema/ISO8601}))
 
+(def OpenUserRep
+  "A representation of the user open, suitable as input to the JWToken that will be cleaned at needs."
+  (merge UserRep {schema/Any schema/Any}))
+
 ;; ----- Metadata -----
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create or update."
-  #{:user-id :password :password-hash :created-at :udpated-at :links :slack-display-name :latest-digest-deliveries})
+  #{:user-id :password :password-hash :created-at :udpated-at :activated-at :links :slack-display-name :latest-digest-deliveries})
 
 (def ignored-properties
   "Properties of a resource that are ignored during an update."
@@ -311,7 +316,9 @@
                                            ;; or the only email domain team is the same of the invite token
                                            (and (= (count email-teams) 1)
                                                 (= (first email-teams) invite-token-team-id)))))
-                            (assoc user-with-teams :status :unverified) ; let user in even if not verified
+                            (assoc user-with-teams :status :unverified ; let user in even if not verified
+                                                   :activated-at (or (:activated-at user-with-teams)
+                                                                     (db-common/current-timestamp)))
                             user-with-teams)
          old-digest-delivery (:digest-delivery user)
          missing-digest-delivery-teams (clj-set/difference (set teams) (set (:teams user)))
@@ -385,7 +392,9 @@
   "Update the user's status to 'active'. Returns the updated user."
   [conn :- lib-schema/Conn user-id :- lib-schema/UniqueID]
   (if-let [original-user (get-user conn user-id)]
-    (parse-tags (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active)))
+    (parse-tags (db-common/update-resource conn table-name primary-key original-user (assoc original-user :status :active
+                                                                                                          :activated-at (or (:activated-at original-user)
+                                                                                                                            (db-common/current-timestamp)))))
     false))
 
 (schema/defn ^:always-validate  delete-user!
