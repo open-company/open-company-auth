@@ -124,7 +124,7 @@
                           (assoc :teams [team-id]))
         new-user-map (user-res/->user new-user-data)]
     (timbre/info "Creating user:" email "for team:" team-id)
-    (if-let [new-user (user-res/create-user! conn new-user-map nil (user-res/nux-tag-for-user new-user-map invite))]
+    (if-let [new-user (user-res/create-user! conn new-user-map nil (user-res/nux-tags-for-user new-user-map invite))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
 
@@ -141,7 +141,7 @@
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
                                           (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name :user-type)))
-              new-user (user-res/create-user! conn oc-user nil (user-res/nux-tag-for-user oc-user invite))]
+              new-user (user-res/create-user! conn oc-user nil (user-res/nux-tags-for-user oc-user invite))]
       (handle-invite conn sender team new-user true admin? (-> invite
                                                              (assoc :bot-token bot-token)
                                                              (assoc :bot-user-id bot-user-id))) ; recurse

@@ -269,9 +269,9 @@
         (assoc :created-at ts)
         (assoc :updated-at ts)))))
 
-(defn nux-tag-for-user
+(defn nux-tags-for-user
   ([user-map]
-   (nux-tag-for-user user-map nil))
+   (nux-tags-for-user user-map nil))
   ([user-map invitation]
    (cond (and (map? invitation)
               (seq (:user-type invitation)))
@@ -279,20 +279,20 @@
          (seq (:teams user-map))
          [:nux-author]
          :else
-         :nux-first-user)))
+         [:nux-first-user])))
 
 (declare tags!)
 (schema/defn ^:always-validate create-user!
   "Create a user in the system. Throws a runtime exception if user doesn't conform to the User schema."
   ([conn user :- User]
    {:pre [(db-common/conn? conn)]}
-   (create-user! conn user nil (nux-tag-for-user user)))
+   (create-user! conn user nil (nux-tags-for-user user)))
   ([conn user :- User invite-token-team-id :- (schema/maybe lib-schema/UniqueID)]
    {:pre [(db-common/conn? conn)]}
    (let [tmp-user (update user :teams #(->> (concat % [invite-token-team-id])
                                             (remove nil?)
                                             vec))
-         nux-tag (nux-tag-for-user tmp-user)]
+         nux-tag (nux-tags-for-user tmp-user)]
      (create-user! conn user invite-token-team-id nux-tag)))
   ([conn user :- User invite-token-team-id :- (schema/maybe lib-schema/UniqueID) tags]
    {:pre [(db-common/conn? conn)]}
