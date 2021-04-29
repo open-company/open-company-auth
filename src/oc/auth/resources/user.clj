@@ -297,7 +297,7 @@
      (create-user! conn user invite-token-team-id nux-tag)))
   ([conn user :- User invite-token-team-id :- (schema/maybe lib-schema/UniqueID) tags]
    {:pre [(db-common/conn? conn)]}
-   (let [email (:email user)
+   (let [email (s/lower-case (:email user))
          email-domain (last (s/split email #"\@"))
          email-teams (mapv :team-id (team-res/list-teams-by-index conn :email-domains email-domain))
          existing-teams (vec (set (concat email-teams (:teams user))))
@@ -343,7 +343,7 @@
   "Given the email address of the user, retrieve them from the database, or return nil if user doesn't exist."
   [conn email :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (->> (clojure.string/lower-case email)
+  (->> (s/lower-case email)
        (db-common/read-resources conn table-name "loweremails")
        (first)
        (parse-tags)))

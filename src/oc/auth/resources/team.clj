@@ -2,6 +2,7 @@
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (when-let*)]
+            [clojure.string :as cstr]
             [schema.core :as schema]
             [oc.lib.html :as lib-html]
             [oc.lib.db.common :as db-common]
@@ -185,7 +186,7 @@
   {:pre [(db-common/conn? conn)
          (allowed-email-domain? email-domain)]}
   (when (get-team conn team-id)
-    (db-common/add-to-set conn table-name team-id "email-domains" email-domain)))
+    (db-common/add-to-set conn table-name team-id "email-domains" (cstr/lower-case email-domain))))
 
 (schema/defn ^:always-validate remove-email-domain :- (schema/maybe Team)
   "
