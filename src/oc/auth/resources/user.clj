@@ -291,6 +291,7 @@
    {:pre [(db-common/conn? conn)]}
    (let [tmp-user (update user :teams #(->> (concat % [invite-token-team-id])
                                             (remove nil?)
+                                            distinct
                                             vec))
          nux-tag (nux-tags-for-user tmp-user)]
      (create-user! conn user invite-token-team-id nux-tag)))
