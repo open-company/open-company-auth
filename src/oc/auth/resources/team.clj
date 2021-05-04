@@ -2,6 +2,7 @@
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (when-let*)]
+            [taoensso.timbre :as timbre]
             [clojure.string :as cstr]
             [schema.core :as schema]
             [oc.lib.html :as lib-html]
@@ -149,7 +150,12 @@
   [conn team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
   (try
-    (db-common/delete-resource conn table-name team-id)
+    (when-let [team-data (get-team conn team-id)]
+      (if (seq (:stripe-customer-id team-data))
+        (timbre/error "Cannot delete team with associated stripe customer. Please remove the stripe customer first and link to the team."
+                      {:team-id team-id
+                       :stripe-customer-id (:stripe-customer-id team-data)})
+        (db-common/delete-resource conn table-name team-id)))
     (catch java.lang.RuntimeException _))) ; it's OK if there is no team to delete
 
 ;; ----- Team's set operations -----
