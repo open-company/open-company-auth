@@ -96,7 +96,7 @@
 (defonce slack-client-id (env :open-company-slack-client-id))
 (defonce slack-client-secret (env :open-company-slack-client-secret))
 (defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
-(defonce slack-bot-share-scope "channels:read")
+(defonce slack-bot-share-scope "channels:read,groups:read")
 (defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
 (defonce slack-bot-unfurl-scope "links:read,links:write")
 (defonce slack-bot-scope (clj-str/join "," ["bot," ;; "commands" need perm in prod app
