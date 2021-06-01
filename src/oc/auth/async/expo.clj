@@ -18,8 +18,7 @@
             [oc.lib.lambda.common :as lambda]
             [oc.auth.resources.user :as user-res]
             [oc.lib.db.pool :as pool]
-            [oc.auth.resources.user :as user]
-            [raven-clj.core :as sentry]))
+            [oc.lib.sentry.core :as sentry]))
 
 ;; ----- core.async -----
 
@@ -65,11 +64,11 @@
         (let [user            (user-res/get-user conn user-id)
               old-push-tokens (set (:expo-push-tokens user))
               new-push-tokens (seq (disj old-push-tokens push-token))]
-          (sentry/capture config/dsn {:message "Removing bad push tokens from user"
-                                      :extra {:user-id user-id
-                                              :push-token push-token
-                                              :old-push-tokens old-push-tokens
-                                              :new-push-tokens new-push-tokens}})
+          (sentry/capture {:message "Removing bad push tokens from user"
+                           :extra {:user-id user-id
+                                   :push-token push-token
+                                   :old-push-tokens old-push-tokens
+                                   :new-push-tokens new-push-tokens}})
           (user-res/update-user! conn user-id {:expo-push-tokens new-push-tokens}))))))
 
 (defn- handle-expo-message
@@ -93,7 +92,7 @@
   ;; Sample receipts
   ;; [{:06c938b1-aca5-47fc-8750-d23ea257bae8 {:status "error"}}]
 
-  (let [{:keys [push-notifications tickets] :as msg}
+  (let [{:keys [push-notifications tickets]}
         {:push-notifications [{:pushToken "TOKEN_A"}
                               {:pushToken "TOKEN_B"}
                               {:pushToken "TOKEN_C"}]
@@ -117,15 +116,16 @@
   [msg]
   (try
     (json/parse-string msg true)
-    (catch Exception e
+    (catch Exception _
       (read-string msg))))
 
 (defn sqs-handler
   "Handle an incoming SQS message to the auth service."
   [msg done-channel]
   (let [msg-body (read-message-body (:body msg))
-        error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
-    (timbre/infof "Received message from SQS: %s\n" msg-body)
+        _error (if (:test-error msg-body) (/ 1 0) false)] ; a message testing Sentry error reporting
+    (timbre/info "Received message from SQS")
+    (timbre/debugf "Received message from SQS: %s\n" msg-body)
     (>!! expo-chan msg-body))
   (sqs/ack done-channel msg))
 
@@ -146,7 +146,8 @@
             (handle-expo-message db-pool msg)
             (timbre/trace "Processing complete.")
             (catch Exception e
-              (timbre/error e))))))))
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Component start/stop -----
 

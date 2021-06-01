@@ -12,6 +12,7 @@
          (map? jwt-user)]}
   (if-let [jwtoken (jwt/generate jwt-user config/passphrase)]
     (do
+      ;; FIXME: Do we really need to send usage every time we create a user's token for? ...this needs a deeper analisys before cut this code
       (when config/payments-enabled?
         (payments-async/report-all-seat-usage! conn (:teams jwt-user)))
       (user-res/update-user! conn (:user-id jwt-user) {:last-token-at (db-common/current-timestamp)})

@@ -1,0 +1,24 @@
+(ns oc.auth.db.migrations.update-digest-delivery
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.resources.user :as user-res]
+            [oc.lib.db.common :as db-common]
+            [oc.auth.config :as config]))
+
+(defn up [conn]
+  ;; Do great things
+  (println "Transform the current digest-delivery field into an array, one for every team of the user.")
+  (let [users (-> (r/table user-res/table-name)
+                  (r/filter (r/fn [user]
+                              (r/has-fields user [:digest-delivery])))
+                  (r/pluck [:user-id :teams :digest-delivery])
+                  (r/run conn)
+                  (db-common/drain-cursor))]
+    (doseq [u users]
+      (println "  updating digest delivery for:")
+      (println (-> (r/table user-res/table-name)
+                   (r/get (:user-id u))
+                   (r/update {:digest-delivery (mapv #(hash-map :team-id % :digest-times (:digest-delivery u))
+                                                     (:teams u))})
+                   (r/run conn)))))
+  true) ; return true on success

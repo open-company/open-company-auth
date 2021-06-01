@@ -1,7 +1,8 @@
 (ns oc.auth.api.teams
   "Liberator API for team resources."
   (:require [if-let.core :refer (if-let* when-let*)]
-            [defun.core :refer (defun-)]
+            [defun.core :refer (defun)]
+            [clojure.set :as clj-set]
             [taoensso.timbre :as timbre]
             [compojure.core :as compojure :refer (ANY OPTIONS POST DELETE)]
             [liberator.core :refer (defresource by-method)]
@@ -13,6 +14,7 @@
             [oc.auth.lib.slack :as slack]
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.async.payments :as payments]
+            [oc.auth.async.notify :as notify]
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
@@ -70,7 +72,7 @@
 
 ;; ----- Actions -----
 
-(defun- handle-invite
+(defun handle-invite
   "Handle an invitation/re-invite request.
 
   This may involve one or more of the following:
@@ -84,30 +86,45 @@
   ;; No team to invite to!
   ([_conn _sender nil _user _member? _admin? _invite] (timbre/warn "Invite request to non-existent team.") false)
 
+  ;; Invite user, used by oc.support.util.email-invite-from-csv
+  ([conn sender :guard :user-id team-id :guard string? invite-data :guard #(and (#{:viewer :admin :contributor} (:access %)) (lib-schema/valid-email-address? (:email %)))]
+   (let [existing-team (team-res/get-team conn team-id)
+         existing-user (user-res/get-user-by-email conn (:email invite-data))
+         ->admin? (= (:access invite-data) :admin)
+         member? (when (and existing-user existing-team)
+                   (boolean ((set (:teams existing-user)) (:team-id existing-team))))
+         admin? (when (and existing-user existing-team)
+                  (boolean ((set (:admins existing-team)) (:user-id existing-user))))]
+     (handle-invite conn sender existing-team existing-user member? admin? {:email (:email invite-data)
+                                                                            :admin ->admin?
+                                                                            :first-name (:first-name invite-data)
+                                                                            :last-name (:last-name invite-data)})))
+
   ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
   ([conn sender team user true _admin? :guard not invite :guard :admin]
   (let [team-id (:team-id team)
         user-id (:user-id user)]
     (timbre/info "Making user:" user-id "an admin of team:" team-id)
     (if-let [updated-team (team-res/add-admin conn team-id user-id)]
-      (handle-invite conn sender team user true true invite) ; recurse
+      (handle-invite conn sender updated-team user true true invite) ; recurse
       (do (timbre/error "Failed making user:" user-id "an admin of team:" team-id) false))))
 
   ;; An already active team member... who is inviting this person, yoh?
   ([_conn _sender team user :guard #(= :active (keyword (:status %))) true _admin? _invite]
   (timbre/warn "Invite request for existing active team member" (:user-id user) "of team" (:team-id team))
   user)
-  
+
   ;; No user yet, email invite
   ([conn sender team nil member? admin? invite :guard :email]
   (let [team-id (:team-id team)
-        email (:email invite)]
-    (timbre/info "Creating user:" email "for team:" team-id)
-    (if-let [new-user (user-res/create-user! conn
-                        (user-res/->user (-> invite
-                          (dissoc :admin :org-name :logo-url :logo-width :logo-height :note :slack-id :slack-org-id)
+        email (:email invite)
+        new-user-data (-> invite
+                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :team-id :note :slack-id :slack-org-id :user-type)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
-                          (assoc :teams [team-id]))))]
+                          (assoc :teams [team-id]))
+        new-user-map (user-res/->user new-user-data)]
+    (timbre/info "Creating user:" email "for team:" team-id)
+    (if-let [new-user (user-res/create-user! conn new-user-map nil (user-res/nux-tags-for-user new-user-map invite))]
       (handle-invite conn sender team new-user true admin? invite) ; recurse
       (do (timbre/error "Failed adding user:" email) false))))
 
@@ -123,8 +140,8 @@
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
-                                          (dissoc :slack-id :slack-org-id :logo-url :logo-width :logo-height :name)))
-              new-user (user-res/create-user! conn oc-user)]
+                                          (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name :user-type)))
+              new-user (user-res/create-user! conn oc-user nil (user-res/nux-tags-for-user oc-user invite))]
       (handle-invite conn sender team new-user true admin? (-> invite
                                                              (assoc :bot-token bot-token)
                                                              (assoc :bot-user-id bot-user-id))) ; recurse
@@ -134,15 +151,17 @@
   ([conn sender team user member? :guard not admin? invite]
   (let [team-id (:team-id team)
         user-id (:user-id user)
-        status (keyword (:status user))]
+        org {:slug (:org-slug invite)
+             :uuid (:org-uuid invite)
+             :name (:org-name invite)
+             :logo-url (:org-logo-url invite)
+             :team-id team-id}]
     (timbre/info "Adding user:" user-id "to team:" team-id)
     (if-let [updated-user (user-res/add-team conn user-id team-id)]
-      ;; TODO this is the case of an existing user being added to an additional team.
-      ;; We don't yet handle this case very well. They won't have access until they
-      ;; logout/login or their JWT expires, and they won't really know they got added
-      ;; to a new team unless they happen to notice the org dropdown in the UI.
-      ;; Need to send them a welcome to the team email.
-      (handle-invite conn sender team updated-user true admin? invite) ; recurse  
+      (do
+        ;; Send a notification to the user to notify the team add and to force refresh his JWT.
+        (notify/send-team! (notify/->team-add-trigger user sender org (:admin invite)))
+        (handle-invite conn sender team updated-user true admin? invite)) ; recurse
       (do (timbre/error "Failed adding team:" team-id "to user:" user-id) false))))
 
   ;; Non-active team member, needs a Slack invite/re-invite
@@ -200,26 +219,54 @@
 
     (do (timbre/error "Failed updating team:" team-id) false)))
 
-
 (defn- delete-team [conn team-id]
   (timbre/info "Deleting team:" team-id)
   (if (team-res/delete-team! conn team-id)
     (do (timbre/info "Deleted team:" team-id) true)
     (do (timbre/error "Failed deleting team:" team-id) false)))
 
-(defn- remove-team-member [conn team-id member-id admin?]
+(defn- remove-team-member [conn team-id {member-id :user-id :as member} sender payload-data admin?]
   (timbre/info "Removing user" member-id "from team" team-id)
-  (let [updated-user (user-res/remove-team conn member-id team-id)]
+  (let [updated-user (user-res/remove-team conn member-id team-id)
+        org-data {:name (:org-name payload-data)
+                  :uuid (:org-uuid payload-data)
+                  :slug (:org-slug payload-data)
+                  :team-id team-id}]
+    ;; Send a notification to the user if he still has teams left
+    (when (seq (:teams updated-user))
+      (notify/send-team! (notify/->team-remove-trigger member sender org-data team-id admin?)))
+
     (when admin?
       (timbre/info "User is an admin, removing from admins of team" team-id)
       (team-res/remove-admin conn team-id member-id))
-    (when (empty? (:teams updated-user))
-      (timbre/info "User has no other team left, deleting user" member-id)
-      (user-res/delete-user! conn member-id))
+    ;; (when (empty? (:teams updated-user))
+    ;;   (timbre/info "User has no other team left, deleting user" member-id)
+    ;;   (user-res/delete-user! conn member-id))
     (when config/payments-enabled? 
       (payments/report-team-seat-usage! conn team-id))
     (timbre/info "User" member-id "removed from team" team-id)
     {:updated-team (team-res/get-team conn team-id)}))
+
+(defn- create-invite-link [conn team-id existing-team user]
+  (timbre/info "Creating invite-link for team" team-id "requested by" (:user-id user))
+  (if-let* [new-invite-link (str (java.util.UUID/randomUUID))
+            updated-team (team-res/update-team! conn team-id (assoc existing-team :invite-token new-invite-link))]
+    (do
+      (timbre/info "Invite link for team" team-id "created:" new-invite-link)
+      {:updated-team updated-team})
+    (do
+      (timbre/info "Failed creating invite link for team" team-id)
+      false)))
+
+(defn- delete-invite-link [conn team-id existing-team user]
+  (timbre/info "Deleting invite-link for team" team-id "requested by" (:user-id user))
+  (if-let [updated-team (team-res/update-team! conn team-id (assoc existing-team :invite-token nil))]
+    (do
+      (timbre/info "Invite link for team" team-id "deleted.")
+      {:updated-team updated-team})
+    (do
+      (timbre/info "Failed deleting invite link for team" team-id)
+      false)))
 
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
@@ -231,7 +278,7 @@
   ;; Media type client accepts
   :available-media-types [mt/team-collection-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/team-collection-media-type)
-  
+
   ;; Responses
   :handle-ok (fn [ctx] (let [user (:user ctx)]
                         (team-rep/render-team-list (teams-for-user conn (:user-id user)) user))))
@@ -252,7 +299,7 @@
     :get true
     :patch (fn [ctx] (api-common/known-content-type? ctx mt/team-media-type))
     :delete true})
-  
+
   ;; Authorization
   :allowed? (by-method {
     :options true
@@ -290,7 +337,7 @@
                                             [:bot-user-id :bot-token]))]
                           (team-rep/render-team (assoc team-users :slack-orgs slack-orgs))))
   :handle-unprocessable-entity (fn [ctx]
-    (api-common/unprocessable-entity-response (schema/check team-res/Team (:team-update ctx)))))
+    (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
 
 ;; A resource for user invitations to a particular team
@@ -311,9 +358,9 @@
   ;; Authorization
   :allowed? (by-method {
     :options true 
-    :post (fn [ctx] (and (or (allow-team-admins conn (:user ctx) team-id)
-                             (not (-> ctx :data :admin)))
-                         (allow-team-members conn (:user ctx) team-id)))})
+    :post (fn [ctx] (if (-> ctx :data :admin)
+                      (allow-team-admins conn (:user ctx) team-id)
+                      (allow-team-members conn (:user ctx) team-id)))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -321,7 +368,10 @@
                               user (when email (user-res/get-user-by-email conn email))
                               member? (when (and team user) (if ((set (:teams user)) (:team-id team)) true false))
                               admin? (when (and team user) (if ((set (:admins team)) (:user-id user)) true false))]
-                          {:existing-team team :existing-user user :member? member? :admin? admin?})
+                          {:existing-team team
+                           :existing-user user
+                           :member? member?
+                           :admin? admin?})
                         false)) ; No team by that ID
 
   ;; Validations
@@ -360,8 +410,11 @@
   :handle-not-acceptable (api-common/only-accept 406 mt/admin-media-type)
 
   ;; Media type client sends
-  :malformed? false ; no check, this media type is blank
-  
+  :known-content-type? true
+
+  ;; Malformed body request?
+  :malformed? false
+
   ;; Auhorization
   :allowed? (by-method {
     :options true
@@ -396,8 +449,10 @@
   :available-media-types [mt/user-media-type]
   :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
 
-  ;; Media type client sends
-  :malformed? false ; no check, this media type is blank
+  ;; Malformed body request?
+  :malformed? (by-method {:options false
+                          :put false
+                          :delete (fn [ctx] (api-common/malformed-json? ctx))})
 
   ;; Auhorization
   :allowed? (by-method {
@@ -412,7 +467,7 @@
                         false)) ; no team, no user, or user not a member of the team
 
   ;; Actions
-  :delete! (fn [ctx] (remove-team-member conn team-id member-id (:admin? ctx)))
+  :delete! (fn [ctx] (remove-team-member conn team-id (:existing-user ctx) (:user ctx) (:data ctx) (:admin? ctx)))
 
   ;; Responses
   :handle-no-content (fn [ctx] (when-not (:updated-team ctx) (api-common/missing-response))))
@@ -463,10 +518,11 @@
                         {:updated-team (team-res/add-email-domain conn team-id (:email-domain (:data ctx)))})))
   :delete! (fn [ctx] (when (:existing-domain ctx)
                       {:updated-team (team-res/remove-email-domain conn team-id domain)}))
-  
+
   ;; Responses
   :respond-with-entity? false
-  :handle-unprocessable-entity (fn [ctx] (api-common/text-response "Email domain not allowed." 409))
+  :handle-unprocessable-entity (fn [ctx]
+    (api-common/unprocessable-entity-handler (merge ctx {:reason "Email domain not allowed." :status 409})))
   :handle-created (fn [ctx] (if (or (:updated-team ctx) (:pre-flight ctx) (:existing-domain ctx))
                               (api-common/blank-response)
                               (api-common/missing-response)))
@@ -534,17 +590,17 @@
           bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
           slack-bot-ids (map :bot-user-id (filter :bot-user-id slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
           slack-users (mapcat #(slack/user-list %) bot-tokens) ; Slack roster of users
-          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium]) ; OC roster of users
+          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium :timezone :blurb :location :title :profiles]) ; OC roster of users
           oc-users-with-admin (map #(if (admins (:user-id %)) (assoc % :admin? true) %) oc-users)
           oc-users-with-slack (map #(assoc % :slack-bot-ids slack-bot-ids) oc-users-with-admin)
           slack-emails (set (map :email slack-users)) ; email of Slack users
           oc-emails (set (map :email oc-users-with-admin)) ; email of OC users
-          uninvited-slack-emails (clojure.set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
+          uninvited-slack-emails (clj-set/difference slack-emails oc-emails) ; email of Slack users that aren't OC
           ;; Slack users not in OC (from their email)
           uninvited-slack-users (map (fn [email] (some #(when (= (:email %) email) %) slack-users)) uninvited-slack-emails)
           uninvited-slack-users-with-status (map #(assoc % :status :uninvited) uninvited-slack-users)
           ;; Find all users that are coming from Slack and add the missing data (like slack-org-id slack-id slack-display-name)
-          oc-emails-from-slack (clojure.set/intersection slack-emails oc-emails)
+          oc-emails-from-slack (clj-set/intersection slack-emails oc-emails)
           ;; Slack users in OC (add slack needed data)
           pending-users-from-slack (map (fn [email] (some #(when (and (= (:email %) email) (= (:status %) "pending")) %) oc-users-with-slack)) oc-emails-from-slack)
           pending-users-with-slack-data (map (fn [user] (merge (first (filterv #(= (:email %) (:email user)) slack-users)) user)) pending-users-from-slack)
@@ -581,6 +637,83 @@
                              channels (slack/channels-for slack-orgs)]
                           (slack-org-rep/render-channel-list team-id channels))))
 
+;; A resource for invite users using a team link
+(defresource invite-link [conn team-id]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post :delete]
+
+  ;; Media type client accepts
+  :available-media-types [mt/invite-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/invite-media-type)
+
+  ;; Malformed?
+  :malformed? false
+
+  ;; Media type client sends
+  :known-content-type? (by-method {
+    :options true
+    :post (fn [ctx] (api-common/known-content-type? ctx mt/invite-media-type))
+    :delete (fn [ctx] (api-common/known-content-type? ctx mt/invite-media-type))})
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true 
+    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
+    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx]
+              (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
+                        _invite-link (:invite-token team)]
+                {:existing-team team}
+                false)) ; No team by that ID or invite-token already exists
+
+  ;; Validations
+  :processable? true
+
+  ;; Actions
+  :post! (fn [ctx] (create-invite-link conn team-id (:existing-team ctx) (:user ctx))) ; create invite link
+
+  :delete! (fn [ctx] (delete-invite-link conn team-id (:existing-team ctx) (:user ctx))) ; delete invite link
+
+  ;; Responses
+  :respond-with-entity? true
+  :post-enacted? true
+  :handle-created (fn [ctx]
+                    (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx))))
+  :handle-ok (fn [ctx]
+               (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)))))
+
+;; A resource for roster of team users for a particular team
+(defresource active-users [conn team-id]
+  (api-common/open-company-id-token-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :get]
+
+  ;; Media type client accepts
+  :available-media-types [mt/user-collection-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-collection-media-type)
+
+  ;; Authorization
+  :allowed? (by-method {
+    :options true
+    :get (fn [ctx] (allow-team-members conn (:user ctx) team-id))})
+
+  ;; Existentialism
+  :exists? (fn [ctx] (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
+                       {:existing-team team}
+                       false))
+
+  ;; Responses
+  :handle-ok (fn [ctx]
+    (let [team (:existing-team ctx)
+          admins (set (:admins team))
+          oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium :timezone :blurb :location :title :profiles]) ; OC roster of users
+          active-users (filter #(#{"active" "unverified"} (:status %)) oc-users)
+          oc-users-with-admin (map #(if (admins (:user-id %)) (assoc % :admin? true) %) active-users)]
+      (user-rep/render-active-users-list team-id oc-users-with-admin))))
+
 ;; ----- Routes -----
 
 (defn routes [sys]
@@ -603,6 +736,11 @@
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
       (ANY "/teams/:team-id/admins/:user-id/" [team-id user-id]
         (pool/with-pool [conn db-pool] (admin conn team-id user-id)))
+      ;; Invite team link
+      (ANY "/teams/:team-id/invite-link" [team-id]
+        (pool/with-pool [conn db-pool] (invite-link conn team-id)))
+      (ANY "/teams/:team-id/invite-link/" [team-id]
+        (pool/with-pool [conn db-pool] (invite-link conn team-id)))
       ;; Email domain operations
       (OPTIONS "/teams/:team-id/email-domains" [team-id]
         (pool/with-pool [conn db-pool] (email-domain conn team-id nil)))
@@ -630,4 +768,7 @@
       (ANY "/teams/:team-id/roster/" [team-id] (pool/with-pool [conn db-pool] (roster conn team-id)))
       ;; Team's Slack channels
       (ANY "/teams/:team-id/channels" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id)))
-      (ANY "/teams/:team-id/channels/" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id))))))
+      (ANY "/teams/:team-id/channels/" [team-id] (pool/with-pool [conn db-pool] (channels conn team-id)))
+      ;; Active users
+      (ANY "/teams/:team-id/active-users" [team-id] (pool/with-pool [conn db-pool] (active-users conn team-id)))
+      (ANY "/teams/:team-id/active-users/" [team-id] (pool/with-pool [conn db-pool] (active-users conn team-id))))))

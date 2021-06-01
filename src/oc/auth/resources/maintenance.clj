@@ -37,9 +37,11 @@
 ;; ----- Armageddon -----
 
 (defn delete-all-teams!
-  "Use with caution! Failure can result in partial deletes. Returns `true` if successful."
-  [conn]
-  {:pre [(db-common/conn? conn)]}
+  "Use with caution! Failure can result in partial deletes. Returns `true` if successful.
+   Second parameter has to be the `kill'em-all!` string to avoid accidental deletes."
+  [conn security-check]
+  {:pre [(db-common/conn? conn)
+         (= security-check "kill'em-all!")]}
   ;; Delete all Slack orgs, users and teams
   (db-common/delete-all-resources! conn slack-org-res/table-name)
   (db-common/delete-all-resources! conn user-res/table-name)

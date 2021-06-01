@@ -3,7 +3,7 @@
   (:require [clojure.string :as s]
             [if-let.core :refer (if-let* when-let*)]
             [taoensso.timbre :as timbre]
-            [compojure.core :as compojure :refer (defroutes ANY OPTIONS POST)]
+            [compojure.core :as compojure :refer (ANY OPTIONS POST)]
             [liberator.core :refer (defresource by-method)]
             [liberator.representation :refer (ring-response)]
             [schema.core :as schema]
@@ -42,7 +42,7 @@
 
 (defn email-basic-auth
   "HTTP Basic Auth function (email/pass) for ring middleware."
-  [sys req auth-data]
+  [sys _req auth-data]
   (when-let* [email (:username auth-data)
               password (:password auth-data)]
     (pool/with-pool [conn (-> sys :db-pool :pool)] 
@@ -53,14 +53,6 @@
         (do
           (timbre/info "Failed to auth:" email) 
           false)))))
-
-(defn- allow-superuser-token [ctx]
-  (if-let* [token (api-common/get-token (get-in ctx [:request :headers]))
-            decoded-token (jwt/decode token)
-            _true? (and (jwt/check-token token config/passphrase) ;; We signed the token
-                        (:super-user (:claims decoded-token)))] ;; And granted super-user perm
-    {:jwtoken decoded-token :user (:claims decoded-token)}
-    false))
 
 (defn- allow-user-and-team-admins [conn ctx accessed-user-id]
   (let [accessing-user-id (:user-id (:user ctx))]
@@ -80,22 +72,51 @@
 (defn- update-user-qsg-checklist
   "Update the :qsg-checklist property by merging the new passed data with the old present data to avoid
   overriding all the properties on every patch."
-  [old-user-map patch-data]
+  [patch-data]
   (if (contains? patch-data :qsg-checklist)
     (update-in patch-data [:qsg-checklist] merge (:qsg-checklist patch-data))
     patch-data))
+
+(defn- filter-team-digest-times [old-digest-delivery digest-time-map premium-teams-set]
+  (let [premium-team? (premium-teams-set (:team-id digest-time-map))
+        team-allowed-times-set (set (if premium-team?
+                                      config/premium-digest-times
+                                      config/digest-times))
+        filtered-times (->> (:digest-times digest-time-map)
+                            (filter (comp team-allowed-times-set keyword))
+                            (remove nil?)
+                            vec)]
+    (if (:changed digest-time-map)
+      (-> digest-time-map
+          (assoc :digest-times filtered-times)
+          (dissoc :changed))
+      (some #(when (= (:team-id %) (:team-id digest-time-map)) %)
+            old-digest-delivery))))
+
+(defn- filter-digest-delivery
+  "Digest delivery times is a premium feature, the user can set some values
+   only if the said team is on premium."
+  [conn original-user updating-user]
+  (let [premium-teams-set (set (user-res/premium-teams conn (:user-id original-user)))]
+    (mapv #(filter-team-digest-times (:digest-delivery original-user) % premium-teams-set)
+          (:digest-delivery updating-user))))
 
 (defn- valid-user-update? [conn user-props user-id]
   (if-let [user (user-res/get-user conn user-id)]
     (let [current-password (:current-password user-props)
           new-password (:password user-props)
-          updated-qsg-checklist (update-user-qsg-checklist user user-props)
-          updated-user (merge user (user-res/ignore-props (dissoc updated-qsg-checklist :current-password)))]
+          updated-user (as-> user-props props
+                         (update-user-qsg-checklist props)
+                         (dissoc props :current-password)
+                         (assoc props :digest-delivery (filter-digest-delivery conn user user-props))
+                         (user-res/ignore-props props)
+                         (merge user props))]
       (if (and (lib-schema/valid? user-res/User updated-user)
                (or (nil? new-password) ; not attempting to change password
-                   (and (empty? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
+                   (and (s/blank? current-password) (not (nil? new-password))) ; attempting to set a new password but with no old password
                    (and (seq current-password) (user-res/password-match? current-password (:password-hash user))))) ; attempting to change the password with an old password set, checking that the old password match
-        {:existing-user user :user-update (if new-password (assoc updated-user :password new-password) user-props)}
+        {:existing-user user
+         :user-update (if new-password (assoc updated-user :password new-password) updated-user)}
         [false, {:user-update updated-user}])) ; invalid update
     true)) ; No user for this user-id, so this will fail existence check later
 
@@ -105,12 +126,18 @@
   [ctx]
   (try
     (if-let* [email (slurp (get-in ctx [:request :body]))
-              valid? (lib-schema/valid-email-address? email)]
+              _valid? (lib-schema/valid-email-address? email)]
       [false {:data email}]
       true)
     (catch Exception e
-      (do (timbre/warn "Request body not processable as an email address: " e)
-        true))))
+      (timbre/warn "Request body not processable as an email address: " e)
+      true)))
+
+(defn malformed-user-tag? [ctx tag-slug]
+  (if-let* [tag-slug-kw (keyword tag-slug)
+            _valid? (lib-schema/valid? user-res/UserTag tag-slug-kw)]
+    [false {:tag-slug-keyword tag-slug-kw}]
+    true))
 
 ;; ----- Actions -----
 
@@ -145,13 +172,13 @@
         (send-verification-email updated-user true)
         {:updated-user updated-user}))))
 
-(defn- create-user [conn {email :email password :password :as user-props}]
-  (timbre/info "Creating user:" email)
-  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password))
+(defn- create-user [conn {email :email password :password :as user-props} {team-id :team-id :as _existing-team}]
+  (timbre/info "Creating user:" email "(invite token team-id " team-id ")")
+  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password) team-id)
             user-id (:user-id created-user)
             admin-teams (user-res/admin-of conn user-id)]
     (do
-      (timbre/info "Created user:" email)
+      (timbre/info "Created user:" email "with teams" (:teams created-user) "and status" (:status created-user))
       (send-verification-email created-user)
       (timbre/info "Sending notification to SNS topic for:" user-id "(" email ")")
       (notification/send-trigger! (notification/->trigger created-user))
@@ -186,6 +213,48 @@
 
     (timbre/warn "Password reset request, no user for:" email)))
 
+(defn- check-super-user-token
+  "Super user tokens are created with very few data, but since they are signed we can trust them
+   This call is used to provide all the missing data the calling service needs.
+   ie: Digest service has very few info about the user usually:
+    {:name 'A B',
+    :user-id '1234-1234-1234'
+    :avatar-url 'https://example.com/avatar.jpg'}
+   it adds a some more to create a valid super-user token:
+    {:super-user true,
+     :auth-source :services,
+     :name \"Digest\",
+     :refresh-url this-endpoint}
+    creates a signed token and does a refresh request to get a complete token.
+  "
+  [conn claims]
+  (let [user-id (:user-id claims)
+        slack-team-id (:slack-team-id claims)
+        user-data (if user-id
+                    (user-res/get-user conn user-id)
+                    (user-res/get-user-by-slack-id conn slack-team-id (:slack-user-id claims)))
+        admin-teams (user-res/admin-of conn (:user-id user-data))]
+    (when (and user-data
+                admin-teams)
+      (let [auth-source (if (:slack-user-id claims) :slack :email)
+            user (-> user-data
+                     (assoc :admin admin-teams)
+                     (assoc :premium-teams (user-res/premium-teams conn (:user-id user-data))))
+            jwt-user (user-rep/jwt-props-for user auth-source)
+            refreshed-token (jwtoken/generate conn jwt-user)
+            is-slack-user? (= auth-source :slack)
+            slack-user (when is-slack-user?
+                          ((keyword slack-team-id) (:slack-users jwt-user)))
+            slack-data-map (when is-slack-user?
+                              {:slack-id (:id slack-user)
+                              :slack-token (:token slack-user)})
+            token-user (-> jwt-user
+                            (assoc :auth-source (name auth-source))
+                            (merge slack-data-map))]
+        (when token-user
+          ;; generated token
+          {:jwtoken refreshed-token :user token-user})))))
+
 ;; ----- Resources - see: http://clojure-liberator.github.io/liberator/assets/img/decision-graph.svg
 
 ;; A resource for authenticating users by email/pass
@@ -203,10 +272,12 @@
     :get (fn [ctx] (or (-> ctx :request :identity) ; Basic HTTP Auth
                        (token-auth conn (-> ctx :request :headers))))}) ; one time use token auth
 
+  ;; Exceptions handling
+  :handle-exception api-common/handle-exception
+
   ;; Responses
-  :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or
-                                                                            (-> ctx :request :identity) ; Basic HTTP Auth
-                                                                            (:email ctx))) ; one time use token auth
+  :handle-ok (fn [ctx] (when-let* [user (user-res/get-user-by-email conn (or (-> ctx :request :identity) ; Basic HTTP Auth
+                                                                             (:email ctx))) ; one time use token auth
                                    admin-teams (user-res/admin-of conn (:user-id user))]
                         (if (= (keyword (:status user)) :pending)
                           ;; they need to verify their email, so no love
@@ -215,12 +286,23 @@
                           (user-rep/auth-response conn
                             (-> user
                               (assoc :admin admin-teams)
+                              (assoc :premium-teams (user-res/premium-teams conn (:user-id user)))
                               (assoc :slack-bots (jwt/bots-for conn user)))
                             :email)))))
 
 ;; A resource for creating users by email
 (defresource user-create [conn]
   (api-common/open-company-anonymous-resource config/passphrase) ; verify validity of JWToken if it's provided
+
+  ;; Override the initialize-context key to read the invite-token if necessary
+  :initialize-context (fn [ctx]
+                        (let [bearer (api-common/get-token (:request ctx))
+                              is-team-token? (lib-schema/valid? lib-schema/UUIDStr bearer)
+                              jwtoken (when-not is-team-token? (api-common/read-token (:request ctx) config/passphrase))]
+                          (if is-team-token?
+                            {:jwtoken false
+                             :invite-token bearer}
+                            jwtoken)))
 
   :allowed-methods [:options :post]
 
@@ -242,13 +324,16 @@
                          (string? (-> ctx :data :last-name))))})
 
   ;; Existentialism
-  :exists? (fn [ctx] {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))})
+  :exists? (fn [ctx]
+             (let [team (when (:invite-token ctx) (team-res/get-team-by-invite-token conn (:invite-token ctx)))]
+               {:existing-user (user-res/get-user-by-email conn (-> ctx :data :email))
+                :existing-team team}))
 
   ;; Actions
   :post-to-existing? false
   :put-to-existing? true ; needed for a 409 conflict
   :conflict? :existing-user
-  :post! (fn [ctx] (create-user conn (:data ctx))) 
+  :post! (fn [ctx] (create-user conn (:data ctx) (:existing-team ctx)))
 
   ;; Responses
   :handle-conflict (ring-response {:status 409})
@@ -258,12 +343,14 @@
                                 (api-common/blank-response)
                                 ;; respond w/ JWToken and location
                                 (user-rep/auth-response conn
-                                  (assoc user :slack-bots (jwt/bots-for conn user))
+                                  (-> user
+                                      (assoc :slack-bots (jwt/bots-for conn user))
+                                      (assoc :premium-teams (user-res/premium-teams conn (:user-id user))))
                                   :email)))))
 
 
 ;; A resource for operations on a particular user
-(defresource user [conn user-id]
+(defresource user-item [conn user-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
 
   :allowed-methods [:options :get :post :patch]
@@ -285,11 +372,6 @@
                           :post true
                           :patch (fn [ctx] (api-common/known-content-type? ctx mt/user-media-type))})
 
-  :initialize-context (fn [ctx]
-                        (or (allow-superuser-token ctx)
-                            (api-common/read-token
-                             (get-in ctx [:request :headers])
-                             config/passphrase)))
   ;; Authorization
   :allowed? (by-method {
     :options true
@@ -301,17 +383,17 @@
   :processable? (by-method {
     :get true
     :options true
-    :post (fn [ctx] (can-resend-verificaiton-email? conn user-id))
+    :post (fn [_] (can-resend-verificaiton-email? conn user-id))
     :patch (fn [ctx] (valid-user-update? conn (:data ctx) user-id))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [user (and (lib-schema/unique-id? user-id)
                                         (user-res/get-user conn user-id))]
                        ;; super-user gets slack bots property as well
-                       (let [bots-user (if (-> ctx :jwtoken :claims :super-user)
-                                          (assoc user :slack-bots (jwt/bots-for conn user))
-                                          user)]
-                         {:existing-user bots-user})
+                       (let [user-with-slack-bots (if (-> ctx :jwtoken :claims :super-user)
+                                                    (assoc user :slack-bots (jwt/bots-for conn user))
+                                                    user)]
+                         {:existing-user user-with-slack-bots})
                        false))
 
   ;; Acctions
@@ -321,57 +403,28 @@
   ;; Responses
   :handle-ok (by-method {
     :get (fn [ctx] (user-rep/render-user (:existing-user ctx)))
-    :post (fn [ctx] (api-common/blank-response))
+    :post (fn [_] (api-common/blank-response))
     :patch (fn [ctx] (user-rep/render-user (:updated-user ctx)))})
+
   :handle-unprocessable-entity (fn [ctx]
-    (api-common/unprocessable-entity-response (schema/check user-res/User (:user-update ctx)))))
+    (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check user-res/User (:user-update ctx))}))))
 
 ;; A resource for refreshing JWTokens
 (defresource token [conn]
 
   ;; Get the JWToken and ensure it checks, but don't check if it's expired (might be expired or old schema, and that's OK)
-  :initialize-context (by-method {
-    :get (fn [ctx]
-           (let [token (api-common/get-token (get-in ctx [:request :headers]))
-                 decoded-token (jwt/decode token)]
-             ;; We signed the token
-             (when (jwt/check-token token config/passphrase)
-               (if (nil? (schema/check jwt/Claims (:claims decoded-token))) ; claims are valid
-                 {:jwtoken token :user (:claims decoded-token)}
-                 (let [claims (:claims decoded-token) ;; check if super user
-                       user-id (:user-id claims)
-                       slack-user-id (:slack-user-id claims)
-                       slack-team-id (:slack-team-id claims)]
-                   (when (:super-user claims)
-                     (let [auth-source (if slack-user-id
-                                         :slack
-                                         :email)
-                           user-data (if user-id
-                                       (user-res/get-user conn user-id)
-                                       (user-res/get-user-by-slack-id
-                                            conn
-                                            slack-team-id
-                                            slack-user-id))]
-                       (when user-data
-                         (when-let* [admin-teams (user-res/admin-of
-                                                  conn
-                                                  (:user-id user-data))
-                                     user (assoc user-data :admin admin-teams)
-                                     jwt-user (user-rep/jwt-props-for user auth-source)
-                                     utoken (jwtoken/generate conn jwt-user)]
-                           (let [is-slack-user? (= auth-source :slack)
-                                 slack-user (when is-slack-user?
-                                              ((keyword slack-team-id) (:slack-users jwt-user)))
-                                 slack-data-map (when is-slack-user?
-                                                  {:slack-id (:id slack-user)
-                                                   :slack-token (:token slack-user)})
-                                 token-user (-> jwt-user
-                                              (assoc :auth-source (name auth-source))
-                                              (merge slack-data-map))]
-                             (when token-user
-                               ;; generated token
-                               {:jwtoken utoken :user token-user})))))))))))})
-  
+  :initialize-context (by-method {:get (fn [ctx]
+                                         (let [token (api-common/get-token (:request ctx))
+                                               claims (:claims (jwt/decode token))]
+                                           ;; We signed the token?
+                                           (when (jwt/check-token token config/passphrase)
+                                             (if (nil? (schema/check lib-schema/Claims claims))
+                                               ;; this is a valid token, go on with refresh
+                                               {:jwtoken token :user claims}
+                                               ;; this is a super-user token, add the missing
+                                               ;; info to the provided token
+                                               (when (:super-user claims)
+                                                 (check-super-user-token conn claims))))))})
   :allowed-methods [:options :get]
 
   ;; Media type client accepts
@@ -381,34 +434,35 @@
   ;; Existentialism
   :exists? (fn [ctx] (if-let* [user-id (-> ctx :user :user-id)
                                user (user-res/get-user conn user-id)
-                               admin-teams (user-res/admin-of conn user-id)]
-                        {:existing-user (assoc user :admin admin-teams)}
-                        false))
-
+                               admin-teams (user-res/admin-of conn user-id)
+                               premium-teams (user-res/premium-teams conn user-id)
+                               complete-user (-> user
+                                                 (assoc :admin admin-teams)
+                                                 (assoc :premium-teams premium-teams))]
+                       {:existing-user complete-user}
+                       false))
+  ;; Exceptions handling
+  :handle-exception api-common/handle-exception
   ;; Responses
   :handle-not-found (api-common/unauthorized-response)
-  :handle-ok (fn [ctx] (case (-> ctx :user :auth-source)
-
-                        ;; Email token - respond w/ JWToken and location
-                        "email" (let [user (:existing-user ctx)]
-                                  (user-rep/auth-response conn
-                                    (assoc user :slack-bots (jwt/bots-for conn user))
-                                    :email))
-
-                        ;; Slack token - defer to Slack API handler
-                        "slack" (slack-api/refresh-token conn (:existing-user ctx)
-                                                              (-> ctx :user :slack-id)
-                                                              (-> ctx :user :slack-token))
-                        "google" (let [user (:existing-user ctx)]
-                                   (if (google/refresh-token conn user)
-                                     (user-rep/auth-response
-                                       conn
-                                       (assoc user :slack-bots
-                                              (jwt/bots-for conn user))
-                                       :google)
-                                     (api-common/unauthorized-response)))
-                        ;; What token is this?
-                        (api-common/unauthorized-response))))
+  :handle-ok (fn [ctx] (let [user (:existing-user ctx)]
+                         (case (-> ctx :user :auth-source)
+                           ;; Email token - respond w/ JWToken and location
+                           "email" (user-rep/auth-response conn
+                                                           (assoc user :slack-bots (jwt/bots-for conn user))
+                                                           :email)
+                           ;; Slack token - defer to Slack API handler
+                           "slack" (slack-api/refresh-token conn user
+                                                            (-> ctx :user :slack-id)
+                                                            (-> ctx :user :slack-token))
+                           ;; Google token - refresh if possible
+                           "google" (if (google/refresh-token conn user)
+                                      (user-rep/auth-response conn
+                                                              (assoc user :slack-bots (jwt/bots-for conn user))
+                                                              :google)
+                                      (api-common/unauthorized-response))
+                           ;; What token is this?
+                           (api-common/unauthorized-response)))))
 
 ;; A resource for requesting a password reset
 (defresource password-reset [conn]
@@ -460,7 +514,7 @@
   :malformed? (by-method {:options false
                           :post (fn [ctx]
                                   (if-let* [token (-> ctx :request :body slurp)
-                                            valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
+                                            _valid? (lib-schema/valid? lib-schema/NonBlankStr token)]
                                     [false {:expo-push-token token}]
                                     true))})
 
@@ -474,8 +528,46 @@
                (update-user conn new-ctx (:user-id existing-user))
                (timbre/info "Expo push tokens have not changed for user  " (-> ctx :user :user-id) ", no action taken"))))
 
-  :handle-ok (by-method {:post (fn [ctx] (api-common/blank-response))})
-  )
+  :handle-ok (by-method {:post (fn [_] (api-common/blank-response))}))
+
+;; ---- User Tags ----
+
+(defresource user-tag [conn user-id tag-slug]
+  (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :allowed-methods [:options :post :delete]
+
+  :available-media-types [mt/user-media-type]
+  :handle-not-acceptable (api-common/only-accept 406 mt/user-media-type)
+
+  :known-content-type? true
+
+  :allowed? (by-method {:options true
+                        :post (fn [ctx]
+                                (allow-user-and-team-admins conn ctx (-> ctx :user :user-id)))})
+
+  :exists? (fn [ctx]
+             (if-let [user (user-res/get-user conn (-> ctx :user :user-id))]
+               {:existing-user user}
+               false))
+
+  :malformed? (by-method {:options false
+                          :delete (fn [ctx] (malformed-user-tag? ctx tag-slug))
+                          :post (fn [ctx] (malformed-user-tag? ctx tag-slug))})
+
+  :post! (fn [{:keys [existing-user tag-slug-keyword] :as ctx}]
+           (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
+           {:updated-user (user-res/tag! conn (:user-id existing-user) tag-slug-keyword)})
+
+  :delete! (fn [{:keys [existing-user tag-slug-keyword] :as ctx}]
+             (timbre/info "User" (:user-id existing-user) "tagged" tag-slug-keyword)
+             {:updated-user (user-res/untag! conn (:user-id existing-user) tag-slug-keyword)})
+
+  :handle-ok (fn [_] (api-common/blank-response))
+  :handle-created (fn [_] (api-common/blank-response))
+
+  :handle-unprocessable-entity (fn [ctx]
+    (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check user-res/User (:updated-user ctx))}))))
 
 ;; ----- Routes -----
 
@@ -497,10 +589,13 @@
       ;; Expo push notification token operations
       (ANY "/users/expo-push-token" [] (pool/with-pool [conn db-pool] (expo-push-token conn)))
       ;; user operations
-      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
+      (ANY "/users/:user-id" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
       ;; Resend verification email api
-      (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user conn user-id)))
-      )))
+      (OPTIONS "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+      (OPTIONS "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+      (POST "/users/:user-id/verify" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+      (POST "/users/:user-id/verify/" [user-id] (pool/with-pool [conn db-pool] (user-item conn user-id)))
+
+      ;; Resend verification email api
+      (ANY "/users/:user-id/tags/:tag-slug" [user-id tag-slug] (pool/with-pool [conn db-pool] (user-tag conn user-id tag-slug)))
+      (ANY "/users/:user-id/tags/:tag-slug/" [user-id tag-slug] (pool/with-pool [conn db-pool] (user-tag conn user-id tag-slug))))))

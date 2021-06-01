@@ -1,6 +1,8 @@
 (ns oc.auth.config
   "Namespace for the configuration parameters."
-  (:require [environ.core :refer (env)]))
+  (:require [environ.core :refer (env)]
+            [clojure.string :as clj-str]
+            [clojure.java.io :as j-io]))
 
 (defn- bool
   "Handle the fact that we may have true/false strings, when we want booleans."
@@ -16,13 +18,22 @@
 (defonce intro? (not prod?))
 (defonce short-server-name (or (env :short-server-name) "localhost"))
 
+;; ----- Logging (see https://github.com/ptaoussanis/timbre) -----
+
+(defonce log-level (if-let [log-level (env :log-level)] (keyword log-level) :info))
+
 ;; ----- Sentry -----
 
 (defonce dsn (or (env :open-company-sentry-auth) false))
-
-;; ----- Logging (see https://github.com/ptaoussanis/timbre) -----
-
-(defonce log-level (or (env :log-level) :info))
+(defonce sentry-release (or (env :release) ""))
+(defonce sentry-deploy (or (env :deploy) ""))
+(defonce sentry-debug  (boolean (or (bool (env :sentry-debug)) (#{:debug :trace} log-level))))
+(defonce sentry-env (or (env :environment) "local"))
+(defonce sentry-config {:dsn dsn
+                        :debug sentry-debug
+                        :release sentry-release
+                        :deploy sentry-deploy
+                        :environment sentry-env})
 
 ;; ----- RethinkDB -----
 
@@ -50,10 +61,13 @@
 
 ;; ----- URLs -----
 
-(defonce auth-server-url (or (env :auth-server-url) (str "http://localhost:" auth-server-port)))
-(defonce ui-server-url (or (env :ui-server-url) "http://localhost:3559"))
-(defonce storage-server-url (or (env :storage-server-url) "http://localhost:3001"))
-(defonce dashboard-url (or (env :oc-dashboard-endpoint) "http://localhost:4001"))
+(defonce host (or (env :local-dev-host) "localhost"))
+
+(defonce auth-server-url (or (env :auth-server-url) (str "http://" host ":" auth-server-port)))
+(defonce ui-server-url (or (env :ui-server-url) (str "http://" host ":3559")))
+(defonce storage-server-url (or (env :storage-server-url) (str "http://" host ":3001")))
+(defonce dashboard-url (or (env :oc-dashboard-endpoint) (str "http://" host ":4001")))
+(defonce payments-server-url (or (env :payments-server-url) (str "http://" host ":3004")))
 
 ;; ----- AWS SQS -----
 
@@ -64,6 +78,8 @@
 (defonce aws-sqs-email-queue (env :aws-sqs-email-queue))
 (defonce aws-sqs-slack-router-auth-queue (env :aws-sqs-slack-router-auth-queue))
 (defonce aws-sqs-expo-queue (env :aws-sqs-expo-queue))
+(defonce aws-sqs-payments-queue (env :aws-sqs-payments-queue))
+(defonce aws-sqs-notify-queue (env :aws-sqs-notify-queue))
 
 (defonce aws-sns-auth-topic-arn (env :aws-sns-auth-topic-arn))
 
@@ -88,12 +104,12 @@
 (defonce slack-bot-share-scope "channels:read,chat:write")
 (defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
 (defonce slack-bot-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (clojure.string/join "," ["commands"
-                                                   slack-bot-share-scope
-                                                   slack-bot-notifications-scope
-                                                   slack-bot-unfurl-scope]))
+(defonce slack-bot-scope (clj-str/join "," [ ;; "commands" ;; need perm in prod app
+                                            slack-bot-share-scope
+                                            slack-bot-notifications-scope
+                                            slack-bot-unfurl-scope]))
 ;; Bot/App uninstall reporting
-(defonce slack-customer-support-webhook (env :oc-customer-support-webhook))
+(defonce slack-customer-support-webhook (env :open-company-slack-customer-support-webhook))
 
 ;; ----- Google Oauth -----
 
@@ -117,14 +133,15 @@
 ;; ----- Email -----
 
 (defonce email-domain-blacklist (rest (clojure.string/split
-                                  (slurp (clojure.java.io/resource "email-domain-blacklist.txt")) #"\n")))
-
-;; ----- Stripe -----
-
-(defonce stripe-secret-key         (env :stripe-secret-key))
-(defonce stripe-premium-product-id (env :stripe-premium-product-id))
-(defonce stripe-default-plan-id    (env :stripe-default-plan-id))
+                                  (slurp (j-io/resource "email-domain-blacklist.txt")) #"\n")))
 
 ;; ----- OpenCompany -----
 
-(defonce payments-enabled? (bool (env :payments-enabled)))
+(defonce payments-enabled? (and (bool (env :payments-enabled))
+                                (not (clojure.string/blank? aws-sqs-payments-queue))))
+
+;; ----- Digest -----
+
+(defonce digest-times (set (map keyword (clojure.string/split (or (env :digest-times) "700") #","))))
+(defonce premium-digest-times (set (map keyword (clojure.string/split (or (env :premium-digest-times) "700,1200,1700") #","))))
+(defonce default-digest-time (keyword (or (env :default-digest-time) "700")))

@@ -1,7 +1,7 @@
 (ns oc.auth.representations.user
   "Resource representations for OpenCompany users."
   (:require [clojure.string :as s]
-            [defun.core :refer (defun defun-)]
+            [defun.core :refer (defun)]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [cheshire.core :as json]
@@ -19,16 +19,23 @@
 
 (def slack-props [:name :slack-id :slack-org-id :slack-display-name :slack-bots])
 (def oc-props [:user-id :first-name :last-name :email :avatar-url
-               :digest-medium :notification-medium :reminder-medium :timezone
-               :created-at :updated-at :slack-users :status :qsg-checklist
-               :expo-push-tokens])
+               :timezone :created-at :slack-users :status :title :blurb :location :profiles])
 (def representation-props (concat slack-props oc-props))
-(def team-user-representation-props (concat representation-props [:admin?]))
-(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin])
+(def self-user-props [:digest-medium :notification-medium :reminder-medium :updated-at :qsg-checklist :expo-push-tokens :digest-delivery :latest-digest-deliveries :tags])
+(def team-user-props [:admin? :activated-at])
+(def self-user-representation-props (concat representation-props self-user-props))
+(def team-user-representation-props (concat representation-props team-user-props))
+(def jwt-props [:user-id :first-name :last-name :name :email :avatar-url :teams :admin :premium-teams])
 
 (defun url
   ([user-id :guard string?] (str "/users/" user-id))
   ([user :guard map?] (url (:user-id user))))
+
+(defun tag-url
+  ([user-id :guard string? tag]
+   (str (url user-id) "/tags/" tag))
+  ([user :guard map? tag]
+   (tag-url (:user-id user) tag)))
 
 (defn- admin-url [team-id user-id]
   (s/join "/" ["/teams" team-id "admins" user-id]))
@@ -48,6 +55,14 @@
 (defn- delete-link [user-id] (hateoas/delete-link (url user-id) {:ref mt/user-media-type}))
 
 (defn- remove-link [team-id user-id] (hateoas/remove-link (team-member-url team-id user-id) {} {:ref mt/user-media-type}))
+
+(defn- tag-link [user-id]
+  (hateoas/link-map "partial-tag" hateoas/POST (tag-url user-id "$0") {} {:accept mt/user-media-type
+                                                                            :replace {:tag "$0"}}))
+
+(defn- untag-link [user-id]
+  (hateoas/link-map "partial-untag" hateoas/DELETE (tag-url user-id "$0") {} {:accept mt/user-media-type
+                                                                              :replace {:tag "$0"}}))
 
 (defn- resend-verification-email-link [user-id]
   (hateoas/link-map "resend-verification" hateoas/POST (str (url user-id) "/verify") {}))
@@ -112,48 +127,64 @@
   "HATEOAS links for a user resource"
   [user]
   (let [user-id (:user-id user)]
-    (assoc user :links [
-      (self-link user-id)
-      (partial-update-link user-id)
-      refresh-link
-      (delete-link user-id)
-      teams-link
-      (resend-verification-email-link user-id)
-      add-expo-push-token-link])))
+    (assoc user :links [(self-link user-id)
+                        (partial-update-link user-id)
+                        refresh-link
+                        (delete-link user-id)
+                        teams-link
+                        (resend-verification-email-link user-id)
+                        add-expo-push-token-link
+                        (tag-link user-id)
+                        (untag-link user-id)])))
+
+(defn- clean-user-tokens [user]
+  (as-> user u
+   (if (:slack-users u)
+     (update u :slack-users (fn [slack-users]
+                              (apply merge
+                               (map (fn [[slack-team-id slack-values]]
+                                      (hash-map slack-team-id (dissoc slack-values :token))) slack-users))))
+     u)
+   (if (:google-users u)
+     (update u :google-users (fn [google-users]
+                              (apply merge
+                               (map (fn [[google-team-id google-values]]
+                                      (hash-map google-team-id (dissoc google-values :token))) google-users))))
+     u)))
 
 (schema/defn ^:always-validate jwt-props-for
-  [user :- user-res/UserRep source :- schema/Keyword]
-  (let [jwt-props (zipmap jwt-props (map user jwt-props))
-        slack? (:slack-id user)
+  [user :- user-res/OpenUserRep source :- schema/Keyword]
+  (let [slack? (:slack-id user)
         slack-bots? (:slack-bots user)
         slack-users? (:slack-users user)
-        slack-props (if slack?
-                      (-> jwt-props
-                        (assoc :slack-id (:slack-id user))
-                        (assoc :slack-token (:slack-token user))
-                        ; "-" for backward compatability w/ old JWTokens
-                        (assoc :slack-display-name (or (:slack-display-name user) "-")))
-                      jwt-props)
-        bot-props (if slack-bots?
-                    (assoc slack-props :slack-bots (:slack-bots user))
-                    slack-props)
-        slack-users-props (if slack-users?
-                            (assoc bot-props :slack-users (:slack-users user))
-                            bot-props)
-        google-users-props (if (:google-id user)
-                             (-> slack-users-props
-                               (assoc :google-id (:google-id user))
-                               (assoc :google-domain (:google-domain user))
-                               (assoc :google-token (:google-token user)))
-                            slack-users-props)]
-    (-> google-users-props
-      (assoc :name (jwt/name-for user))
-      (assoc :auth-source source)
-      (assoc :refresh-url (str config/auth-server-url "/users/refresh")))))
+        google? (:google-id user)]
+    (as-> (zipmap jwt-props (map user jwt-props)) jwt-user
+      (if slack?
+        (-> jwt-user
+            (assoc :slack-id (:slack-id user))
+            (assoc :slack-token (:slack-token user))
+            ; "-" for backward compatability w/ old JWTokens
+            (assoc :slack-display-name (or (:slack-display-name user) "-")))
+        jwt-user)
+      (if slack-bots?
+        (assoc jwt-user :slack-bots (:slack-bots user))
+        jwt-user)
+      (if slack-users?
+        (assoc jwt-user :slack-users (:slack-users user))
+        jwt-user)
+      (if google?
+        (-> jwt-user
+            (assoc :google-id (:google-id user))
+            (assoc :google-domain (:google-domain user))
+            (assoc :google-token (:google-token user)))
+        jwt-user)
+      (assoc jwt-user :name (jwt/name-for user))
+      (assoc jwt-user :auth-source source)
+      (assoc jwt-user :refresh-url (str config/auth-server-url "/users/refresh")))))
 
 (schema/defn ^:always-validate auth-response
   "Return a JWToken for the user, or and a Location header."
-  [conn user :- user-res/UserRep source :- schema/Keyword]
+  [conn user :- user-res/OpenUserRep source :- schema/Keyword]
   (let [jwt-user (jwt-props-for user source)
         location (url (:user-id user))]
     (api-common/location-response location (jwtoken/generate conn jwt-user) jwt/media-type)))
@@ -162,17 +193,17 @@
   "Create a map of the user for use in a collection in the REST API"
   [team-id :- lib-schema/UniqueID user]
   {:pre [(map? user)]}
-  (let [user-id (:user-id user)]
-    (-> user
-      (select-keys team-user-representation-props)
-      (user-collection-links team-id))))
+  (-> user
+    (clean-user-tokens)
+    (select-keys team-user-representation-props)
+    (user-collection-links team-id)))
 
 (schema/defn ^:always-validate render-user :- schema/Str
   "Create a JSON representation of the user for the REST API"
   [user :- user-res/User]
   (json/generate-string
     (-> user
-      (select-keys representation-props)
+      (select-keys self-user-representation-props)
       (assoc :password "")
       (user-links))
     {:pretty config/pretty?}))
@@ -181,6 +212,18 @@
   "Given a team-id and a sequence of user maps, create a JSON representation of a list of users for the REST API."
   [team-id users]
   (let [url (str (team-rep/url team-id) "/roster")]
+    (json/generate-string
+      {:team-id team-id
+       :collection {:version hateoas/json-collection-version
+                    :href url
+                    :links [(hateoas/self-link url {:accept mt/user-collection-media-type})]
+                    :items (map #(-> % (clean-user-tokens) (select-keys team-user-representation-props)) users)}}
+      {:pretty config/pretty?})))
+
+(defn render-active-users-list
+  "Given a team-id and a sequence of active user maps, create a JSON representation of a list of users for the REST API."
+  [team-id users]
+  (let [url (str (team-rep/url team-id) "/active-users")]
     (json/generate-string
       {:team-id team-id
        :collection {:version hateoas/json-collection-version

@@ -2,12 +2,12 @@
   "
    Asynchronous tasks that make many slack API calls for user information.
   "
-  (:require
-   [clojure.core.async :as async :refer (<!! >!!)]
-   [taoensso.timbre :as timbre]
-   [oc.lib.db.pool :as pool]
-   [oc.lib.slack :as slack-lib]
-   [oc.auth.resources.user :as user]))
+  (:require [clojure.core.async :as async :refer (<!! >!!)]
+            [taoensso.timbre :as timbre]
+            [oc.lib.db.pool :as pool]
+            [oc.lib.slack :as slack-lib]
+            [oc.lib.sentry.core :as sentry]
+            [oc.auth.resources.user :as user]))
 
 
 ;; ----- core.async -----
@@ -57,7 +57,8 @@
                                           (:slack-org msg)))
             (timbre/trace "Processing complete.")
             (catch Exception e
-              (timbre/error e))))))))
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Component start/stop -----
 

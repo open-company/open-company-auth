@@ -26,7 +26,7 @@
   (let [user-name (or (:real_name_normalized user-data)
                       (:real_name user-data)
                       (:name user-data))
-        split-name (when user-name (s/split user-name #"\s"))
+        split-name (when user-name (s/split user-name #"\s" 2))
         name-size (count split-name)
         splittable-name? (= name-size 2)]
     {:user-id (db-common/unique-id)
@@ -47,16 +47,16 @@
      :title (or (:title user-data)
                 (get-in user-data [:profile :title]))
      :avatar-url (or (:image_512 user-data)
-                     (:image_192 user-data)
-                     (:image_72 user-data)
-                     (:image_48 user-data)
-                     (:image_32 user-data)
-                     (:image_24 user-data)
                      (get-in user-data [:profile :image_512])
+                     (:image_192 user-data)
                      (get-in user-data [:profile :image_192])
+                     (:image_72 user-data)
                      (get-in user-data [:profile :image_72])
+                     (:image_48 user-data)
                      (get-in user-data [:profile :image_48])
+                     (:image_32 user-data)
                      (get-in user-data [:profile :image_32])
+                     (:image_24 user-data)
                      (get-in user-data [:profile :image_24]))
      :logo-url (when team-data
                   (or (:image_230 team-data)
@@ -159,17 +159,6 @@
     (get params "error") [false "denied"]
     :else                [false "no-code"]))
 
-(defn channel-list
-  "Given a Slack bot token, list the public channels for the Slack org."
-  [bot-token]
-  (let [conn (merge slack-connection {:token bot-token})
-        channels (slack/slack-request conn "channels.list")]
-    (if (:ok channels)
-      (remove :is_archived (:channels channels)) ; unarchived channels
-      (do (timbre/warn "Channel list could not be retrieved."
-                       {:response channels :bot-token bot-token})
-          false))))
-
 (defn user-list
   "Given a Slack bot token, list the user roster for the Slack org, excluding restricted, deleted and bots users."
   [bot-token]
@@ -230,7 +219,7 @@
   "Given a sequence of Slack orgs, retrieve the channel list of those that have a bot."
 
   ;; Initial case
-  ([slack-orgs] (channels-for slack-orgs []))
+  ([slack-orgs] (channels-for (sort-by :name slack-orgs) []))
 
   ;; All done case
   ([slack-orgs :guard empty? channels] (vec channels))
@@ -241,5 +230,12 @@
   ;; Retrieve channel for this Slack org
   ([slack-orgs channels]
   (let [slack-org (first slack-orgs)
-        bot-token (:bot-token slack-org)]
-    (channels-for (rest slack-orgs) (conj channels (assoc slack-org :channels (channel-list bot-token)))))))
+        bot-token (:bot-token slack-org)
+        org-channels (try
+                       (slack-lib/get-channels bot-token)
+                       (catch Exception e
+                         (timbre/error e)
+                         []))
+        sorted-channels (sort-by :name org-channels)
+        updated-org (assoc slack-org :channels sorted-channels)]
+    (channels-for (rest slack-orgs) (conj channels updated-org)))))

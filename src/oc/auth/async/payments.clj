@@ -1,14 +1,16 @@
 (ns oc.auth.async.payments
-  "
-  Async publish of team change reports to payments (Stripe)
-  "
+  "Async publish of team change reports to payments service."
   (:require [clojure.core.async :as async :refer (<! >!!)]
+            [clojure.string :as string]
+            [cheshire.core :as json]
+            [if-let.core :refer (when-let*)]
             [taoensso.timbre :as timbre]
             [schema.core :as schema]
-            [oc.auth.resources.payments :as pay-res]
-            [oc.auth.resources.user :as user-res]
-            [oc.auth.resources.team :as team-res])
-  (:import [com.stripe.exception RateLimitException]))
+            [oc.lib.sentry.core :as sentry]
+            [oc.lib.schema :as lib-schema]
+            [amazonica.aws.sqs :as sqs]
+            [oc.auth.config :as c]
+            [oc.auth.resources.team :as team-res]))
 
 ;; ----- core.async -----
 
@@ -19,17 +21,21 @@
 ;; ----- Data schema -----
 
 (def TeamReportTrigger
-  {:customer-id (:id pay-res/Customer)
-   :seats       (:quantity pay-res/Subscription)})
+  {:customer-id lib-schema/NonBlankStr
+   :team-id lib-schema/UniqueID})
 
 ;; ----- Event handling -----
 
-(defn- handle-payments-message
+(defn handle-payments-message
   [trigger]
-  (timbre/trace "Message request:" trigger)
+  (timbre/info "Request to send" trigger "to" c/aws-sqs-payments-queue)
   (schema/validate TeamReportTrigger trigger)
-  (pay-res/report-latest-team-size! (:customer-id trigger)
-                                    (:seats trigger)))
+  (sqs/send-message
+    {:access-key c/aws-access-key-id
+     :secret-key c/aws-secret-access-key}
+      :queue-url c/aws-sqs-payments-queue
+      :message-body (json/generate-string trigger {:pretty true}))
+  (timbre/info "Request sent!"))
 
 ;; ----- Event loop -----
 
@@ -45,35 +51,30 @@
           (do (reset! payments-go false) (timbre/info "Payments loop stopped."))
           (try
             (handle-payments-message message)
-            ;; we're overwhelming Stripe, slow down
-            (catch RateLimitException e
-              (<! (async/timeout 1000))
-              (async/put! payments-chan message))
             (catch Exception e
-              (timbre/error e))))))))
+              (timbre/warn e)
+              (sentry/capture e))))))))
 
 ;; ----- Payments triggering -----
 
 (defn ->team-report-trigger
-  [{:keys [customer-id seats] :as report}]
-  (select-keys report [:customer-id :seats]))
+  [report]
+  (select-keys report [:customer-id :team-id]))
 
 (schema/defn ^:always-validate send-team-report-trigger! [trigger :- TeamReportTrigger]
-  (>!! payments-chan trigger))
+  (when-not (string/blank? c/aws-sqs-payments-queue)
+    (>!! payments-chan trigger)))
 
 (defn report-team-seat-usage!
   [conn team-id]
-  (when-let [customer-id (:stripe-customer-id (team-res/get-team conn team-id))] ;; Early on there's no customer yet
-    (let [active?     #(#{"active" "unverified"} (:status %))
-          team-users  (filter active? (user-res/list-users conn team-id))
-          seat-count  (count team-users)
-          trigger     (->team-report-trigger {:customer-id customer-id
-                                            :seats       seat-count})]
-      (timbre/info (format "Reporting %d seats used to payment service for team %s (%s)"
-                         seat-count
-                         team-id
-                         customer-id))
-      (send-team-report-trigger! trigger))))
+  (when-let* [_enabled? c/payments-enabled?
+              team-data (team-res/get-team conn team-id)
+              customer-id (:stripe-customer-id team-data)  ;; Early on there's no customer yet which avoid triggering a team size change in payments
+              trigger (->team-report-trigger {:customer-id customer-id :team-id team-id})]
+    (timbre/info (format "Reporting seats used to payment service for team %s (%s)"
+                        team-id
+                        customer-id))
+    (send-team-report-trigger! trigger)))
 
 (defn report-all-seat-usage!
   [conn team-ids]
@@ -85,11 +86,12 @@
 (defn start
   "Start the core.async event loop."
   []
-  (payments-loop))
+  (when c/payments-enabled?
+    (payments-loop)))
 
 (defn stop
   "Stop the the core.async event loop."
   []
-  (when @payments-go
+  (when (and c/payments-enabled? @payments-go)
     (timbre/info "Stopping payments loop...")
     (>!! payments-chan {:stop true})))

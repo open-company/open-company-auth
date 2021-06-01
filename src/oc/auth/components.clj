@@ -2,6 +2,7 @@
   (:require [com.stuartsierra.component :as component]
             [taoensso.timbre :as timbre]
             [org.httpkit.server :as httpkit]
+            [oc.lib.sentry.core :refer (map->SentryCapturer)]
             [oc.lib.db.pool :as pool]
             [oc.lib.sqs :as sqs]
             [oc.auth.async.expo :as expo]
@@ -9,6 +10,7 @@
             [oc.auth.async.notification :as notification]
             [oc.auth.async.slack-api-calls :as slack-api-calls]
             [oc.auth.async.payments :as payments]
+            [oc.auth.async.notify :as notify]
             [oc.auth.config :as c]))
 
 (defrecord HttpKit [options handler server]
@@ -22,7 +24,7 @@
       component
       (do
         (server)
-        (dissoc component :server)))))
+        (assoc component :server nil)))))
 
 (defrecord RethinkPool [size regenerate-interval pool]
   component/Lifecycle
@@ -36,7 +38,7 @@
     (if pool
       (do
         (pool/shutdown-pool! pool)
-        (dissoc component :pool))
+        (assoc component :pool nil))
       component)))
 
 (defrecord Handler [handler-fn]
@@ -45,7 +47,7 @@
     (timbre/info "[handler] starting")
     (assoc component :handler (handler-fn component)))
   (stop [component]
-    (dissoc component :handler)))
+    (assoc component :handler nil)))
 
 (defrecord SlackRouter [slack-router-fn]
   component/Lifecycle
@@ -62,7 +64,7 @@
         (timbre/info "[slack-router] stopping...")
         (slack-router/stop)
         (timbre/info "[slack-router] stopped")
-        (dissoc component :slack-router))
+        (assoc component :slack-router nil))
       component)))
 
 (defrecord ExpoConsumer [expo-consumer-fn]
@@ -80,7 +82,7 @@
         (timbre/info "[expo-consumer] stopping...")
         (expo/stop)
         (timbre/info "[expo-consumer] stopped")
-        (dissoc component :expo-consumer))
+        (assoc component :expo-consumer nil))
       component)))
 
 (defrecord AsyncConsumers []
@@ -91,6 +93,7 @@
     (notification/start) ; core.async channel consumer for notification events
     (slack-api-calls/start component)
     (payments/start)
+    (notify/start)
     (timbre/info "[async-consumers] started")
     (assoc component :async-consumers true))
 
@@ -101,32 +104,40 @@
         (notification/stop) ; core.async channel consumer for notification events
         (slack-api-calls/stop)
         (payments/stop)
+        (notify/stop)
         (timbre/info "[async-consumers] stopped")
-        (dissoc component :async-consumers))
+        (assoc component :async-consumers nil))
     component)))
 
 (defn db-only-auth-system [_opts]
   (component/system-map
-   :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
+    :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})))
 
 (defn auth-system [{:keys [port handler-fn sqs-creds sqs-queue slack-sqs-msg-handler
-                           expo-sqs-queue expo-sqs-msg-handler]}]
+                           expo-sqs-queue expo-sqs-msg-handler sentry]}]
   (component/system-map
-   :db-pool (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
+   :sentry-capturer (map->SentryCapturer sentry)
+   :db-pool (component/using
+             (map->RethinkPool {:size c/db-pool-size :regenerate-interval 5})
+             [:sentry-capturer])
    :slack-router (component/using
                   (map->SlackRouter {:slack-router-fn slack-sqs-msg-handler})
                   [:db-pool])
-   :sqs (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
+   :sqs (component/using
+         (sqs/sqs-listener sqs-creds sqs-queue slack-sqs-msg-handler)
+         [:sentry-capturer])
    :expo (component/using
           (map->ExpoConsumer {:expo-consumer-fn expo-sqs-msg-handler})
           [:db-pool])
-   :expo-sqs (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
+   :expo-sqs (component/using
+              (sqs/sqs-listener sqs-creds expo-sqs-queue expo-sqs-msg-handler)
+              [:sentry-capturer])
    :async-consumers (component/using
-                     (map->AsyncConsumers {})
-                     [:db-pool])
+                      (map->AsyncConsumers {})
+                      [:db-pool])
    :handler (component/using
-             (map->Handler {:handler-fn handler-fn})
-             [:db-pool])
+              (map->Handler {:handler-fn handler-fn})
+              [:db-pool])
    :server  (component/using
-             (map->HttpKit {:options {:port port}})
-             [:handler])))
+              (map->HttpKit {:options {:port port}})
+              [:handler])))

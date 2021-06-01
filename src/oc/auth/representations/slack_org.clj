@@ -20,9 +20,9 @@
   [team-id slack-orgs]
   (let [url (str (team-rep/url team-id) "/channels")]
     (json/generate-string
-      {:team-id team-id
-       :collection {:version hateoas/json-collection-version
-                    :href url
-                    :links [(hateoas/self-link url {:accept mt/slack-channel-collection-media-type})]
-                    :items (map slack-org-for-collection slack-orgs)}}
-      {:pretty config/pretty?})))
+     {:team-id team-id
+      :collection {:version hateoas/json-collection-version
+                   :href url
+                   :links [(hateoas/self-link url {:accept mt/slack-channel-collection-media-type})]
+                   :items (map slack-org-for-collection slack-orgs)}}
+     {:pretty config/pretty?})))

@@ -1,4 +1,4 @@
-/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of November 19, 2019 */
+/* Source: https://knowledge.hubspot.com/articles/kcs_article/forms/what-domains-are-blocked-when-using-the-forms-email-domains-to-block-feature with last update of August 24, 2020 */
 0-mail.com
 027168.com
 0815.su
@@ -179,7 +179,6 @@ amrer.net
 amuro.net
 amuromail.com
 ananzi.co.za
-ancestry.com
 andylau.net
 anfmail.com
 angelfire.com
@@ -375,7 +374,6 @@ bodhi.lawlita.com
 bol.com.br
 bolando.com
 bollywoodz.com
-bolt.com
 boltonfans.com
 bombdiggity.com
 bonbon.net
@@ -527,6 +525,7 @@ cicciociccio.com
 cincinow.net
 citiz.net
 citlink.net
+citromail.hu
 city-of-bath.org
 city-of-birmingham.com
 city-of-brighton.org
@@ -1182,8 +1181,7 @@ fuse.net
 fut.es
 fux0ringduh.com
 fwnb.com
-fxsmails.com 
-
+fxsmails.com
 galaxy5.com
 galaxyhit.com
 gamebox.net
@@ -1234,6 +1232,7 @@ gmail.com
 gmail.com.br
 gmail.ru
 gmx.at
+gmx.ch
 gmx.com
 gmx.de
 gmx.li
@@ -1556,8 +1555,7 @@ ivillage.com
 iwan-fals.com
 iwmail.com
 iwon.com
-izadpanah.com 
-
+izadpanah.com
 jahoopa.com
 jakuza.hu
 japan.com
@@ -3671,6 +3669,7 @@ posta.ro
 postaccesslite.com
 postafree.com
 postaweb.com
+posteo.de
 postfach.cc
 postinbox.com
 postino.ch
@@ -4543,6 +4542,8 @@ whipmail.com
 whoever.com
 whoopymail.com
 whtjddn.33mail.com
+wi.rr.com
+wi.twcbc.com
 wickmail.net
 wideopenwest.com
 wildmail.com

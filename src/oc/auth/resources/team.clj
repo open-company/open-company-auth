@@ -2,7 +2,10 @@
   "Team stored in RethinkDB."
   (:require [clojure.walk :refer (keywordize-keys)]
             [if-let.core :refer (when-let*)]
+            [taoensso.timbre :as timbre]
+            [clojure.string :as cstr]
             [schema.core :as schema]
+            [oc.lib.html :as lib-html]
             [oc.lib.db.common :as db-common]
             [oc.lib.schema :as lib-schema]
             [oc.auth.config :as c]))
@@ -22,6 +25,8 @@
   :slack-orgs [lib-schema/NonBlankStr]
   (schema/optional-key :logo-url) (schema/maybe schema/Str)
   (schema/optional-key :stripe-customer-id) (schema/maybe schema/Str)
+  (schema/optional-key :premium) (schema/maybe schema/Bool)
+  (schema/optional-key :invite-token) (schema/maybe lib-schema/UUIDStr)
   :created-at lib-schema/ISO8601
   :updated-at lib-schema/ISO8601})
 
@@ -29,19 +34,26 @@
   :email lib-schema/EmailAddress
   :admin schema/Bool
   (schema/optional-key :org-name) (schema/maybe schema/Str)
-  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :org-uuid) (schema/maybe schema/Str)
+  (schema/optional-key :org-slug) (schema/maybe schema/Str)
+  (schema/optional-key :team-id) (schema/maybe schema/Str)
+  (schema/optional-key :org-logo-url) (schema/maybe schema/Str)
   (schema/optional-key :logo-width) (schema/maybe schema/Int)
   (schema/optional-key :logo-height) (schema/maybe schema/Int)
   (schema/optional-key :first-name) (schema/maybe schema/Str)
   (schema/optional-key :last-name) (schema/maybe schema/Str)
-  (schema/optional-key :note) (schema/maybe schema/Str)})
+  (schema/optional-key :note) (schema/maybe schema/Str)
+  (schema/optional-key :user-type) (schema/maybe schema/Str)})
 
 (def SlackInviteRequest {
   :slack-id lib-schema/NonBlankStr
   :slack-org-id lib-schema/NonBlankStr
   :admin schema/Bool
   (schema/optional-key :org-name) (schema/maybe schema/Str)
-  (schema/optional-key :logo-url) (schema/maybe schema/Str)
+  (schema/optional-key :org-uuid) (schema/maybe schema/Str)
+  (schema/optional-key :org-slug) (schema/maybe schema/Str)
+  (schema/optional-key :team-id) (schema/maybe schema/Str)
+  (schema/optional-key :org-logo-url) (schema/maybe schema/Str)
   (schema/optional-key :logo-width) (schema/maybe schema/Int)
   (schema/optional-key :logo-height) (schema/maybe schema/Int)
   (schema/optional-key :first-name) (schema/maybe schema/Str)
@@ -54,7 +66,7 @@
 
 (def reserved-properties
   "Properties of a resource that can't be specified during a create and are ignored during an update."
-  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links})
+  #{:team-id :admins :email-domains :slack-orgs :created-at :udpated-at :links :premium})
 
 ;; ----- Utility functions -----
 
@@ -63,6 +75,16 @@
   [team]
   (apply dissoc team reserved-properties))
 
+(defn clean-prop [team-data clean-key]
+  (if (get team-data clean-key)
+    (update team-data clean-key #(or (lib-html/strip-xss-tags %) ""))
+    team-data))
+
+(defn clean-input [team]
+  (-> team
+      clean
+      (clean-prop :name)))
+
 ;; ----- Team CRUD -----
 
 (schema/defn ^:always-validate ->team :- Team
@@ -70,21 +92,20 @@
   Take a minimal map describing a team, the user-id of the initial admin, and an optional Slack org id
   and 'fill the blanks' with any missing properties.
   "
-  ([team-props initial-admin] (->team team-props initial-admin nil))
-
-  ([team-props initial-admin :- lib-schema/UniqueID slack-org :- (schema/maybe lib-schema/NonBlankStr)] 
+  [team-props initial-admin :- lib-schema/UniqueID]
   {:pre [(map? team-props)]}
   (let [ts (db-common/current-timestamp)]
     (-> team-props
         keywordize-keys
-        clean
-        (assoc :team-id (db-common/unique-id))
         (update :name #(or % ""))
+        clean-input
+        (assoc :team-id (db-common/unique-id))
+        (assoc :premium false)
         (assoc :admins [initial-admin])
         (assoc :email-domains [])
         (update :slack-orgs #(or % []))
         (assoc :created-at ts)
-        (assoc :updated-at ts)))))
+        (assoc :updated-at ts))))
 
 (schema/defn ^:always-validate create-team!
   "Create a team in the system. Throws a runtime exception if the team doesn't conform to the Team schema."
@@ -97,6 +118,12 @@
   [conn team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
   (db-common/read-resource conn table-name team-id))
+
+(schema/defn ^:always-validate get-team-by-invite-token :- (schema/maybe Team)
+  "Given the one-time-use token of the user, retrieve them from the database, or return nil if user doesn't exist."
+  [conn token :- lib-schema/NonBlankStr]
+  {:pre [(db-common/conn? conn)]}
+  (first (db-common/read-resources conn table-name "invite-token" token)))
 
 (schema/defn ^:always-validate update-team! :- Team
   "
@@ -113,8 +140,8 @@
   [conn team-id :- lib-schema/UniqueID team]
   {:pre [(db-common/conn? conn)
          (map? team)]}
-  (if-let [original-team (get-team conn team-id)]
-    (let [updated-team (merge original-team (clean team))]
+  (when-let [original-team (get-team conn team-id)]
+    (let [updated-team (merge original-team (clean-input team))]
       (schema/validate Team updated-team)
       (db-common/update-resource conn table-name primary-key original-team updated-team))))
 
@@ -123,8 +150,13 @@
   [conn team-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
   (try
-    (db-common/delete-resource conn table-name team-id)
-    (catch java.lang.RuntimeException e))) ; it's OK if there is no team to delete
+    (when-let [team-data (get-team conn team-id)]
+      (if (seq (:stripe-customer-id team-data))
+        (timbre/error "Cannot delete team with associated stripe customer. Please remove the stripe customer first and link to the team."
+                      {:team-id team-id
+                       :stripe-customer-id (:stripe-customer-id team-data)})
+        (db-common/delete-resource conn table-name team-id)))
+    (catch java.lang.RuntimeException _))) ; it's OK if there is no team to delete
 
 ;; ----- Team's set operations -----
 
@@ -145,7 +177,7 @@
   "
   [conn team-id :- lib-schema/UniqueID user-id :- lib-schema/UniqueID]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "admins" user-id)))
 
 (defn allowed-email-domain? [email-domain]
@@ -159,8 +191,8 @@
   [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)
          (allowed-email-domain? email-domain)]}
-  (if-let [team (get-team conn team-id)]
-    (db-common/add-to-set conn table-name team-id "email-domains" email-domain)))
+  (when (get-team conn team-id)
+    (db-common/add-to-set conn table-name team-id "email-domains" (cstr/lower-case email-domain))))
 
 (schema/defn ^:always-validate remove-email-domain :- (schema/maybe Team)
   "
@@ -169,7 +201,7 @@
   "
   [conn team-id :- lib-schema/UniqueID email-domain :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "email-domains" email-domain)))
 
 (schema/defn ^:always-validate add-slack-org :- (schema/maybe Team)
@@ -179,7 +211,7 @@
   "
   [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/add-to-set conn table-name team-id "slack-orgs" slack-org)))
 
 (schema/defn ^:always-validate remove-slack-org :- (schema/maybe Team)
@@ -189,7 +221,7 @@
   "
   [conn team-id :- lib-schema/UniqueID slack-org :- lib-schema/NonBlankStr]
   {:pre [(db-common/conn? conn)]}
-  (if-let [team (get-team conn team-id)]
+  (when (get-team conn team-id)
     (db-common/remove-from-set conn table-name team-id "slack-orgs" slack-org)))
 
 ;; ----- Collection of teams -----

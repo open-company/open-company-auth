@@ -183,11 +183,7 @@ An [AWS SNS](https://aws.amazon.com/sns/) pub/sub topic is used to push user eve
 
 The `aws-sqs-expo-queue` is read by auth directly to consume Expo push notification tickets produced by the notify service. These tickets are then
 exchanged for push notification receipts with the Expo server in order to determine if the pushes were successful. In the case that a push notification
-failed, it is the responsibility of the auth service to remove the invalid push tokens from the database. This can happen if the user uninstalls the mobile
-application, for example. Subsequent push notification attempts will fail, because the push token on record is no longer valid. **Expo recommends allowing
-30 minutes to pass before a ticket is exchanged for a receipt to allow the respective push services time to deal with high volume. Because of this, the SQS
-queue should be configured with a delay in production scenarios.** At the time or writing, the maximum queue delay allowed is 15 minutes, which is okay for our
-purposes.
+failed, it is the responsibility of the auth service to remove the invalid push tokens from the database. This can happen if the user uninstalls the mobile application, for example. Subsequent push notification attempts will fail, because the push token on record is no longer valid. **Expo recommends allowing 30 minutes to pass before a ticket is exchanged for a receipt to allow the respective push services time to deal with high volume. Because of this, the SQS queue should be configured with a delay in production scenarios.** At the time or writing, the maximum queue delay allowed is 15 minutes, which is okay for our purposes.
 
 For an explanation on configuring `aws-lambda-expo-prefix`, please see the [notify service documentation](https://github.com/open-company/open-company-notify).
 
@@ -209,8 +205,10 @@ Make sure you update the `CHANGE-ME` items in the section of the `project.clj` t
     :aws-sqs-email-queue "CHANGE-ME"
     :aws-sqs-slack-router-auth-queue "CHANGE-ME"
     :aws-sns-auth-topic-arn "CHANGE-ME"
+    :aws-sqs-payments-queue "" ; Queue to send team size changes to (optional)
     :aws-sqs-expo-queue "CHANGE-ME"
     :aws-lambda-expo-prefix "CHANGE-ME"
+    :aws-sns-auth-topic-arn "" ; SNS topic to publish notifications (optional)
     :log-level "debug"
   }
 ```
@@ -890,7 +888,7 @@ Please note that this project is released with a [Contributor Code of Conduct](h
 
 Distributed under the [GNU Affero General Public License Version 3](https://www.gnu.org/licenses/agpl-3.0.en.html).
 
-Copyright © 2015-2019 OpenCompany, LLC
+Copyright © 2015-2021 OpenCompany, LLC
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
