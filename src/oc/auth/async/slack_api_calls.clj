@@ -3,6 +3,7 @@
    Asynchronous tasks that make many slack API calls for user information.
   "
   (:require [clojure.core.async :as async :refer (<!! >!!)]
+            [clojure.string :as cstr]
             [taoensso.timbre :as timbre]
             [oc.lib.db.pool :as pool]
             [oc.lib.slack :as slack-lib]
@@ -18,20 +19,21 @@
 
 (defn slack-gather-display-names [db-pool team-id slack-org]
   (pool/with-pool [conn db-pool]
+    (timbre/infof "Gathering display-name for team-id %s and slack-org %s" team-id (:slack-org-id slack-org))
     (doseq [user (user/list-users conn team-id [:slack-users])]
-      (let [slack-user ((keyword (:slack-org-id slack-org)) (:slack-users user))
+      (timbre/infof "Retrieve slack users info for user-id %s" (:user-id user))
+      (let [slack-org-id-kw (:slack-org-id slack-org)
+            slack-user (get-in user [:slack-users slack-org-id-kw])
             slack-user-info (slack-lib/get-user-info (:bot-token slack-org)
-                                                     (:id slack-user))
-            display-name (if-not (clojure.string/blank? (:display_name slack-user-info))
+                                                     (:slack-id slack-user))
+            display-name (if-not (cstr/blank? (:display_name slack-user-info))
                            (:display_name slack-user-info)
-                           (:name slack-user-info))]
-        (user/update-user! conn
-                           (:user-id user)
-                           (assoc-in user
-                                     [:slack-users
-                                      (keyword (:slack-org-id slack-org))
-                                      :display-name]
-                                     display-name))))))
+                           (:name slack-user-info))
+            updated-user (assoc-in user [:slack-users slack-org-id-kw :display-name] display-name)]
+        (timbre/debugf "Slack users for Slack org %s: %s" slack-org-id-kw slack-user)
+        (timbre/tracef "Retrieved info: %s" slack-user-info)
+        (timbre/debugf "Gathered display-name: %s" display-name)
+        (user/update-user! conn (:user-id user) updated-user)))))
 
 (defn gather-display-names [team-id slack-org]
   (>!! slack-api-calls-chan {:display-names true
