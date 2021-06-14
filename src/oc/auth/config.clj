@@ -98,16 +98,39 @@
 (defonce slack-client-secret (env :open-company-slack-client-secret))
 (defonce slack-verification-token (env :open-company-slack-verification-token))
 
+(defn- scope->str [& granular-scope]
+  (->> (apply concat granular-scope)
+       distinct
+       (clj-str/join ",")))
+
 ;; OAuth configuration
 (defonce slack-oauth-url "https://slack.com/oauth/v2/authorize")
-(defonce slack-user-scope "identity.avatar,identity.basic,identity.email,identity.team")
-(defonce slack-bot-share-scope "channels:read,chat:write")
-(defonce slack-bot-notifications-scope "team:read,users:read,users:read.email")
-(defonce slack-bot-unfurl-scope "links:read,links:write")
-(defonce slack-bot-scope (clj-str/join "," [ ;; "commands" ;; need perm in prod app
-                                            slack-bot-share-scope
-                                            slack-bot-notifications-scope
-                                            slack-bot-unfurl-scope]))
+
+(defonce slack-user-scope (scope->str ["identity.avatar"  ;; User avatar
+                                       "identity.basic"   ;; User basic infos (name, title, tz etc)
+                                       "identity.email"   ;; User email
+                                       "identity.team"])) ;; Team infos
+
+(defonce slack-bot-share-scope ["channels:read"           ;; Read list of public channels
+                                "groups:read"             ;; New: Read list of private channels
+                                "im:read"                 ;; New: Read list of IM convos
+                                "mpim:read"               ;; New: Read list of multi user IM convos
+                                "chat:write"              ;; New: Send messages in all the above
+                                "channels:join"])         ;; New: bot needs to join a channel to post in it
+
+(defonce slack-bot-notifications-scope ["team:read"       ;; Read info of team (extended from identity.team)
+                                       "users:read"       ;; Read list of users on the team
+                                 "users:read.email"       ;; Read the email of every user on the team
+                                         "im:write"])     ;; Send direct messages to every user
+
+(defonce slack-bot-unfurl-scope ["links:read"             ;; Read links posted in Slack that are relevant to out app
+                                 "links:write"])          ;; Rewrite those messages link infos
+
+(defonce slack-bot-scope (scope->str ;; ["commands"]      ;; Staging test
+                                     slack-bot-share-scope
+                                     slack-bot-notifications-scope
+                                     slack-bot-unfurl-scope))
+
 ;; Bot/App uninstall reporting
 (defonce slack-customer-support-webhook (env :open-company-slack-customer-support-webhook))
 

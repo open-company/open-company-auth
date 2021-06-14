@@ -242,7 +242,7 @@
     ;; (when (empty? (:teams updated-user))
     ;;   (timbre/info "User has no other team left, deleting user" member-id)
     ;;   (user-res/delete-user! conn member-id))
-    (when config/payments-enabled? 
+    (when config/payments-enabled?
       (payments/report-team-seat-usage! conn team-id))
     (timbre/info "User" member-id "removed from team" team-id)
     {:updated-team (team-res/get-team conn team-id)}))
@@ -357,7 +357,7 @@
 
   ;; Authorization
   :allowed? (by-method {
-    :options true 
+    :options true
     :post (fn [ctx] (if (-> ctx :data :admin)
                       (allow-team-admins conn (:user ctx) team-id)
                       (allow-team-members conn (:user ctx) team-id)))})
@@ -381,7 +381,7 @@
                         (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
 
   ;; Actions
-  :post! (fn [ctx] {:updated-user 
+  :post! (fn [ctx] {:updated-user
                     (handle-invite
                       conn
                       (:user ctx) ; sender
@@ -394,7 +394,7 @@
   ;; Responses
   :respond-with-entity? true
   :handle-created (fn [ctx] (if-let [updated-user (:updated-user ctx)]
-                              (api-common/location-response (user-rep/url updated-user) 
+                              (api-common/location-response (user-rep/url updated-user)
                                                             (user-rep/render-user updated-user)
                                                             mt/user-media-type)
                               (api-common/missing-response))))
@@ -589,7 +589,7 @@
           slack-orgs (slack-org-res/list-slack-orgs-by-ids conn (:slack-orgs team) [:bot-token :bot-user-id]) ; Slack orgs for team
           bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
           slack-bot-ids (map :bot-user-id (filter :bot-user-id slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
-          slack-users (mapcat #(slack/user-list %) bot-tokens) ; Slack roster of users
+          slack-users (slack/user-list bot-tokens) ; Slack roster of users
           oc-users (user-res/list-users conn team-id [:status :created-at :updated-at :slack-users :notification-medium :timezone :blurb :location :title :profiles]) ; OC roster of users
           oc-users-with-admin (map #(if (admins (:user-id %)) (assoc % :admin? true) %) oc-users)
           oc-users-with-slack (map #(assoc % :slack-bot-ids slack-bot-ids) oc-users-with-admin)
@@ -630,12 +630,15 @@
                         false))
 
   ;; Responses
-  :handle-ok (fn [ctx] (let [team (:existing-team ctx)
-                             slack-org-ids (:slack-orgs team)
-                             slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
-                                            [:bot-user-id :bot-token])
-                             channels (slack/channels-for slack-orgs)]
-                          (slack-org-rep/render-channel-list team-id channels))))
+  :handle-ok (fn [ctx]
+               (let [team (:existing-team ctx)
+                     slack-org-ids (:slack-orgs team)
+                     slack-orgs (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
+                                                                      [:bot-user-id :bot-token])
+                     bot-tokens (map :bot-token (filter :bot-token slack-orgs)) ; Bot tokens of Slack orgs w/ a bot
+                     slack-users (slack/user-list bot-tokens) ; Slack roster of users
+                     channels (slack/channels-for slack-orgs)]
+                 (slack-org-rep/render-channel-list team-id channels slack-users))))
 
 ;; A resource for invite users using a team link
 (defresource invite-link [conn team-id]
@@ -658,7 +661,7 @@
 
   ;; Authorization
   :allowed? (by-method {
-    :options true 
+    :options true
     :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
     :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
 
