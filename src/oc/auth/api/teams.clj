@@ -95,10 +95,7 @@
                    (boolean ((set (:teams existing-user)) (:team-id existing-team))))
          admin? (when (and existing-user existing-team)
                   (boolean ((set (:admins existing-team)) (:user-id existing-user))))]
-     (handle-invite conn sender existing-team existing-user member? admin? {:email (:email invite-data)
-                                                                            :admin ->admin?
-                                                                            :first-name (:first-name invite-data)
-                                                                            :last-name (:last-name invite-data)})))
+     (handle-invite conn sender existing-team existing-user member? admin? (assoc invite-data :admin ->admin?))))
 
   ;; User exists, and is a team member, but not an admin, and admin was requested in the invite
   ([conn sender team user true _admin? :guard not invite :guard :admin]
