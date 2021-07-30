@@ -60,7 +60,8 @@
   (schema/optional-key :last-name) (schema/maybe schema/Str)
   (schema/optional-key :avatar-url) (schema/maybe schema/Str)
   (schema/optional-key :note) (schema/maybe schema/Str)
-  (schema/optional-key :email) (schema/maybe lib-schema/EmailAddress)})
+  (schema/optional-key :email) (schema/maybe lib-schema/EmailAddress)
+  (schema/optional-key :user-type) (schema/maybe schema/Str)})
 
 ;; ----- Metadata -----
 
