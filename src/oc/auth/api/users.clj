@@ -11,6 +11,7 @@
             [oc.lib.db.pool :as pool]
             [oc.lib.jwt :as jwt]
             [oc.lib.api.common :as api-common]
+            [oc.lib.sentry.core :as sentry]
             [oc.auth.config :as config]
             [oc.auth.lib.sqs :as sqs]
             [oc.auth.lib.jwtoken :as jwtoken]
@@ -233,7 +234,12 @@
         user-data (if user-id
                     (user-res/get-user conn user-id)
                     (user-res/get-user-by-slack-id conn slack-team-id (:slack-user-id claims)))
-        admin-teams (user-res/admin-of conn (:user-id user-data))]
+        user-found? (:user-id user-data)
+        admin-teams (when user-found?
+                      (user-res/admin-of conn (:user-id user-data)))]
+    (when-not user-found?
+      (sentry/capture {:throwable (ex-info "No user-id in super-user-request" {:claims claims})
+                       :data {:claims claims}}))
     (when (and user-data
                 admin-teams)
       (let [auth-source (if (:slack-user-id claims) :slack :email)
