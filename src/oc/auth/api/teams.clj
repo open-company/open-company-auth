@@ -116,7 +116,7 @@
   (let [team-id (:team-id team)
         email (:email invite)
         new-user-data (-> invite
-                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :team-id :note :slack-id :slack-org-id :user-type)
+                          (dissoc :admin :org-name :org-slug :org-uuid :org-logo-url :team-id :note :slack-id :slack-org-id :user-type :access)
                           (assoc :one-time-token (str (java.util.UUID/randomUUID)))
                           (assoc :teams [team-id]))
         new-user-map (user-res/->user new-user-data)]
@@ -137,7 +137,7 @@
               slack-user (slack/get-user-info bot-token config/slack-bot-scope slack-id)
               oc-user (user-res/->user (-> slack-user
                                           (assoc :teams [team-id])
-                                          (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name :user-type)))
+                                          (dissoc :slack-id :slack-org-id :org-name :org-slug :org-uuid :org-logo-url :name :user-type :access)))
               new-user (user-res/create-user! conn oc-user nil (user-res/nux-tags-for-user oc-user invite))]
       (handle-invite conn sender team new-user true admin? (-> invite
                                                              (assoc :bot-token bot-token)
