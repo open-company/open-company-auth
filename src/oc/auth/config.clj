@@ -126,8 +126,7 @@
 (defonce slack-bot-unfurl-scope ["links:read"             ;; Read links posted in Slack that are relevant to out app
                                  "links:write"])          ;; Rewrite those messages link infos
 
-(defonce slack-bot-usage-scope ["im:history"              ;; New: Used to reply to messages sent directly to the bot with usage
-                                "app_mentions:read"])     ;; New: Used to receive bot mention events
+(defonce slack-bot-usage-scope ["im:history"])            ;; New: Used to reply to messages sent directly to the bot with usage
 
 (defonce slack-bot-scope (scope->str ;; ["commands"]      ;; Staging test
                                      slack-bot-share-scope
