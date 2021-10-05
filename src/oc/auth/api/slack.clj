@@ -29,7 +29,8 @@
   "Remove properties from a Slack user that are not needed for a persisted user."
   [slack-user]
   (dissoc slack-user :bot :name :slack-id :slack-org-id :slack-token :slack-org-name :display-name
-                     :team-id :logo-url :slack-domain :redirect :state-slack-org-id :error))
+                     :team-id :logo-url :slack-domain :redirect :state-slack-org-id :error
+                     :state :redirectURI))
 
 (defn- clean-user
   "Remove properties from a user that are not needed for a JWToken."
