@@ -337,6 +337,9 @@
     (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
 
+(defn- can-invite? [ctx]
+  (-> ctx :user :status keyword (= :active)))
+
 ;; A resource for user invitations to a particular team
 (defresource invite [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
@@ -355,9 +358,10 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (if (-> ctx :data :admin)
-                      (allow-team-admins conn (:user ctx) team-id)
-                      (allow-team-members conn (:user ctx) team-id)))})
+    :post (fn [ctx] (when (can-invite? ctx)
+                      (if (-> ctx :data :admin)
+                        (allow-team-admins conn (:user ctx) team-id)
+                        (allow-team-members conn (:user ctx) team-id))))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -492,8 +496,8 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
-    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+    :post (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))
+    :delete (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))})
 
   :processable? (fn [ctx] (team-res/allowed-email-domain? (:email-domain (:data ctx)))) ; check for blacklisted email domain
 
@@ -659,8 +663,8 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
-    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+    :post (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))
+    :delete (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))})
 
   ;; Existentialism
   :exists? (fn [ctx]
