@@ -1,0 +1,10 @@
+(ns oc.auth.db.migrations.add-invite-throttle-table
+  (:require [rethinkdb.query :as r]
+            [oc.lib.db.migrations :as m]
+            [oc.auth.config :as config]
+            [oc.auth.resources.invite-throttle :as invite-throttle]))
+
+(defn up [dynamodb-opts]
+  ;; Do great things
+  (println (invite-throttle/create-table dynamodb-opts))
+  true) ; return true on success

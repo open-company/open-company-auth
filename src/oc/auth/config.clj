@@ -171,3 +171,17 @@
 (defonce digest-times (set (map keyword (clojure.string/split (or (env :digest-times) "700") #","))))
 (defonce premium-digest-times (set (map keyword (clojure.string/split (or (env :premium-digest-times) "700,1200,1700") #","))))
 (defonce default-digest-time (keyword (or (env :default-digest-time) "700")))
+
+;; ----- DynamoDB -----
+
+(defonce dynamodb-end-point (or (env :dynamodb-end-point) "http://localhost:8000"))
+
+(defonce dynamodb-table-prefix (or (env :dynamodb-table-prefix) "local"))
+
+(defonce dynamodb-opts {:access-key (env :aws-access-key-id)
+                        :secret-key (env :aws-secret-access-key)
+                        :endpoint dynamodb-end-point})
+
+(defonce invite-throttle-ttl (or (env :invite-throttle-ttl) 1)) ;; hours
+
+(defonce invite-throttle-max-count (or (env :invite-throttle-max-count) 100)) ;; hours
