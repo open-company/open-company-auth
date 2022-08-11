@@ -79,7 +79,7 @@
   ([team user self-name]
   (let [team-id (:team-id team)
         can-invite? (-> user :status keyword (= :active))]
-    (assoc team :links [
+    (assoc team :links (remove nil? [
       (if self-name 
         (hateoas/link-map self-name hateoas/GET (url team-id) {:accept mt/team-media-type})
         (self-link team-id))
@@ -99,7 +99,7 @@
       (when can-invite?
         (if (seq (:invite-token team))
           (delete-invite-token-link team-id)
-          (create-invite-token-link team-id)))]))))
+          (create-invite-token-link team-id)))])))))
 
 (defn- id-token-links
   "HATEOAS links for a team resource for a user authenticated with the id-token only."

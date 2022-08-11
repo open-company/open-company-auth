@@ -331,8 +331,9 @@
                              slack-orgs (if (empty? slack-org-ids)
                                           []
                                           (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
-                                            [:bot-user-id :bot-token]))]
-                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) (:user ctx))))
+                                            [:bot-user-id :bot-token]))
+                             full-user (user-res/get-user conn (:user-id (:user ctx)))]
+                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) full-user)))
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
@@ -685,9 +686,11 @@
   :respond-with-entity? true
   :post-enacted? true
   :handle-created (fn [ctx]
-                    (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) (:user ctx)))
+                    (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
+                      (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user)))
   :handle-ok (fn [ctx]
-               (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) (:user ctx))))
+               (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
+                 (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user))))
 
 ;; A resource for roster of team users for a particular team
 (defresource active-users [conn team-id]
