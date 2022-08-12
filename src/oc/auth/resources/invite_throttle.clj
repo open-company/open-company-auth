@@ -2,6 +2,7 @@
   "Store notification details with a TTL"
   (:require [taoensso.faraday :as far]
             [clojure.set :as clj-set]
+            [taoensso.timbre :as timbre]
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [oc.auth.config :as c]
@@ -70,13 +71,20 @@
       (assoc :ttl (or (:ttl invite-throttle-data) (ttl/ttl-epoch c/invite-throttle-ttl)))))
 
 (schema/defn ^:always-validate store!
-  [invite-throttle-data :- InviteThrottle]
-  (far/put-item c/dynamodb-opts table-name (transform-invite-throttle invite-throttle-data))
-  true)
+  ([user-id :- lib-schema/UniqueID
+    team-id :- lib-schema/UniqueID]
+   (store! (->InviteThrottle user-id team-id))
+   true)
 
-(schema/defn ^:always-validate retrieve :- InviteThrottle
+  ([invite-throttle-data :- InviteThrottle]
+  (timbre/debugf "Store invite-throttle for %s %s" (:user-id invite-throttle-data) (:team-id invite-throttle-data))
+  (far/put-item c/dynamodb-opts table-name (transform-invite-throttle invite-throttle-data))
+  true))
+
+(schema/defn ^:always-validate retrieve :- (schema/maybe InviteThrottle)
   [user-id :- lib-schema/UniqueID
    team-id :- lib-schema/UniqueID]
+  (timbre/debugf "Retrieve invite-throttle for %s %s" user-id team-id)
   ;; Filter out TTL records as TTL expiration doesn't happen with local DynamoDB,
   ;; and on server DynamoDB it can be delayed by up to 48 hours
   (-> (far/get-item c/dynamodb-opts table-name {:user_id user-id :team_id team-id})
@@ -85,14 +93,46 @@
                             :invite_count :invite-count})
       (dissoc :ttl)))
 
-(schema/defn ^:always-validate increase-invite-count! :- schema/Bool
+(schema/defn ^:always-validate delete!
   [user-id :- lib-schema/UniqueID
    team-id :- lib-schema/UniqueID]
-  (let [current-record (retrieve user-id team-id)
-        new-record (if current-record
-                     (update current-record :invite-count inc)
-                     (->InviteThrottle user-id team-id 1))]
-    (store! new-record)))
+  (timbre/debugf "Delete invite-throttle for %s %s" user-id team-id)
+  (far/delete-item c/dynamodb-opts table-name {:user_id user-id
+                                               :team_id team-id})
+  true)
+
+(schema/defn ^:always-validate increase-invite-count!
+  [user-id :- lib-schema/UniqueID
+   team-id :- lib-schema/UniqueID]
+  (timbre/debugf "Increase invite count for %s %s" user-id team-id)
+  (if-let [item (retrieve user-id team-id)]
+    (do (timbre/debugf "Found item for %s %s, increasing from %s to %s" (:user-id item) (:team-id item) (:invite-count item) (inc (:invite-count item)))
+        (far/update-item c/dynamodb-opts table-name {:user_id user-id
+                                                     :team_id team-id}
+                         {:update-expr "SET invite_count = invite_count + :inc"
+                          :expr-attr-vals {":inc" 1}
+                          :return :updated-new}))
+    (do
+      (timbre/debugf "No item found for %s %s, will create one" user-id team-id)
+      (store! (->InviteThrottle user-id team-id 1)))))
+
+(schema/defn ^:always-validate update-token!
+  [user-id :- lib-schema/UniqueID
+   team-id :- lib-schema/UniqueID]
+  (timbre/debugf "Update token for %s %s" user-id team-id)
+  (if-let [item (retrieve user-id team-id)]
+    (do (timbre/debugf "Found item for %s %s, increasing from %s to %s" (:user-id item) (:team-id item) (:invite-count item) (inc (:invite-count item)))
+        (far/update-item c/dynamodb-opts table-name {:user_id user-id
+                                                     :team_id team-id}
+                         {:update-expr "SET #token = :token"
+                          :expr-attr-names {"#token" "token"}
+                          :expr-attr-vals {":token" (str (java.util.UUID/randomUUID))}
+                          :return :updated-new}))
+    (do
+      (timbre/debugf "No item found for %s %s, will create one" user-id team-id)
+      (store! (->InviteThrottle user-id team-id)))))
+
+;; ----- Table handling -----
 
 (defn create-table
   ([] (create-table c/dynamodb-opts))
