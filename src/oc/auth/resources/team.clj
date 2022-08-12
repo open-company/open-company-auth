@@ -33,6 +33,7 @@
 (def EmailInviteRequest {
   :email lib-schema/EmailAddress
   :admin schema/Bool
+  :csrf schema/Str
   (schema/optional-key :org-name) (schema/maybe schema/Str)
   (schema/optional-key :org-uuid) (schema/maybe schema/Str)
   (schema/optional-key :org-slug) (schema/maybe schema/Str)
@@ -49,6 +50,7 @@
   :slack-id lib-schema/NonBlankStr
   :slack-org-id lib-schema/NonBlankStr
   :admin schema/Bool
+  (schema/optional-key :csrf) (schema/maybe schema/Str)
   (schema/optional-key :org-name) (schema/maybe schema/Str)
   (schema/optional-key :org-uuid) (schema/maybe schema/Str)
   (schema/optional-key :org-slug) (schema/maybe schema/Str)

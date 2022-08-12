@@ -73,8 +73,8 @@
 (schema/defn ^:always-validate store!
   ([user-id :- lib-schema/UniqueID
     team-id :- lib-schema/UniqueID]
-   (store! (->InviteThrottle user-id team-id))
-   true)
+  (store! (->InviteThrottle user-id team-id))
+  true)
 
   ([invite-throttle-data :- InviteThrottle]
   (timbre/debugf "Store invite-throttle for %s %s" (:user-id invite-throttle-data) (:team-id invite-throttle-data))
@@ -131,6 +131,15 @@
     (do
       (timbre/debugf "No item found for %s %s, will create one" user-id team-id)
       (store! (->InviteThrottle user-id team-id)))))
+
+(schema/defn ^:always-validate get-or-create! :- InviteThrottle
+  [user-id :- lib-schema/UniqueID
+   team-id :- lib-schema/UniqueID]
+  (if-let [existing-item (retrieve user-id team-id)]
+    existing-item
+    (do
+      (store! user-id team-id)
+      (retrieve user-id team-id))))
 
 ;; ----- Table handling -----
 
