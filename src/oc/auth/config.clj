@@ -184,4 +184,4 @@
 
 (defonce invite-throttle-ttl (or (env :invite-throttle-ttl) 1)) ;; hours
 
-(defonce invite-throttle-max-count (or (env :invite-throttle-max-count) 100)) ;; hours
+(defonce invite-throttle-max-count (or (env :invite-throttle-max-count) 10)) ;; 10 invites at most every invite-throttle-ttl
