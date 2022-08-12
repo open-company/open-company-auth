@@ -395,7 +395,7 @@
   :processable? (by-method {
     :options true
     :post (fn [ctx] (or (and (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
-                             (check-invite-throttle (-> ctx :data :csrf) invite-throttle-data))
+                             (check-invite-throttle (-> ctx :data :csrf) (:invite-throttle ctx)))
                         (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
 
   ;; Actions
