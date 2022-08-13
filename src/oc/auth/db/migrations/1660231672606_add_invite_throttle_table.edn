@@ -1,10 +1,17 @@
 (ns oc.auth.db.migrations.add-invite-throttle-table
-  (:require [rethinkdb.query :as r]
+  (:require [taoensso.faraday :as far]
             [oc.lib.db.migrations :as m]
             [oc.auth.config :as config]
             [oc.auth.resources.invite-throttle :as invite-throttle]))
 
 (defn up [dynamodb-opts]
   ;; Do great things
-  (println (invite-throttle/create-table dynamodb-opts))
+    ;; Create invite-throttle table if not already present
+  (println
+   (far/ensure-table dynamodb-opts
+                     invite-throttle/table-name
+                     [:user_id :s]
+                     {:range-keydef [:team_id :s]
+                      :billing-mode :pay-per-request
+                      :block? true}))
   true) ; return true on success
