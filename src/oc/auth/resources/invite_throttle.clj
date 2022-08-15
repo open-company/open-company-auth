@@ -40,6 +40,10 @@
   (schema/optional-key :ttl) schema/Num
 })
 
+;; ----- TTL -----
+
+(def invite-throttle-ttl (ttl/ttl-epoch (* (/ 1 24) c/invite-throttle-ttl-hours))
+
 ;; ----- Constructors -----
 
 (schema/defn ^:always-validate ->InviteThrottle :- InviteThrottle
@@ -58,7 +62,7 @@
    :team-id team-id
    :token token
    :invite-count invite-count
-   :ttl (ttl/ttl-epoch c/invite-throttle-ttl)}))
+   :ttl invite-throttle-ttl}))
 
 ;; ----- DB Operations -----
 
