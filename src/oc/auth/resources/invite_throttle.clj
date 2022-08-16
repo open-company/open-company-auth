@@ -136,7 +136,8 @@
                           :return :updated-new}))
     (do
       (timbre/debugf "No item found for %s %s, will create one" user-id team-id)
-      (store! (->InviteThrottle user-id team-id)))))
+      (store! (->InviteThrottle user-id team-id))))
+  (retrieve user-id team-id))
 
 (schema/defn ^:always-validate get-or-create! :- InviteThrottle
   [user-id :- lib-schema/UniqueID

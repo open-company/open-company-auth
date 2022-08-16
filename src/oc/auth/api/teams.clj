@@ -336,8 +336,9 @@
                                           []
                                           (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
                                             [:bot-user-id :bot-token]))
-                             full-user (user-res/get-user conn (:user-id (:user ctx)))]
-                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) full-user (:invite-throttle ctx))))
+                             full-user (user-res/get-user conn (:user-id (:user ctx)))
+                             updated-invite-throttle (invite-throttle/update-token! (:user-id full-user) team-id)]
+                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) full-user updated-invite-throttle)))
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
@@ -705,11 +706,13 @@
   :respond-with-entity? true
   :post-enacted? true
   :handle-created (fn [ctx]
-                    (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
-                      (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user (:invite-throttle ctx))))
+                    (let [full-user (user-res/get-user conn (:user-id (:user ctx)))
+                          updated-invite-throttle (:invite-throttle/updated-csrf (:user-id full-user) team-id)]
+                      (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user updated-invite-throttle)))
   :handle-ok (fn [ctx]
-               (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
-                 (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user (:invite-throttle ctx)))))
+               (let [full-user (user-res/get-user conn (:user-id (:user ctx)))
+                     updated-invite-throttle (invite-throttle/update-token! (:user-id full-user) team-id)]
+                 (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user updated-invite-throttle))))
 
 ;; A resource for roster of team users for a particular team
 (defresource active-users [conn team-id]
