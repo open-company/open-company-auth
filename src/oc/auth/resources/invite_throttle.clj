@@ -43,6 +43,9 @@
 
 ;; ----- TTL -----
 
+(defn- default-invite-throttle-ttl []
+  (ttl/ttl-epoch c/invite-throttle-ttl-hours clj-time/hours))
+
 ;; ----- Constructors -----
 
 (schema/defn ^:always-validate ->InviteThrottle :- InviteThrottle
@@ -61,7 +64,7 @@
    :team-id team-id
    :token token
    :invite-count invite-count
-   :ttl c/invite-throttle-ttl-hours}))
+   :ttl (default-invite-throttle-ttl)}))
 
 ;; ----- DB Operations -----
 
@@ -71,7 +74,7 @@
       (clj-set/rename-keys {:user-id :user_id
                             :team-id :team_id
                             :invite-count :invite_count})
-      (assoc :ttl (or (:ttl invite-throttle-data) (ttl/ttl-epoch c/invite-throttle-ttl-hours clj-time/hours)))))
+      (assoc :ttl (or (:ttl invite-throttle-data) (default-invite-throttle-ttl)))))
 
 (schema/defn ^:always-validate store!
   ([user-id :- lib-schema/UniqueID
