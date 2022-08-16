@@ -44,7 +44,7 @@
 ;; ----- TTL -----
 
 (defn- default-invite-throttle-ttl []
-  (ttl/ttl-epoch c/invite-throttle-ttl-hours clj-time/hours))
+  (ttl/ttl-epoch c/invite-throttle-ttl-minutes clj-time/minutes))
 
 ;; ----- Constructors -----
 

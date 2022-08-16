@@ -182,6 +182,6 @@
                         :secret-key (env :aws-secret-access-key)
                         :endpoint dynamodb-end-point})
 
-(defonce invite-throttle-ttl-hours (Integer/parseInt (or (env :invite-throttle-ttl-hours) "1"))) ;; hours
+(defonce invite-throttle-ttl-minutes (Integer/parseInt (or (env :invite-throttle-ttl-minutes) "60"))) ;; minutes
 
-(defonce invite-throttle-max-count (Integer/parseInt (or (env :invite-throttle-max-count) "100"))) ;; 100 invites at most every invite-throttle-ttl-hours
+(defonce invite-throttle-max-count (Integer/parseInt (or (env :invite-throttle-max-count) "100"))) ;; 100 invites at most every invite-throttle-ttl-minutes
