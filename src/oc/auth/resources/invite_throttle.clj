@@ -6,6 +6,7 @@
             [schema.core :as schema]
             [oc.lib.schema :as lib-schema]
             [oc.auth.config :as c]
+            [clj-time.core :as clj-time]
             [oc.lib.dynamo.common :as ttl]))
 
 ;; ----- DynamoDB -----
@@ -42,8 +43,6 @@
 
 ;; ----- TTL -----
 
-(def invite-throttle-ttl (ttl/ttl-epoch (* (/ 1 24) c/invite-throttle-ttl-hours))
-
 ;; ----- Constructors -----
 
 (schema/defn ^:always-validate ->InviteThrottle :- InviteThrottle
@@ -62,7 +61,7 @@
    :team-id team-id
    :token token
    :invite-count invite-count
-   :ttl invite-throttle-ttl}))
+   :ttl c/invite-throttle-ttl-hours}))
 
 ;; ----- DB Operations -----
 
@@ -72,7 +71,7 @@
       (clj-set/rename-keys {:user-id :user_id
                             :team-id :team_id
                             :invite-count :invite_count})
-      (assoc :ttl (or (:ttl invite-throttle-data) (ttl/ttl-epoch c/invite-throttle-ttl)))))
+      (assoc :ttl (or (:ttl invite-throttle-data) (ttl/ttl-epoch c/invite-throttle-ttl-hours clj-time/hours)))))
 
 (schema/defn ^:always-validate store!
   ([user-id :- lib-schema/UniqueID
