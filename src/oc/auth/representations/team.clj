@@ -38,6 +38,7 @@
                      :accept mt/user-media-type}
                     {:csrf (:token invite-throttle)
                      :invite-count (:invite-count invite-throttle)
+                     :ttl (:ttl invite-throttle)
                      :total-invites config/invite-throttle-max-count}))
 
 (defn- payments-link [team-id]

@@ -96,8 +96,7 @@
   (-> (far/get-item c/dynamodb-opts table-name {:user_id user-id :team_id team-id})
       (clj-set/rename-keys {:user_id :user-id
                             :team_id :team-id
-                            :invite_count :invite-count})
-      (dissoc :ttl)))
+                            :invite_count :invite-count})))
 
 (schema/defn ^:always-validate delete!
   [user-id :- lib-schema/UniqueID
