@@ -22,7 +22,8 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]
-            [oc.auth.representations.slack-org :as slack-org-rep]))
+            [oc.auth.representations.slack-org :as slack-org-rep]
+            [oc.auth.lib.recipient-validation :as recipient-validation]))
 
 ;; ----- Validations -----
 
@@ -397,7 +398,8 @@
     :options true
     :post (fn [ctx] (or (and (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
                              (check-invite-throttle (-> ctx :data :csrf) (:invite-throttle ctx)))
-                        (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
+                        (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))
+                        (recipient-validation/validate! (-> ctx :data :email))))})
 
   ;; Actions
   :post! (fn [ctx] {:updated-user
