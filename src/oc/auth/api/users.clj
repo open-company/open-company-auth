@@ -326,11 +326,17 @@
   ;; Validations
   :processable? (by-method {
     :options true
-    :post (fn [ctx] (and (lib-schema/valid-email-address? (-> ctx :data :email))
-                         (lib-schema/valid-password? (-> ctx :data :password))
-                         (string? (-> ctx :data :first-name))
-                         (string? (-> ctx :data :last-name))
-                         (recipient-validation/validate! (-> ctx :data :email))))})
+    :post (fn [ctx] (cond (or (not (lib-schema/valid-email-address? (-> ctx :data :email)))
+                              (not (recipient-validation/validate! (-> ctx :data :email))))
+                          [false {:reason "The email address you provided is not valid. Please try again."}]
+                          (not (lib-schema/valid-password? (-> ctx :data :password)))
+                          [false {:reason "The password is not valid. Please try again."}]
+                          (not (string? (-> ctx :data :first-name)))
+                          [false {:reason "First name is not valid. Please try again."}]
+                          (not (string? (-> ctx :data :last-name)))
+                          [false {:reason "Last name not valid. Please try again"}]
+                          :else
+                          true))})
 
   ;; Existentialism
   :exists? (fn [ctx]
