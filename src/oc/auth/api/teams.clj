@@ -399,16 +399,16 @@
     :post (fn [ctx]
             (cond ;; Email request not conform
               (not (lib-schema/valid? team-res/EmailInviteRequest (:data ctx)))
-              [false {:reason "Invalid data, please correct the filled informations and try again."}]
+              [false {:reason "Invalid data, please correct the filled informations and try again." :override-default-error-message true}]
               ;; csrf token not valid
               (not (check-invite-throttle (-> ctx :data :csrf) (:invite-throttle ctx)))
-              [false {:reason "Csrf token not valid, please refresh the page and try again."}]
+              [false {:reason "Csrf token not valid, please refresh the page and try again." :override-default-error-message true}]
               ;; Slack request not conform
               (not (lib-schema/valid? team-res/SlackInviteRequest (:data ctx)))
-              [false {:reason "Something went wrong checking your Slack informations, please try again."}]
+              [false {:reason "Something went wrong checking your Slack informations, please try again." :override-default-error-message true}]
               ;; Not valid email address
               (not (recipient-validation/validate! (-> ctx :data :email)))
-              [false {:reason "The email address you provided is not valid. Please try again."}]
+              [false {:reason "The email address you provided is not valid. Please try again." :override-default-error-message true}]
               :else
               true))})
 

@@ -328,13 +328,13 @@
     :options true
     :post (fn [ctx] (cond (or (not (lib-schema/valid-email-address? (-> ctx :data :email)))
                               (not (recipient-validation/validate! (-> ctx :data :email))))
-                          [false {:reason "The email address you provided is not valid. Please try again."}]
+                          [false {:reason "The email address you provided is not valid. Please try again." :override-default-error-message true}]
                           (not (lib-schema/valid-password? (-> ctx :data :password)))
-                          [false {:reason "The password is not valid. Please try again."}]
+                          [false {:reason "The password is not valid. Please try again." :override-default-error-message true}]
                           (not (string? (-> ctx :data :first-name)))
-                          [false {:reason "First name is not valid. Please try again."}]
+                          [false {:reason "First name is not valid. Please try again." :override-default-error-message true}]
                           (not (string? (-> ctx :data :last-name)))
-                          [false {:reason "Last name not valid. Please try again"}]
+                          [false {:reason "Last name not valid. Please try again" :override-default-error-message true}]
                           :else
                           true))})
 
