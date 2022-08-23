@@ -2,11 +2,12 @@
   (:require [clj-http.client :as http]
             [cheshire.core :as json]
             [oc.auth.config :as config]
-            [taoensso.timbre :as timbre]))
+            [taoensso.timbre :as timbre]
+            [oc.lib.sentry.core :as sentry]))
 
 (def spark-post-endpoint "https://api.sparkpost.com")
 
-(def discard-results #{"risky" "undeliverable"})
+(def invalid-result? #{"risky" "undeliverable"})
 
 (defn validate! [email-address]
   (timbre/debugf "Will validate email address: %s" email-address)
@@ -18,9 +19,9 @@
                           :body
                           (json/parse-string true))]
       (timbre/debugf "Validation response: %s" parsed-body)
-      (timbre/infof "Recipient result: %s discard? %s" (-> parsed-body :results :result) (-> parsed-body :results :result discard-results))
+      (timbre/infof "Recipient result: %s discard? %s" (-> parsed-body :results :result) (-> parsed-body :results :result invalid-result?))
       (-> parsed-body
           :results
           :result
-          (discard-results)
+          invalid-result?
           not))))
