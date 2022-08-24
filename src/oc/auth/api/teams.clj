@@ -22,7 +22,8 @@
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]
-            [oc.auth.representations.slack-org :as slack-org-rep]))
+            [oc.auth.representations.slack-org :as slack-org-rep]
+            [oc.auth.lib.recipient-validation :as recipient-validation]))
 
 ;; ----- Validations -----
 
@@ -395,9 +396,21 @@
   ;; Validations
   :processable? (by-method {
     :options true
-    :post (fn [ctx] (or (and (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
-                             (check-invite-throttle (-> ctx :data :csrf) (:invite-throttle ctx)))
-                        (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
+    :post (fn [ctx]
+            (cond ;; Email request not conform
+              (not (lib-schema/valid? team-res/EmailInviteRequest (:data ctx)))
+              [false {:reason "Invalid data, please correct the filled informations and try again." :override-default-error-message true}]
+              ;; csrf token not valid
+              (not (check-invite-throttle (-> ctx :data :csrf) (:invite-throttle ctx)))
+              [false {:reason "Csrf token not valid, please refresh the page and try again." :override-default-error-message true}]
+              ;; Slack request not conform
+              (not (lib-schema/valid? team-res/SlackInviteRequest (:data ctx)))
+              [false {:reason "Something went wrong checking your Slack informations, please try again." :override-default-error-message true}]
+              ;; Not valid email address
+              (not (recipient-validation/validate! (-> ctx :data :email)))
+              [false {:reason "The email address you provided is not valid. Please try again." :override-default-error-message true}]
+              :else
+              true))})
 
   ;; Actions
   :post! (fn [ctx] {:updated-user

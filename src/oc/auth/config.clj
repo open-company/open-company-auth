@@ -185,3 +185,7 @@
 (defonce invite-throttle-ttl-minutes (Integer/parseInt (or (env :invite-throttle-ttl-minutes) "60"))) ;; minutes
 
 (defonce invite-throttle-max-count (Integer/parseInt (or (env :invite-throttle-max-count) "100"))) ;; 100 invites at most every invite-throttle-ttl-minutes
+
+;; ----- Recipient validation (SparkPost) ------
+
+(defonce spark-post-api-key (env :spark-post-api-key))

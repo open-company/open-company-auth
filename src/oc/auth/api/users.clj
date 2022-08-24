@@ -21,7 +21,8 @@
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.user :as user-res]
             [oc.auth.representations.media-types :as mt]
-            [oc.auth.representations.user :as user-rep]))
+            [oc.auth.representations.user :as user-rep]
+            [oc.auth.lib.recipient-validation :as recipient-validation]))
 
 ;; ----- Validations -----
 
@@ -175,7 +176,8 @@
 
 (defn- create-user [conn {email :email password :password :as user-props} {team-id :team-id :as _existing-team}]
   (timbre/info "Creating user:" email "(invite token team-id " team-id ")")
-  (if-let* [created-user (user-res/create-user! conn (user-res/->user user-props password) team-id)
+  (if-let* [_ (recipient-validation/validate! email)
+            created-user (user-res/create-user! conn (user-res/->user user-props password) team-id)
             user-id (:user-id created-user)
             admin-teams (user-res/admin-of conn user-id)]
     (do
@@ -324,10 +326,17 @@
   ;; Validations
   :processable? (by-method {
     :options true
-    :post (fn [ctx] (and (lib-schema/valid-email-address? (-> ctx :data :email))
-                         (lib-schema/valid-password? (-> ctx :data :password))
-                         (string? (-> ctx :data :first-name))
-                         (string? (-> ctx :data :last-name))))})
+    :post (fn [ctx] (cond (or (not (lib-schema/valid-email-address? (-> ctx :data :email)))
+                              (not (recipient-validation/validate! (-> ctx :data :email))))
+                          [false {:reason "The email address you provided is not valid. Please try again." :override-default-error-message true}]
+                          (not (lib-schema/valid-password? (-> ctx :data :password)))
+                          [false {:reason "The password is not valid. Please try again." :override-default-error-message true}]
+                          (not (string? (-> ctx :data :first-name)))
+                          [false {:reason "First name is not valid. Please try again." :override-default-error-message true}]
+                          (not (string? (-> ctx :data :last-name)))
+                          [false {:reason "Last name not valid. Please try again" :override-default-error-message true}]
+                          :else
+                          true))})
 
   ;; Existentialism
   :exists? (fn [ctx]
