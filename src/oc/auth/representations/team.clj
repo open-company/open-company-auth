@@ -32,9 +32,14 @@
 (defn- remove-email-domain-link [team-id domain]
   (hateoas/remove-link (s/join "/" [(url team-id) "email-domains" domain]) {} {:ref mt/email-domain-media-type}))
 
-(defn- invite-user-link [team-id]
-  (hateoas/add-link hateoas/POST (str (url team-id) "/users/") {:content-type mt/invite-media-type
-                                                                :accept mt/user-media-type}))
+(defn- invite-user-link [team-id invite-throttle]
+  (hateoas/add-link hateoas/POST (str (url team-id) "/users/")
+                    {:content-type mt/invite-media-type
+                     :accept mt/user-media-type}
+                    {:csrf (:token invite-throttle)
+                     :invite-count (:invite-count invite-throttle)
+                     :ttl (:ttl invite-throttle)
+                     :total-invites config/invite-throttle-max-count}))
 
 (defn- payments-link [team-id]
   (hateoas/link-map
@@ -72,11 +77,13 @@
 
 (defn- admin-links
   "HATEOAS links for a team resource for a team admin."
-  ([team] (admin-links team nil nil))
+  ([team] (admin-links team nil nil nil))
   
-  ([team user] (admin-links team user nil))
+  ([team user] (admin-links team user nil nil))
   
-  ([team user self-name]
+  ([team user self-name] (admin-links team user self-name nil))
+
+  ([team user self-name invite-throttle]
   (let [team-id (:team-id team)
         can-invite? (-> user :status keyword (= :active))]
     (assoc team :links (remove nil? [
@@ -84,7 +91,7 @@
         (hateoas/link-map self-name hateoas/GET (url team-id) {:accept mt/team-media-type})
         (self-link team-id))
       (partial-update-link team-id)
-      (when can-invite? (invite-user-link team-id))
+      (when can-invite? (invite-user-link team-id invite-throttle))
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)
@@ -108,10 +115,11 @@
 
 (defn- member-links
   "HATEOAS links for a team resource for a regular team member."
-  [{team-id :team-id :as team}]
-  (assoc team :links [(roster-link team-id)
-                      (invite-user-link team-id)
-                      (channels-link team-id)]))
+  [{team-id :team-id :as team} user invite-throttle]
+  (let [can-invite? (-> user :status keyword (= :active))]
+    (assoc team :links [(roster-link team-id)
+                        (when can-invite? (invite-user-link team-id invite-throttle))
+                        (channels-link team-id)])))
 
 (defn- email-domain
   "Item entry for an email domain for the team."
@@ -138,14 +146,14 @@
 
 (defn render-team
   "Given a team map, create a JSON representation of the team for the REST API."
-  [team user]
+  [team user invite-throttle]
   (let [team-id (:team-id team)]
     (json/generate-string
       (-> team
         (select-keys representation-props)
         (assoc :email-domains (map #(email-domain team-id %) (:email-domains team)))
         (assoc :slack-orgs (map #(slack-org team-id %) (:slack-orgs team)))
-        (admin-links user))
+        (admin-links user nil invite-throttle))
       {:pretty config/pretty?})))
 
 (defn render-team-list
@@ -162,7 +170,7 @@
                   :items (->> teams
                             (map #(cond
                                     (:id-token user) (id-token-links %)
-                                    ((set (:admins %)) (:user-id user)) (admin-links % user "item")
-                                    :else (member-links %)))
-                            (map #(dissoc % :admins)))}}
+                                    ((set (:admins %)) (:user-id user)) (admin-links % user "item" (:invite-throttle %))
+                                    :else (member-links % user (:invite-throttle %))))
+                            (map #(apply dissoc % [:admins :invite-throttle])))}}
     {:pretty config/pretty?}))

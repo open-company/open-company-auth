@@ -18,6 +18,7 @@
             [oc.auth.resources.team :as team-res]
             [oc.auth.resources.slack-org :as slack-org-res]
             [oc.auth.resources.user :as user-res]
+            [oc.auth.resources.invite-throttle :as invite-throttle]
             [oc.auth.representations.media-types :as mt]
             [oc.auth.representations.team :as team-rep]
             [oc.auth.representations.user :as user-rep]
@@ -68,7 +69,8 @@
   [conn user-id]
   (when-let* [user (user-res/get-user conn user-id)
             teams (:teams user)]
-    (team-res/list-teams-by-ids conn teams [:logo-url :admins :created-at :updated-at])))
+    (let [teams-data (team-res/list-teams-by-ids conn teams [:logo-url :admins :created-at :updated-at])]
+      (map #(assoc % :invite-throttle (invite-throttle/get-or-create! (:user-id user) (:team-id %))) teams-data))))
 
 ;; ----- Actions -----
 
@@ -277,8 +279,9 @@
   :handle-not-acceptable (api-common/only-accept 406 mt/team-collection-media-type)
 
   ;; Responses
-  :handle-ok (fn [ctx] (let [user (:user ctx)]
-                        (team-rep/render-team-list (teams-for-user conn (:user-id user)) user))))
+  :handle-ok (fn [ctx] (let [user (:user ctx)
+                             teams (teams-for-user conn (:user-id user))]
+                        (team-rep/render-team-list teams user))))
 
 ;; A resource for operations on a particular team
 (defresource team [conn team-id]
@@ -313,7 +316,8 @@
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
-                        {:existing-team team}
+                        {:existing-team team
+                         :invite-throttle (invite-throttle/get-or-create! (:user-id (:user ctx)) team-id)}
                         false))
 
   ;; Actions
@@ -332,18 +336,30 @@
                                           []
                                           (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
                                             [:bot-user-id :bot-token]))
-                             full-user (user-res/get-user conn (:user-id (:user ctx)))]
-                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) full-user)))
+                             full-user (user-res/get-user conn (:user-id (:user ctx)))
+                             updated-invite-throttle (invite-throttle/update-token! (:user-id full-user) team-id)]
+                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) full-user updated-invite-throttle)))
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
 
-(defn- can-invite? [ctx]
-  (-> ctx :user :status keyword (= :active)))
+(defn- can-invite? [ctx conn]
+  (let [check-user-status #(-> % :status keyword (= :active))]
+    (if (-> ctx :user :status)
+      (check-user-status (:user ctx))
+      (check-user-status (user-res/get-user conn (:user-id (:user ctx)))))))
+
+(defn- check-invite-throttle [token invite-throttle-data]
+  (and (= token (:token invite-throttle-data))
+       (< (:invite-count invite-throttle-data) config/invite-throttle-max-count)))
 
 ;; A resource for user invitations to a particular team
 (defresource invite [conn team-id]
   (api-common/open-company-authenticated-resource config/passphrase) ; verify validity and presence of required JWToken
+
+  :initialize-context (fn [ctx] (let [jwt-auth (api-common/read-token (:request ctx) config/passphrase)
+                                      invite-throttle-data (when (:user jwt-auth) (invite-throttle/retrieve (-> jwt-auth :user :user-id) team-id))]
+                                  (merge jwt-auth {:invite-throttle invite-throttle-data})))
 
   :allowed-methods [:options :post]
 
@@ -359,7 +375,7 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (when (can-invite? ctx)
+    :post (fn [ctx] (when (can-invite? ctx conn)
                       (if (-> ctx :data :admin)
                         (allow-team-admins conn (:user ctx) team-id)
                         (allow-team-members conn (:user ctx) team-id))))})
@@ -379,7 +395,8 @@
   ;; Validations
   :processable? (by-method {
     :options true
-    :post (fn [ctx] (or (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
+    :post (fn [ctx] (or (and (lib-schema/valid? team-res/EmailInviteRequest (:data ctx))
+                             (check-invite-throttle (-> ctx :data :csrf) (:invite-throttle ctx)))
                         (lib-schema/valid? team-res/SlackInviteRequest (:data ctx))))})
 
   ;; Actions
@@ -391,14 +408,16 @@
                       (:existing-user ctx) ; recipient
                       (:member? ctx)
                       (:admin? ctx)
-                      (:data ctx))}) ; invitation
+                      (dissoc (:data ctx) :csrf))}) ; invitation
 
   ;; Responses
   :respond-with-entity? true
   :handle-created (fn [ctx] (if-let [updated-user (:updated-user ctx)]
-                              (api-common/location-response (user-rep/url updated-user)
+                              (do
+                                (invite-throttle/increase-invite-count! (-> ctx :user :user-id) team-id)
+                                (api-common/location-response (user-rep/url updated-user)
                                                             (user-rep/render-user updated-user)
-                                                            mt/user-media-type)
+                                                            mt/user-media-type))
                               (api-common/missing-response))))
 
 ;; A resource for the admins of a particular team
@@ -497,8 +516,8 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))
-    :delete (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))})
+    :post (fn [ctx] (when (can-invite? ctx conn) (allow-team-admins conn (:user ctx) team-id)))
+    :delete (fn [ctx] (when (can-invite? ctx conn) (allow-team-admins conn (:user ctx) team-id)))})
 
   :processable? (fn [ctx] (team-res/allowed-email-domain? (:email-domain (:data ctx)))) ; check for blacklisted email domain
 
@@ -664,14 +683,15 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))
-    :delete (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))})
+    :post (fn [ctx] (when (can-invite? ctx conn) (allow-team-admins conn (:user ctx) team-id)))
+    :delete (fn [ctx] (when (can-invite? ctx conn) (allow-team-admins conn (:user ctx) team-id)))})
 
   ;; Existentialism
   :exists? (fn [ctx]
               (if-let* [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))
                         _invite-link (:invite-token team)]
-                {:existing-team team}
+                {:existing-team team
+                 :invite-throttle (invite-throttle/get-or-create! (:user-id (:user ctx)) team-id)}
                 false)) ; No team by that ID or invite-token already exists
 
   ;; Validations
@@ -686,11 +706,13 @@
   :respond-with-entity? true
   :post-enacted? true
   :handle-created (fn [ctx]
-                    (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
-                      (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user)))
+                    (let [full-user (user-res/get-user conn (:user-id (:user ctx)))
+                          updated-invite-throttle (:invite-throttle/updated-csrf (:user-id full-user) team-id)]
+                      (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user updated-invite-throttle)))
   :handle-ok (fn [ctx]
-               (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
-                 (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user))))
+               (let [full-user (user-res/get-user conn (:user-id (:user ctx)))
+                     updated-invite-throttle (invite-throttle/update-token! (:user-id full-user) team-id)]
+                 (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user updated-invite-throttle))))
 
 ;; A resource for roster of team users for a particular team
 (defresource active-users [conn team-id]
