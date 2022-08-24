@@ -72,16 +72,19 @@
 
 (defn- admin-links
   "HATEOAS links for a team resource for a team admin."
-  ([team] (admin-links team nil))
+  ([team] (admin-links team nil nil))
   
-  ([team self-name]
-  (let [team-id (:team-id team)]
-    (assoc team :links [
+  ([team user] (admin-links team user nil))
+  
+  ([team user self-name]
+  (let [team-id (:team-id team)
+        can-invite? (-> user :status keyword (= :active))]
+    (assoc team :links (remove nil? [
       (if self-name 
         (hateoas/link-map self-name hateoas/GET (url team-id) {:accept mt/team-media-type})
         (self-link team-id))
       (partial-update-link team-id)
-      (invite-user-link team-id)
+      (when can-invite? (invite-user-link team-id))
       (add-email-domain-link team-id)
       (add-slack-org-link team-id)
       (add-slack-bot-link team-id)
@@ -91,11 +94,12 @@
       (channels-link team-id)
       (when config/payments-enabled?
         (payments-link team-id))
-      (when (seq (:invite-token team))
+      (when (and can-invite? (seq (:invite-token team)))
         (invite-token-link (:invite-token team)))
-      (if (seq (:invite-token team))
-        (delete-invite-token-link team-id)
-        (create-invite-token-link team-id))]))))
+      (when can-invite?
+        (if (seq (:invite-token team))
+          (delete-invite-token-link team-id)
+          (create-invite-token-link team-id)))])))))
 
 (defn- id-token-links
   "HATEOAS links for a team resource for a user authenticated with the id-token only."
@@ -134,14 +138,14 @@
 
 (defn render-team
   "Given a team map, create a JSON representation of the team for the REST API."
-  [team]
+  [team user]
   (let [team-id (:team-id team)]
     (json/generate-string
       (-> team
         (select-keys representation-props)
         (assoc :email-domains (map #(email-domain team-id %) (:email-domains team)))
         (assoc :slack-orgs (map #(slack-org team-id %) (:slack-orgs team)))
-        (admin-links))
+        (admin-links user))
       {:pretty config/pretty?})))
 
 (defn render-team-list
@@ -158,7 +162,7 @@
                   :items (->> teams
                             (map #(cond
                                     (:id-token user) (id-token-links %)
-                                    ((set (:admins %)) (:user-id user)) (admin-links % "item")
+                                    ((set (:admins %)) (:user-id user)) (admin-links % user "item")
                                     :else (member-links %)))
                             (map #(dissoc % :admins)))}}
     {:pretty config/pretty?}))

@@ -331,11 +331,15 @@
                              slack-orgs (if (empty? slack-org-ids)
                                           []
                                           (slack-org-res/list-slack-orgs-by-ids conn slack-org-ids
-                                            [:bot-user-id :bot-token]))]
-                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs))))
+                                            [:bot-user-id :bot-token]))
+                             full-user (user-res/get-user conn (:user-id (:user ctx)))]
+                          (team-rep/render-team (assoc team-users :slack-orgs slack-orgs) full-user)))
   :handle-unprocessable-entity (fn [ctx]
     (api-common/unprocessable-entity-handler (merge ctx {:reason (schema/check team-res/Team (:team-update ctx))}))))
 
+
+(defn- can-invite? [ctx]
+  (-> ctx :user :status keyword (= :active)))
 
 ;; A resource for user invitations to a particular team
 (defresource invite [conn team-id]
@@ -355,9 +359,10 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (if (-> ctx :data :admin)
-                      (allow-team-admins conn (:user ctx) team-id)
-                      (allow-team-members conn (:user ctx) team-id)))})
+    :post (fn [ctx] (when (can-invite? ctx)
+                      (if (-> ctx :data :admin)
+                        (allow-team-admins conn (:user ctx) team-id)
+                        (allow-team-members conn (:user ctx) team-id))))})
 
   ;; Existentialism
   :exists? (fn [ctx] (if-let [team (and (lib-schema/unique-id? team-id) (team-res/get-team conn team-id))]
@@ -492,8 +497,8 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
-    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+    :post (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))
+    :delete (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))})
 
   :processable? (fn [ctx] (team-res/allowed-email-domain? (:email-domain (:data ctx)))) ; check for blacklisted email domain
 
@@ -659,8 +664,8 @@
   ;; Authorization
   :allowed? (by-method {
     :options true
-    :post (fn [ctx] (allow-team-admins conn (:user ctx) team-id))
-    :delete (fn [ctx] (allow-team-admins conn (:user ctx) team-id))})
+    :post (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))
+    :delete (fn [ctx] (when (can-invite? ctx) (allow-team-admins conn (:user ctx) team-id)))})
 
   ;; Existentialism
   :exists? (fn [ctx]
@@ -681,9 +686,11 @@
   :respond-with-entity? true
   :post-enacted? true
   :handle-created (fn [ctx]
-                    (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx))))
+                    (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
+                      (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user)))
   :handle-ok (fn [ctx]
-               (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)))))
+               (let [full-user (user-res/get-user conn (:user-id (:user ctx)))]
+                 (team-rep/render-team (or (:updated-team ctx) (:existing-team ctx)) full-user))))
 
 ;; A resource for roster of team users for a particular team
 (defresource active-users [conn team-id]
